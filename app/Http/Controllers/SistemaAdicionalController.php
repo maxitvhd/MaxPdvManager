@@ -26,12 +26,15 @@ class SistemaAdicionalController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->has('valor')) {
+            $request->merge(['valor' => str_replace(',', '.', $request->valor)]);
+        }
+
         $data = $request->validate([
             'nome' => 'required|string|max:255',
             'descricao' => 'nullable|string',
             'tipo' => 'required|in:dispositivo,modulo',
             'valor' => 'required|numeric|min:0',
-            'status' => 'boolean'
         ]);
 
         $data['status'] = $request->has('status');
@@ -50,13 +53,16 @@ class SistemaAdicionalController extends Controller
 
     public function update(Request $request, SistemaAdicional $adicionai)
     {
+        if ($request->has('valor')) {
+            $request->merge(['valor' => str_replace(',', '.', $request->valor)]);
+        }
+
         $adicional = $adicionai;
         $data = $request->validate([
             'nome' => 'required|string|max:255',
             'descricao' => 'nullable|string',
             'tipo' => 'required|in:dispositivo,modulo',
             'valor' => 'required|numeric|min:0',
-            'status' => 'boolean'
         ]);
 
         $data['status'] = $request->has('status');

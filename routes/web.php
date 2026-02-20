@@ -34,6 +34,8 @@ Route::group(['middleware' => 'auth'], function () {
         return view('dashboard');
     })->name('dashboard');
 
+
+    # ======= rotas de demonstracao retira do menu principal ============
     Route::get('billing', function () {
         return view('billing');
     })->name('billing');
@@ -65,6 +67,7 @@ Route::group(['middleware' => 'auth'], function () {
     Route::get('static-sign-up', function () {
         return view('static-sign-up');
     })->name('sign-up');
+    #  ====== fim das rotas de demonstração ==========
 
     Route::get('/logout', [SessionsController::class, 'destroy']);
     Route::get('/user-profile', [InfoUserController::class, 'create']);
@@ -106,7 +109,12 @@ Route::group(['middleware' => 'auth'], function () {
 
 #------------ ROTAS DE LICENÇAS, LOJAS E CHECKOUTS ------------------
 Route::group(['middleware' => 'auth'], function () {
-    Route::resource('licencas', LicencaController::class);
+    Route::get('licencas', [LicencaController::class, 'index'])->name('licencas.index');
+    Route::get('licencas/criar', [LicencaController::class, 'create'])->name('licencas.create');
+    Route::post('licencas', [LicencaController::class, 'store'])->name('licencas.store');
+    Route::get('licencas/{codigo}/editar', [LicencaController::class, 'edit'])->name('licencas.edit');
+    Route::put('licencas/{codigo}', [LicencaController::class, 'update'])->name('licencas.update');
+    Route::delete('licencas/{codigo}', [LicencaController::class, 'destroy'])->name('licencas.destroy');
     Route::resource('lojas', LojasController::class);
     Route::resource('checkouts', CheckoutController::class);
 });

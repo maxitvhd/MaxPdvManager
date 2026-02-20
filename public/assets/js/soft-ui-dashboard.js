@@ -653,6 +653,7 @@ if (iconSidenav) {
 function toggleSidenav() {
   if (body.classList.contains(className)) {
     body.classList.remove(className);
+    body.classList.add('g-sidenav-hidden');
     setTimeout(function() {
       sidenav.classList.remove('bg-white');
     }, 100);
@@ -660,9 +661,12 @@ function toggleSidenav() {
 
   } else {
     body.classList.add(className);
+    body.classList.remove('g-sidenav-hidden');
     sidenav.classList.add('bg-white');
     sidenav.classList.remove('bg-transparent');
-    iconSidenav.classList.remove('d-none');
+    if (iconSidenav) {
+      iconSidenav.classList.remove('d-none');
+    }
   }
 }
 
