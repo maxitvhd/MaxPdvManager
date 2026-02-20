@@ -8,7 +8,7 @@ class Checkout extends Model
 {
     protected $table = 'loja_checkout';
 
-    protected $fillable = ['licenca_id', 'codigo', 'mac', 'descricao', 'ip', 'sistema_operacional', 'hardware', 'status'];
+    protected $fillable = ['licenca_id', 'codigo', 'mac', 'descricao', 'ip', 'sistema_operacional', 'hardware', 'status', 'status_manual'];
 
     public function licenca()
     {

@@ -111,8 +111,8 @@ class CheckoutController extends Controller
         $licenca = $checkout->licenca;
 
         if ($checkout->status === 'ativo') {
-            // Desativar é sempre permitido
-            $checkout->update(['status' => 'inativo']);
+            // Desativar é sempre permitido, marcamos manual como true
+            $checkout->update(['status' => 'inativo', 'status_manual' => true]);
             return redirect()->back()->with('success', 'O dispositivo foi desativado com sucesso.');
         } else {
             // Para ativar, precisa checar limitação de plano e validade da licença
@@ -125,7 +125,8 @@ class CheckoutController extends Controller
                 return redirect()->back()->with('error', "Limite da Licença excedido! Seu plano atual suporta no máximo {$licenca->limite_dispositivos} dispositivo(s). Desative algum primeiro.");
             }
 
-            $checkout->update(['status' => 'ativo']);
+            // Ao ativar manualmente, libera a trava
+            $checkout->update(['status' => 'ativo', 'status_manual' => false]);
             return redirect()->back()->with('success', 'Dispositivo ativado! Ele já pode se conectar ao PDV.');
         }
     }
@@ -178,12 +179,20 @@ class CheckoutController extends Controller
                 $novoStatus = 'ativo'; // Já estava ativo e a licença tá ok
                 Log::info('Decisão de Status: Manter ATIVO (Dispositivo já pertencia à cota ativa).');
             } else {
-                // Tenta ativar automaticamente se tiver espaço
-                if ($qntAtivos < $licenca->limite_dispositivos) {
-                    $novoStatus = 'ativo';
-                    Log::info('Decisão de Status: Promover para ATIVO (Há espaço na cota limite).');
+                // Checa se foi desativado MANUALMENTE pelo Lojista na Dash
+                $foiBanidoManualmente = $checkout_existente && $checkout_existente->status_manual;
+
+                if ($foiBanidoManualmente) {
+                    Log::warning('Decisão de Status: Manter INATIVO. O Lojista desativou este PDV manualmente pelo Painel Web. É preciso ativá-lo por lá primeiro.');
+                    $novoStatus = 'inativo';
                 } else {
-                    Log::warning('Decisão de Status: Manter INATIVO (A cota máxima de ' . $licenca->limite_dispositivos . ' já foi atingida).');
+                    // Tenta ativar automaticamente se tiver espaço (e não foi banido manual)
+                    if ($qntAtivos < $licenca->limite_dispositivos) {
+                        $novoStatus = 'ativo';
+                        Log::info('Decisão de Status: Promover para ATIVO (Há espaço na cota limite e a máquina é bem vinda).');
+                    } else {
+                        Log::warning('Decisão de Status: Manter INATIVO (A cota máxima de ' . $licenca->limite_dispositivos . ' já foi atingida).');
+                    }
                 }
             }
         } else {
