@@ -30,7 +30,9 @@
                         <td>
                             <a href="{{ route('licencas.edit', $licenca->id) }}" class="btn btn-warning btn-sm">Editar</a>
                             <a href="{{ route('pagamentos.faturas', ['loja_codigo' => $licenca->loja->codigo ?? '']) }}"
-                                class="btn btn-success btn-sm">Faturas / Planos</a>
+                                class="btn btn-success btn-sm">Faturas</a>
+                            <a href="{{ route('assinaturas.index', $licenca->id) }}" class="btn btn-primary btn-sm">Mudar
+                                Plano/Extras</a>
                             <form action="{{ route('licencas.destroy', $licenca->id) }}" method="POST" style="display:inline;">
                                 @csrf
                                 @method('DELETE')

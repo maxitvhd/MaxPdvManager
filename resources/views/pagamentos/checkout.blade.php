@@ -18,12 +18,13 @@
 
                     <div class="bg-gray-100 border-radius-lg my-4 p-4 row text-center">
                         <div class="col-12 text-center mx-auto">
-                            @if(isset($pix['qr_code_base64']))
-                                <img src="data:image/jpeg;base64,{{ $pix['qr_code_base64'] }}"
+                            @if(isset($pix['point_of_interaction']['transaction_data']['qr_code_base64']))
+                                <img src="data:image/jpeg;base64,{{ $pix['point_of_interaction']['transaction_data']['qr_code_base64'] }}"
                                     class="img-fluid border-radius-lg border border-2 shadow-sm" style="max-width: 200px"
                                     alt="QR Code PIX">
                             @else
                                 <span class="text-danger">Erro ao gerar código PIX. Tente novamente mais tarde.</span>
+                                <!-- Exibir erro para debug se necessário: {{ json_encode($pix) }} -->
                             @endif
                         </div>
                         <div class="col-12 mt-3 text-center">
@@ -32,10 +33,11 @@
                         </div>
                     </div>
 
-                    @if(isset($pix['qr_code']))
+                    @if(isset($pix['point_of_interaction']['transaction_data']['qr_code']))
                         <div class="form-group mb-4">
                             <label>PIX Copia e Cola:</label>
-                            <textarea class="form-control text-sm" rows="3" readonly>{{ $pix['qr_code'] }}</textarea>
+                            <textarea class="form-control text-sm" rows="3"
+                                readonly>{{ $pix['point_of_interaction']['transaction_data']['qr_code'] }}</textarea>
                             <small class="text-muted text-xs mt-1">Copie o código acima na área "PIX Retira/Copia e Cola" do seu
                                 Banco.</small>
                         </div>

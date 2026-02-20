@@ -32,7 +32,7 @@ class LicencaController extends Controller
             'descricao' => 'required',
         ];
 
-        if (Auth::user()->hasRole('admin')) {
+        if (Auth::user()->hasRole('admin') || Auth::user()->hasRole('super-admin')) {
             $rules['validade'] = 'required|date';
         }
 
@@ -42,8 +42,8 @@ class LicencaController extends Controller
         $data['user_id'] = Auth::id();
         $data['codigo'] = $codigo;
 
-        if (!Auth::user()->hasRole('admin')) {
-            unset($data['validade']);
+        if (!Auth::user()->hasRole('admin') && !Auth::user()->hasRole('super-admin')) {
+            $data['validade'] = now()->toDateString(); // Default
             $data['status'] = 'inativo'; // Requererá compra de plano
         }
 
@@ -67,7 +67,7 @@ class LicencaController extends Controller
         ];
 
         // Bloqueia update de validade por lojistas
-        if (Auth::user()->hasRole('admin')) {
+        if (Auth::user()->hasRole('admin') || Auth::user()->hasRole('super-admin')) {
             $rules['validade'] = 'required|date';
         }
 
@@ -75,8 +75,9 @@ class LicencaController extends Controller
         $licenca = Licenca::findOrFail($id);
 
         $data = $request->all();
-        if (!Auth::user()->hasRole('admin')) {
+        if (!Auth::user()->hasRole('admin') && !Auth::user()->hasRole('super-admin')) {
             unset($data['validade']);
+            unset($data['status']);
         }
 
         $licenca->update($data);

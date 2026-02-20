@@ -230,12 +230,37 @@ class PagamentosController extends Controller
                                 'data_transacao' => now()
                             ]);
 
-                            // Renova a licença conforme o plano
+                            // Renova a licença conforme o plano e carrinho
                             $licenca = $fatura->licenca;
                             if ($licenca) {
-                                $mesesValid = $licenca->plano ? $licenca->plano->meses_validade : 1;
-                                $licenca->validade = now()->addMonths($mesesValid);
-                                $licenca->status = 'ativo';
+                                if ($fatura->dados_assinatura) {
+                                    $dados = $fatura->dados_assinatura;
+                                    $licenca->plano_id = $dados['plano_id'] ?? $licenca->plano_id;
+                                    $licenca->status = 'ativo';
+                                    $licenca->validade = now()->addMonths($dados['meses_validade'] ?? 1);
+
+                                    $totalDispositivos = $dados['limite_dispositivos_base'] ?? 1;
+                                    $modulos = [];
+
+                                    if (isset($dados['extras']) && is_array($dados['extras'])) {
+                                        foreach ($dados['extras'] as $extra) {
+                                            if ($extra['tipo'] === 'dispositivo') {
+                                                $totalDispositivos += (int) $extra['qtd'];
+                                            } else {
+                                                $modulos[] = $extra['nome'];
+                                            }
+                                        }
+                                    }
+
+                                    $licenca->limite_dispositivos = $totalDispositivos;
+                                    $licenca->modulos_adicionais = $modulos;
+                                } else {
+                                    // Fallback / Antigo
+                                    $mesesValid = $licenca->plano ? $licenca->plano->meses_validade : 1;
+                                    $licenca->validade = now()->addMonths($mesesValid);
+                                    $licenca->status = 'ativo';
+                                }
+
                                 $licenca->save();
                             }
                         }
