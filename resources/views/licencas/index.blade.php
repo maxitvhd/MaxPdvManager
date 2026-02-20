@@ -54,6 +54,11 @@
                                     data-bs-toggle="tooltip" data-bs-placement="top" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                                <a href="{{ route('checkouts.index', ['licenca' => $licenca->codigo]) }}"
+                                    class="btn btn-icon-only btn-rounded btn-outline-info mb-0 me-1"
+                                    data-bs-toggle="tooltip" data-bs-placement="top" title="Ver Dispositivos / PDVs">
+                                    <i class="fas fa-desktop"></i>
+                                </a>
                                 <a href="{{ route('pagamentos.faturas', ['loja_codigo' => $licenca->loja->codigo ?? '']) }}"
                                     class="btn btn-icon-only btn-rounded btn-outline-success mb-0 me-1"
                                     data-bs-toggle="tooltip" data-bs-placement="top" title="Faturas Financeiras">

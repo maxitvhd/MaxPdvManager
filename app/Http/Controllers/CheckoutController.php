@@ -30,9 +30,17 @@ use Illuminate\Support\Facades\DB;
 
 class CheckoutController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $checkouts = Checkout::with('licenca')->get();
+        $query = Checkout::with('licenca');
+
+        if ($request->has('licenca')) {
+            $query->whereHas('licenca', function ($q) use ($request) {
+                $q->where('codigo', $request->licenca);
+            });
+        }
+
+        $checkouts = $query->get();
         return view('checkouts.index', compact('checkouts'));
     }
 
