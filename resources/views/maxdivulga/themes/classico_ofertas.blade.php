@@ -274,7 +274,14 @@
 
     <div class="header">
         <div class="header-logo">
-            <div class="nome-loja">{{ $loja['nome'] ?? 'Seu Mercado' }}</div>
+            <div class="nome-loja">
+                @if(!empty($loja['logo_url']))
+                    <img src="{{ $loja['logo_url'] }}" alt="{{ $loja['nome'] ?? '' }}"
+                        style="max-height:50px;max-width:160px;object-fit:contain;vertical-align:middle;">
+                @else
+                    {{ $loja['nome'] ?? 'Seu Mercado' }}
+                @endif
+            </div>
             <div class="tagline">Ofertas da Semana</div>
         </div>
         <div class="header-info">
@@ -309,7 +316,14 @@
     <div class="grid-produtos">
         @forelse($produtos as $i => $prod)
             <div class="card {{ $i === 0 ? 'card-destaque' : '' }}">
-                <div class="card-topo"><span>🛒</span></div>
+                <div class="card-topo">
+                    @if(!empty($prod['imagem_url']))
+                        <img src="{{ $prod['imagem_url'] }}" alt="{{ $prod['nome'] }}"
+                            style="max-height:100px;max-width:100%;object-fit:contain;">
+                    @else
+                        <span>🛒</span>
+                    @endif
+                </div>
                 <div class="tag-oferta">OFERTA</div>
                 <div class="card-nome">{{ $prod['nome'] }}</div>
                 <div class="card-preco-de">de R$ {{ $prod['preco_original'] }}</div>

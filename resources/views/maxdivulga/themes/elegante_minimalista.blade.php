@@ -231,7 +231,14 @@
 
     <div class="cabecalho">
         <div class="cabecalho-loja">
-            <div class="nome">{{ $loja['nome'] ?? 'Sua Loja' }}</div>
+            <div class="nome">
+                @if(!empty($loja['logo_url']))
+                    <img src="{{ $loja['logo_url'] }}" alt="{{ $loja['nome'] ?? '' }}"
+                        style="max-height:45px;max-width:150px;object-fit:contain;vertical-align:middle;">
+                @else
+                    {{ $loja['nome'] ?? 'Sua Loja' }}
+                @endif
+            </div>
             <div class="slogan">Produtos Selecionados com Qualidade</div>
         </div>
         <div class="cabecalho-data">{{ \Carbon\Carbon::now()->isoFormat('MMMM [de] Y') }}</div>
@@ -262,7 +269,14 @@
     <div class="lista-produtos">
         @forelse($produtos as $prod)
             <div class="produto-item">
-                <div class="produto-simbolo">🛍️</div>
+                <div class="produto-simbolo">
+                    @if(!empty($prod['imagem_url']))
+                        <img src="{{ $prod['imagem_url'] }}" alt="{{ $prod['nome'] }}"
+                            style="max-height:80px;max-width:80px;object-fit:contain;">
+                    @else
+                        🛍️
+                    @endif
+                </div>
                 <div class="produto-info">
                     <div class="produto-nome">{{ $prod['nome'] }}</div>
                     <div class="produto-preco-de">antes R$ {{ $prod['preco_original'] }}</div>

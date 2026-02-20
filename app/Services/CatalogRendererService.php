@@ -41,20 +41,24 @@ class CatalogRendererService
 
     private function construirPastaSaida(MaxDivulgaCampaign $campaign, array $dadosLoja): string
     {
-        // Pasta: storage/app/public/maxdivulga/lojas/{codigo_loja}/campanha_{id}/
-        $codigoLoja = Str::slug($dadosLoja['codigo'] ?? 'sem-codigo');
-        $pasta = "maxdivulga/lojas/{$codigoLoja}/campanha_{$campaign->id}";
+        // Pasta: storage/app/public/lojas/{codigo}/campanhas/{tema}_{ddmmyyyy}/
+        // Ex: lojas/y0yZBKLa/campanhas/cafe_da_manha_20022026
+        $codigoLoja = $dadosLoja['codigo'] ?? 'sem-codigo';
+        $tema = $dadosLoja['tema_campanha'] ?? 'catalogo_geral';
+        $data = now()->format('dmY');
+        $nomePasta = Str::slug("{$tema}_{$data}", '_');
+
+        $pasta = "lojas/{$codigoLoja}/campanhas/{$nomePasta}";
         $caminhoCompleto = storage_path("app/public/{$pasta}");
 
         if (!is_dir($caminhoCompleto)) {
             mkdir($caminhoCompleto, 0775, true);
         }
-
-        // Garante que o diretório seja legível pelo servidor web
         @chmod($caminhoCompleto, 0775);
 
         return $pasta;
     }
+
 
     private function getHtml(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
     {

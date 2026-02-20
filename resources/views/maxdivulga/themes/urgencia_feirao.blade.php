@@ -301,7 +301,12 @@
             <div class="header-titulo">PROMOÇÃO<br><span>IM&shy;PER&shy;DÍ&shy;VEL</span></div>
         </div>
         <div class="header-loja">
-            <strong>{{ $loja['nome'] ?? 'Seu Mercado' }}</strong>
+            @if(!empty($loja['logo_url']))
+                <img src="{{ $loja['logo_url'] }}" alt="{{ $loja['nome'] ?? '' }}"
+                    style="max-height:50px;max-width:160px;object-fit:contain;vertical-align:middle;">
+            @else
+                <strong>{{ $loja['nome'] ?? 'Seu Mercado' }}</strong>
+            @endif
             {{ \Carbon\Carbon::now()->isoFormat('D [de] MMMM') }}
         </div>
     </div>
@@ -326,7 +331,14 @@
     <div class="grid-produtos">
         @forelse($produtos as $i => $prod)
             <div class="card {{ $i === 0 ? 'card-principal' : '' }}">
-                <div class="card-topo">🛒</div>
+                <div class="card-topo">
+                    @if(!empty($prod['imagem_url']))
+                        <img src="{{ $prod['imagem_url'] }}" alt="{{ $prod['nome'] }}"
+                            style="max-height:90px;max-width:100%;object-fit:contain;">
+                    @else
+                        🛒
+                    @endif
+                </div>
                 <div class="card-info">
                     <div class="card-nome">{{ $prod['nome'] }}</div>
                     <div class="card-de">de R$ {{ $prod['preco_original'] }}</div>

@@ -214,7 +214,14 @@
     <div class="header">
         <div class="header-esq">
             <div class="pre">Lista de Preços Atacado</div>
-            <div class="nome-loja">{{ $loja['nome'] ?? 'Seu Mercado Atacado' }}</div>
+            <div class="nome-loja">
+                @if(!empty($loja['logo_url']))
+                    <img src="{{ $loja['logo_url'] }}" alt="{{ $loja['nome'] ?? '' }}"
+                        style="max-height:55px;max-width:180px;object-fit:contain;vertical-align:middle;">
+                @else
+                    {{ $loja['nome'] ?? 'Seu Mercado Atacado' }}
+                @endif
+            </div>
             <div class="dados">
                 @if(!empty($loja['cnpj'])) CNPJ: {{ $loja['cnpj'] }} @endif<br>
                 {{ $loja['endereco'] ?? '' }} — {{ $loja['cidade'] ?? '' }}

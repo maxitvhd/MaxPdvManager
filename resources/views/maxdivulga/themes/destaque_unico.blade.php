@@ -268,7 +268,14 @@
     <div class="header">
         <div>
             <span class="badge-destaque">⭐ OFERTA EXCLUSIVA</span>
-            <div class="nome-loja">{{ $loja['nome'] ?? 'Sua Loja' }}</div>
+            <div class="nome-loja">
+                @if(!empty($loja['logo_url']))
+                    <img src="{{ $loja['logo_url'] }}" alt="{{ $loja['nome'] ?? '' }}"
+                        style="max-height:50px;max-width:160px;object-fit:contain;vertical-align:middle;">
+                @else
+                    {{ $loja['nome'] ?? 'Sua Loja' }}
+                @endif
+            </div>
             <div class="header-data">{{ \Carbon\Carbon::now()->isoFormat('D [de] MMMM [de] Y') }}</div>
         </div>
         <div class="header-dir">
@@ -288,7 +295,9 @@
 
     @if($primeiro)
         <div class="destaque-bloco">
-            <div class="destaque-emoji">🛒</div>
+            <div class="destaque-emoji">@if(!empty($primeiro["imagem_url"]))<img src="{{ $primeiro["imagem_url"] }}"
+            alt="{{ $primeiro["nome"] }}" style="max-height:150px;max-width:150px;object-fit:contain;">@else🛒@endif
+            </div>
             <div class="destaque-info">
                 <div class="label-prod">Produto em Destaque</div>
                 <h2>{{ $primeiro['nome'] }}</h2>

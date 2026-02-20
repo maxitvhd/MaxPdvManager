@@ -44,11 +44,17 @@ class MaxDivulgaController extends Controller
         $user = auth()->user();
 
         if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
+            // Admin vê TODAS as campanhas
             $campaigns = MaxDivulgaCampaign::orderBy('created_at', 'desc')->get();
         } else {
             $loja = $this->resolverLoja();
             $lojaId = $loja ? $loja->id : null;
-            $campaigns = MaxDivulgaCampaign::where('loja_id', $lojaId)
+
+            // Exibe campanhas desta loja OU campanhas sem loja (criadas antes da migração)
+            $campaigns = MaxDivulgaCampaign::where(function ($q) use ($lojaId) {
+                $q->where('loja_id', $lojaId)
+                    ->orWhereNull('loja_id');  // compatibilidade retroativa
+            })
                 ->orderBy('created_at', 'desc')
                 ->get();
         }
@@ -90,38 +96,39 @@ class MaxDivulgaController extends Controller
 
         $selectedIds = $request->input('selected_products', []);
         $ruleType = $request->input('product_selection_rule.type');
+        $qty = max(1, intval($request->input('product_quantity', 10)));
 
         $produtos = collect();
 
         if ($ruleType === 'manual' && count($selectedIds) > 0) {
             Log::info("[MAXDIVULGA-02] Modo MANUAL. Qtde selecionados: " . count($selectedIds));
-            $produtos = Produto::whereIn('id', $selectedIds)->get();
+            $produtos = Produto::whereIn('id', $selectedIds)->limit($qty)->get();
 
         } elseif ($ruleType === 'best_sellers') {
-            Log::info("[MAXDIVULGA-02] Modo MAIS VENDIDOS (igual ao dashboard).");
-            // Mesmo método/JOIN que o dashboard usa para rankear
-            $topIds = LojaVendaItem::join('loja_vendas', 'loja_vendas_itens.loja_venda_id', '=', 'loja_vendas.id')
-                ->join('produtos', 'loja_vendas_itens.produto_id', '=', 'produtos.id')
+            Log::info("[MAXDIVULGA-02] Modo MAIS VENDIDOS (por produto_nome, limit={$qty}).");
+            $topNomes = LojaVendaItem::join('loja_vendas', 'loja_vendas_itens.loja_venda_id', '=', 'loja_vendas.id')
                 ->where('loja_vendas.loja_id', $loja->id)
-                ->select(
-                    'loja_vendas_itens.produto_id',
-                    DB::raw('SUM(loja_vendas_itens.quantidade) as total_vendido')
-                )
-                ->groupBy('loja_vendas_itens.produto_id')
+                ->select('loja_vendas_itens.produto_nome', DB::raw('SUM(loja_vendas_itens.quantidade) as total_vendido'))
+                ->groupBy('loja_vendas_itens.produto_nome')
                 ->orderByDesc('total_vendido')
-                ->limit(10)
-                ->get()
-                ->pluck('produto_id');
+                ->limit(50) // busca mais pra filtrar depois
+                ->get()->pluck('produto_nome');
 
-            $produtos = Produto::whereIn('id', $topIds)->get();
+            $query = Produto::where('loja_id', $loja->id)->whereIn('nome', $topNomes);
+            // Se o usuário desmarcou produtos, respeitar a seleção
+            if (count($selectedIds) > 0) {
+                $query->whereIn('id', $selectedIds);
+            }
+            $produtos = $query->limit($qty)->get();
 
         } elseif ($ruleType === 'category') {
             $cat = $request->input('product_selection_rule.value', '');
-            Log::info("[MAXDIVULGA-02] Modo CATEGORIA: {$cat}");
-            $produtos = Produto::where('loja_id', $loja->id)
-                ->where('categoria', 'like', "%{$cat}%")
-                ->limit(10)
-                ->get();
+            Log::info("[MAXDIVULGA-02] Modo CATEGORIA: {$cat}, limit={$qty}");
+            $query = Produto::where('loja_id', $loja->id)->where('categoria', 'like', "%{$cat}%");
+            if (count($selectedIds) > 0) {
+                $query->whereIn('id', $selectedIds);
+            }
+            $produtos = $query->limit($qty)->get();
         }
 
         Log::info("[MAXDIVULGA-03] Total de produtos para o catálogo: " . $produtos->count());
@@ -135,14 +142,40 @@ class MaxDivulgaController extends Controller
                 ? $precoOriginal - ($precoOriginal * ($descontoPct / 100))
                 : $precoOriginal;
 
+            // Busca imagem pelo código de barras (padrão do sistema)
+            $codigoBarra = trim($prod->codigo_barra ?? '');
+            $imagemUrl = null;
+            foreach (['.jpg', '.jpeg', '.png', '.webp'] as $ext) {
+                $testPath = storage_path("app/public/lojas/{$loja->codigo}/produtos/{$codigoBarra}{$ext}");
+                if ($codigoBarra && file_exists($testPath)) {
+                    $imagemUrl = url("storage/lojas/{$loja->codigo}/produtos/{$codigoBarra}{$ext}");
+                    break;
+                }
+            }
+            // Fallback: campo imagem do cadastro
+            if (!$imagemUrl && !empty($prod->imagem) && file_exists(storage_path('app/public/' . ltrim($prod->imagem, '/')))) {
+                $imagemUrl = url('storage/' . ltrim($prod->imagem, '/'));
+            }
+
             $produtosParaCatalogo[] = [
                 'nome' => $prod->nome,
                 'preco_original' => number_format($precoOriginal, 2, ',', '.'),
                 'preco_novo' => number_format($precoNovo, 2, ',', '.'),
+                'codigo_barra' => $codigoBarra,
+                'imagem_url' => $imagemUrl,
             ];
         }
 
-        // Dados da loja para os templates
+        // Dados da loja para os templates (inclui logo)
+        $logoPath = storage_path("app/public/lojas/{$loja->codigo}/logo/logo.png");
+        $logoUrl = file_exists($logoPath) ? url("storage/lojas/{$loja->codigo}/logo/logo.png") : null;
+        // Tenta .jpg também
+        if (!$logoUrl) {
+            $logoPathJpg = storage_path("app/public/lojas/{$loja->codigo}/logo/logo.jpg");
+            if (file_exists($logoPathJpg))
+                $logoUrl = url("storage/lojas/{$loja->codigo}/logo/logo.jpg");
+        }
+
         $dadosLoja = [
             'nome' => $loja->nome ?? '',
             'telefone' => $loja->telefone ?? '',
@@ -151,10 +184,17 @@ class MaxDivulgaController extends Controller
             'cep' => $loja->cep ?? '',
             'cnpj' => $loja->cnpj ?? '',
             'codigo' => $loja->codigo ?? '',
+            'logo_url' => $logoUrl,
         ];
 
         Log::info("[MAXDIVULGA-04] Acionando IA para gerar 2 versões de copy...");
         $aiService = new \App\Services\AiCopyWriterService();
+
+        // Detecta o tema com base nos produtos (antes da copy, para usar no folder e no prompt)
+        $temaCampanha = $aiService->detectarTema($produtosParaCatalogo);
+        $dadosLoja['tema_campanha'] = $temaCampanha;
+        Log::info("[MAXDIVULGA-04A] Tema detectado: {$temaCampanha}");
+
         $copyPrincipal = $aiService->generateCopy($produtosParaCatalogo, $campaign->persona);
         $copyAcompanhamento = $aiService->generateCopySocial($produtosParaCatalogo, $campaign->persona, $dadosLoja);
         $campaign->update([
@@ -239,20 +279,22 @@ class MaxDivulgaController extends Controller
         $limit = $request->get('limit', 10);
 
         if ($rule === 'best_sellers') {
-            $topIds = LojaVendaItem::join('loja_vendas', 'loja_vendas_itens.loja_venda_id', '=', 'loja_vendas.id')
-                ->join('produtos', 'loja_vendas_itens.produto_id', '=', 'produtos.id')
+            // Igual ao DashboardController: agrupa por produto_nome (sem JOIN em produtos)
+            $topNomes = LojaVendaItem::join('loja_vendas', 'loja_vendas_itens.loja_venda_id', '=', 'loja_vendas.id')
                 ->where('loja_vendas.loja_id', $loja->id)
                 ->select(
-                    'loja_vendas_itens.produto_id',
+                    'loja_vendas_itens.produto_nome',
                     DB::raw('SUM(loja_vendas_itens.quantidade) as total_vendido')
                 )
-                ->groupBy('loja_vendas_itens.produto_id')
+                ->groupBy('loja_vendas_itens.produto_nome')
                 ->orderByDesc('total_vendido')
                 ->limit($limit)
                 ->get()
-                ->pluck('produto_id');
+                ->pluck('produto_nome');
 
-            return response()->json(Produto::whereIn('id', $topIds)->get());
+            return response()->json(
+                Produto::where('loja_id', $loja->id)->whereIn('nome', $topNomes)->get()
+            );
         }
 
         if ($rule === 'category') {
