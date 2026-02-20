@@ -97,65 +97,117 @@ class CheckoutController extends Controller
         return redirect()->route('checkouts.index')->with('success', 'Máquina excluída com sucesso!');
     }
 
+    public function toggleStatus($id)
+    {
+        $checkout = Checkout::findOrFail($id);
+        $licenca = $checkout->licenca;
+
+        if ($checkout->status === 'ativo') {
+            // Desativar é sempre permitido
+            $checkout->update(['status' => 'inativo']);
+            return redirect()->back()->with('success', 'O dispositivo foi desativado com sucesso.');
+        } else {
+            // Para ativar, precisa checar limitação de plano e validade da licença
+            if (!$licenca || !$licenca->isValid()) {
+                return redirect()->back()->with('error', 'Não foi possível ativar. A licença está inativa ou vencida.');
+            }
+
+            $ativos = Checkout::where('licenca_id', $licenca->id)->where('status', 'ativo')->count();
+            if ($ativos >= $licenca->limite_dispositivos) {
+                return redirect()->back()->with('error', "Limite da Licença excedido! Seu plano atual suporta no máximo {$licenca->limite_dispositivos} dispositivo(s). Desative algum primeiro.");
+            }
+
+            $checkout->update(['status' => 'ativo']);
+            return redirect()->back()->with('success', 'Dispositivo ativado! Ele já pode se conectar ao PDV.');
+        }
+    }
 
     public function licenca(Request $request)
     {
         $key = $request->header('Authorization');
         $key = str_replace('Bearer ', '', $key);
 
+        Log::info('--- TENTATIVA DE ATIVAÇÃO DE PDV ---');
+        Log::info('Key recebida: ' . $key);
+
         if (!$key) {
+            Log::warning('Tentativa falhou: Chave de licença não fornecida.');
             return response()->json(['error' => 'Chave de licença não fornecida'], 400);
         }
 
         $licenca = Licenca::where('key', $key)->first();
-
-        // Usamos o método novo de validade com Grace Period
-        if (!$licenca || !$licenca->isValid()) {
-            return response()->json(['error' => 'Licença inválida, inativa ou com pagamentos pendentes.'], 403);
-        }
+        Log::info('Licença localizada no BD: ' . ($licenca ? 'SIM, ID ' . $licenca->id : 'NÃO'));
 
         $dadosMaquina = $request->all();
+        $licencaValid = $licenca && $licenca->isValid();
+
+        Log::info('Licença é Considerada Válida? ' . ($licencaValid ? 'SIM' : 'NÃO'));
+        Log::info('Dados do MAC: ' . ($dadosMaquina['mac'] ?? 'MAC_NULO'));
 
         // Verifica se essa máquina já está registrada nesse MAC/Código
-        $checkout_existente = Checkout::where('licenca_id', $licenca->id)
+        $checkout_existente = Checkout::where('licenca_id', $licenca ? $licenca->id : 0)
             ->where('mac', $dadosMaquina['mac'] ?? null)
             ->first();
 
-        if ($checkout_existente) {
-            $checkout_existente->update(['status' => 'ativo']); // Atualiza se estivesse inativo
-            return response()->json([
-                'success' => 'Conexão bem-sucedida',
-                'mensagem' => 'O terminal já estava registrado e foi autenticado.',
-                'validade' => $licenca->validade,
-                'status' => $licenca->status,
+        Log::info('Checkout pré-existente (Mesmo MAC): ' . ($checkout_existente ? 'SIM, ID ' . $checkout_existente->id . ', Status Atual: ' . $checkout_existente->status : 'NÃO CRIADO AINDA'));
+
+        // Conta quantos existem ativos dessa loja
+        $qntAtivos = $licenca ? Checkout::where('licenca_id', $licenca->id)->where('status', 'ativo')->count() : 0;
+
+        Log::info('Total de Dispositivos Ativos nesta Licença: ' . $qntAtivos . '. Limite da Licença: ' . ($licenca->limite_dispositivos ?? 0));
+
+        // Determina o status a ser atribuído
+        $statusAtual = $checkout_existente ? $checkout_existente->status : 'inativo';
+        $novoStatus = 'inativo';
+
+        if ($licencaValid) {
+            if ($statusAtual === 'ativo') {
+                $novoStatus = 'ativo'; // Já estava ativo e a licença tá ok
+                Log::info('Decisão de Status: Manter ATIVO (Dispositivo já pertencia à cota ativa).');
+            } else {
+                // Tenta ativar automaticamente se tiver espaço
+                if ($qntAtivos < $licenca->limite_dispositivos) {
+                    $novoStatus = 'ativo';
+                    Log::info('Decisão de Status: Promover para ATIVO (Há espaço na cota limite).');
+                } else {
+                    Log::warning('Decisão de Status: Manter INATIVO (A cota máxima de ' . $licenca->limite_dispositivos . ' já foi atingida).');
+                }
+            }
+        } else {
+            Log::warning('Decisão de Status: Manter INATIVO forçadamente (Licença inválida ou expirada).');
+        }
+
+        // Se a máquina não existe, cria
+        if (!$checkout_existente) {
+            $checkout_existente = Checkout::create([
+                'licenca_id' => $licenca->id,
+                'codigo' => $dadosMaquina['codigo'] ?? null,
+                'descricao' => 'PDV ' . ($dadosMaquina['hostname'] ?? 'Novo'),
+                'sistema_operacional' => $dadosMaquina['sistema_operacional'] ?? null,
+                'versao_sistema' => $dadosMaquina['versao_sistema'] ?? null,
+                'arquitetura' => $dadosMaquina['arquitetura'] ?? null,
+                'hostname' => $dadosMaquina['hostname'] ?? null,
+                'ip' => $dadosMaquina['ip'] ?? null,
+                'mac' => $dadosMaquina['mac'] ?? null,
+                'status' => $novoStatus,
             ]);
+        } else {
+            // Atualiza sempre o último IP e o status calculado
+            $checkout_existente->update(['status' => $novoStatus, 'ip' => $dadosMaquina['ip'] ?? $checkout_existente->ip]);
         }
 
-        // Caso seja uma nova máquina, checar o limite maximo de dispositivos
-        $qntAtivos = Checkout::where('licenca_id', $licenca->id)->where('status', 'ativo')->count();
-
-        if ($qntAtivos >= $licenca->limite_dispositivos) {
-            return response()->json([
-                'error' => 'Limite de dispositivos atingido para este plano.',
-                'limite' => $licenca->limite_dispositivos
-            ], 403);
+        // Bloqueio do Frontend (Aplicativo do PDV) se precisou ficar inativo
+        if (!$licencaValid) {
+            return response()->json(['error' => 'Licença inválida, inativa ou com pagamentos pendentes. Dispositivo registrado e aguardando regularização.'], 403);
         }
 
-        $checkout = Checkout::create([
-            'licenca_id' => $licenca->id,
-            'codigo' => $dadosMaquina['codigo'] ?? null,
-            'sistema_operacional' => $dadosMaquina['sistema_operacional'] ?? null,
-            'versao_sistema' => $dadosMaquina['versao_sistema'] ?? null,
-            'arquitetura' => $dadosMaquina['arquitetura'] ?? null,
-            'hostname' => $dadosMaquina['hostname'] ?? null,
-            'ip' => $dadosMaquina['ip'] ?? null,
-            'mac' => $dadosMaquina['mac'] ?? null,
-            'status' => 'ativo',
-        ]);
+        if ($novoStatus === 'inativo') {
+            return response()->json(['error' => 'Limite de dispositivos atingido para este plano. Gerencie seus terminais na plataforma Web.'], 403);
+        }
 
         return response()->json([
-            'success' => 'Dados salvos com sucesso',
-            'checkout' => $checkout,
+            'success' => 'Conexão bem-sucedida',
+            'checkout' => $checkout_existente,
             'validade' => $licenca->validade,
             'status' => $licenca->status,
         ]);

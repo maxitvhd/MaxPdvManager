@@ -30,6 +30,41 @@
     crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   <link id="pagestyle" href="/../assets/css/soft-ui-dashboard.css?v=1.0.3" rel="stylesheet" />
+  <style>
+    /* Remove scrollbar constraint entirely from sidebar */
+    #sidenav-collapse-main::-webkit-scrollbar {
+      display: none;
+    }
+
+    #sidenav-collapse-main {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Fix visibility of section headings (Mercado, Administração) when sidebar is collapsed */
+    .g-sidenav-hidden .navbar-vertical .sidenav-heading {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    /* Show headings again when hovering the collapsed sidebar */
+    .g-sidenav-hidden .navbar-vertical:hover .sidenav-heading {
+      opacity: 1;
+      width: auto;
+    }
+
+    /* Hide the collapse submenus when the sidebar is retracted to prevent icon overlap */
+    .g-sidenav-hidden .navbar-vertical .nav-item .collapse {
+      display: none !important;
+    }
+
+    /* Show the collapse submenus when hovering the collapsed sidebar */
+    .g-sidenav-hidden .navbar-vertical:hover .nav-item .collapse.show {
+      display: block !important;
+    }
+  </style>
 </head>
 
 <body

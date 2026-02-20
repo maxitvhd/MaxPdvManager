@@ -29,14 +29,32 @@
                         <!-- Planos -->
                         <h6 class="mt-2 mb-3">1. Escolha o Plano Principal</h6>
                         <div class="row">
+                            <!-- Card de Apenas Extras / Manter Plano Atual -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card border border-2 shadow-none cursor-pointer h-100 plano-card border-primary"
+                                    onclick="selectPlano(0, 0)">
+                                    <div class="card-body p-3 text-center">
+                                        <div class="form-check d-flex justify-content-center mb-2">
+                                            <input class="form-check-input" type="radio" name="plano_id"
+                                                id="plano_0" value="0" checked onchange="calculateTotal()">
+                                        </div>
+                                        <h6 class="mb-1">Manter o Plano Atual</h6>
+                                        <h4 class="font-weight-bolder text-dark mb-1">R$ 0,00</h4>
+                                        <span class="text-xs">Apenas Comprar Adicionais</span><br>
+                                        <span class="badge badge-sm bg-gradient-secondary mt-2">Sem Custo Recorrente Base</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Opções dos Planos no Banco de Dados -->
                             @foreach($planos as $plano)
                                 <div class="col-md-6 mb-3">
-                                    <div class="card border border-2 shadow-none cursor-pointer h-100 plano-card {{ $loop->first ? 'border-primary' : '' }}"
+                                    <div class="card border border-2 shadow-none cursor-pointer h-100 plano-card"
                                         onclick="selectPlano({{ $plano->id }}, {{ $plano->valor }})">
                                         <div class="card-body p-3 text-center">
                                             <div class="form-check d-flex justify-content-center mb-2">
                                                 <input class="form-check-input" type="radio" name="plano_id"
-                                                    id="plano_{{ $plano->id }}" value="{{ $plano->id }}" {{ $loop->first ? 'checked' : '' }} onchange="calculateTotal()">
+                                                    id="plano_{{ $plano->id }}" value="{{ $plano->id }}" onchange="calculateTotal()">
                                             </div>
                                             <h6 class="mb-1">{{ $plano->nome }}</h6>
                                             <h4 class="font-weight-bolder text-dark mb-1">R$

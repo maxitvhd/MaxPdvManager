@@ -16,6 +16,7 @@ use App\Http\Controllers\FuncionarioController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CancelamentoController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\UsuarioController;
 
 #----- bibliotecas para resetar cache spatie -----
 use Illuminate\Support\Facades\Artisan;
@@ -48,9 +49,9 @@ Route::group(['middleware' => 'auth'], function () {
         return view('rtl');
     })->name('rtl');
 
-    Route::get('user-management', function () {
-        return view('laravel-examples/user-management');
-    })->name('user-management');
+    Route::middleware(['role:admin|super-admin'])->group(function () {
+        Route::resource('usuarios', UsuarioController::class)->except(['create', 'store', 'show']);
+    });
 
     Route::get('tables', function () {
         return view('tables');
@@ -116,6 +117,7 @@ Route::group(['middleware' => 'auth'], function () {
     Route::put('licencas/{codigo}', [LicencaController::class, 'update'])->name('licencas.update');
     Route::delete('licencas/{codigo}', [LicencaController::class, 'destroy'])->name('licencas.destroy');
     Route::resource('lojas', LojasController::class);
+    Route::patch('checkouts/{checkout}/toggle', [CheckoutController::class, 'toggleStatus'])->name('checkouts.toggleStatus');
     Route::resource('checkouts', CheckoutController::class);
 });
 

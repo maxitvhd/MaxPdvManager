@@ -252,19 +252,31 @@ class PagamentosController extends Controller
                             if ($licenca) {
                                 if ($fatura->dados_assinatura) {
                                     $dados = $fatura->dados_assinatura;
-                                    $licenca->plano_id = $dados['plano_id'] ?? $licenca->plano_id;
-                                    $licenca->status = 'ativo';
-                                    $licenca->validade = now()->addMonths($dados['meses_validade'] ?? 1);
 
-                                    $totalDispositivos = $dados['limite_dispositivos_base'] ?? 1;
-                                    $modulos = [];
+                                    // Verificando se trata-se de assinatura de plano ou somente expansão de loja
+                                    $ehMudancaDePlano = !empty($dados['plano_id']) && $dados['plano_id'] > 0;
+                                    if ($ehMudancaDePlano) {
+                                        $licenca->plano_id = $dados['plano_id'];
+                                        $licenca->validade = now()->addMonths($dados['meses_validade']);
+                                        $totalDispositivos = $dados['limite_dispositivos_base'] ?? 1;
+                                        // Reseta os módulos se comprar um plano do zero. Só fica os dessa Fatura.
+                                        $modulos = [];
+                                    } else {
+                                        // Apenas comprou extra / expansão. Mantém a data de validade limpa.
+                                        $totalDispositivos = $licenca->limite_dispositivos;
+                                        $modulos = is_array($licenca->modulos_adicionais) ? $licenca->modulos_adicionais : [];
+                                    }
+
+                                    $licenca->status = 'ativo';
 
                                     if (isset($dados['extras']) && is_array($dados['extras'])) {
                                         foreach ($dados['extras'] as $extra) {
                                             if ($extra['tipo'] === 'dispositivo') {
                                                 $totalDispositivos += (int) $extra['qtd'];
                                             } else {
-                                                $modulos[] = $extra['nome'];
+                                                if (!in_array($extra['nome'], $modulos)) {
+                                                    $modulos[] = $extra['nome'];
+                                                }
                                             }
                                         }
                                     }

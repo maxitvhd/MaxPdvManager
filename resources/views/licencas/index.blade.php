@@ -9,7 +9,8 @@
             <table class="table table-bordered align-items-center mb-0">
                 <thead>
                     <tr>
-                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Código</th>
+                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Cód</th>
+                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Key</th>
                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Descrição</th>
                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Validade
                         </th>
@@ -24,12 +25,15 @@
                 <tbody>
                     @foreach ($licencas as $licenca)
                         <tr>
+                            <td class="align-middle text-sm font-weight-bold">
+                                #{{ $licenca->codigo }}
+                            </td>
                             <td class="align-middle text-sm">
                                 <div class="d-flex align-items-center">
-                                    <span class="font-weight-bold me-2">********{{ substr($licenca->codigo, -4) }}</span>
+                                    <span class="font-weight-bold me-2" style="font-family: monospace;">********{{ substr($licenca->key, -4) }}</span>
                                     <button type="button" class="btn btn-link text-secondary mb-0 px-0" 
-                                        onclick="copyToClipboard('{{ $licenca->codigo }}')" 
-                                        data-bs-toggle="tooltip" data-bs-placement="top" title="Copiar Chave Inteira">
+                                        onclick="copyToClipboard('{{ $licenca->key }}')" 
+                                        data-bs-toggle="tooltip" data-bs-placement="top" title="Copiar Key Inteira">
                                         <i class="far fa-copy text-sm"></i>
                                     </button>
                                 </div>
@@ -45,7 +49,7 @@
                             </td>
                             <td class="align-middle text-center text-sm">{{ $licenca->loja->nome }}</td>
                             <td class="align-middle text-center" style="white-space: nowrap;">
-                                <a href="{{ route('licencas.edit', $licenca->id) }}"
+                                <a href="{{ route('licencas.edit', $licenca->codigo) }}"
                                     class="btn btn-icon-only btn-rounded btn-outline-warning mb-0 me-1"
                                     data-bs-toggle="tooltip" data-bs-placement="top" title="Editar">
                                     <i class="fas fa-edit"></i>
@@ -60,7 +64,7 @@
                                     data-bs-toggle="tooltip" data-bs-placement="top" title="Mudar Plano ou Extras">
                                     <i class="fas fa-shopping-cart"></i>
                                 </a>
-                                <form action="{{ route('licencas.destroy', $licenca->id) }}" method="POST"
+                                <form action="{{ route('licencas.destroy', $licenca->codigo) }}" method="POST"
                                     style="display:inline;">
                                     @csrf
                                     @method('DELETE')

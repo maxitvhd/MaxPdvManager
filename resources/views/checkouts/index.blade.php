@@ -6,30 +6,46 @@
     <table class="table">
         <thead>
             <tr>
-                <th>ID</th>
                 <th>Licença</th>
-                <th>Descrição</th>
-                <th>IP</th>
-                <th>Sistema Operacional</th>
-                <th>Hardware</th>
+                <th>Descrição / Nome</th>
+                <th>Rede / IP</th>
+                <th>OS</th>
+                <th>Status</th>
                 <th>Ações</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($checkouts as $checkout)
                 <tr>
-                    <td>{{ $checkout->id }}</td>
                     <td>{{ $checkout->licenca->codigo ?? 'N/A' }}</td>
-                    <td>{{ $checkout->descricao }}</td>
+                    <td>{{ $checkout->descricao }}<br><small class="text-muted">{{ $checkout->hardware }}</small></td>
                     <td>{{ $checkout->ip }}</td>
                     <td>{{ $checkout->sistema_operacional }}</td>
-                    <td>{{ $checkout->hardware }}</td>
                     <td>
-                        <a href="{{ route('checkouts.edit', $checkout->id) }}" class="btn btn-warning">Editar</a>
+                        <span class="badge {{ $checkout->status === 'ativo' ? 'bg-success' : 'bg-danger' }}">
+                            {{ ucfirst($checkout->status) }}
+                        </span>
+                    </td>
+                    <td>
+                        <!-- Toggle de Status -->
+                        <form action="{{ route('checkouts.toggleStatus', $checkout->id) }}" method="POST"
+                            style="display:inline;">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit"
+                                class="btn btn-sm {{ $checkout->status === 'ativo' ? 'btn-outline-danger' : 'btn-outline-success' }} mb-0 me-1"
+                                title="{{ $checkout->status === 'ativo' ? 'Desativar Conexão' : 'Autorizar Conexão' }}">
+                                {{ $checkout->status === 'ativo' ? 'Desligar' : 'Ligar PDV' }}
+                            </button>
+                        </form>
+
+                        <a href="{{ route('checkouts.edit', $checkout->id) }}"
+                            class="btn btn-sm btn-warning mb-0 me-1">Editar</a>
                         <form action="{{ route('checkouts.destroy', $checkout->id) }}" method="POST" style="display:inline;">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-danger">Excluir</button>
+                            <button type="submit" class="btn btn-sm btn-danger mb-0"
+                                onclick="return confirm('Deseja realmente remover?')">Excluir</button>
                         </form>
                     </td>
                 </tr>

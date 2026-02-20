@@ -25,7 +25,7 @@ class LicencaController extends Controller
 
     public function store(Request $request)
     {
-        $codigo = Str::random(30);
+        $codigo = strtoupper(Str::random(6));
         $key = Str::random(40); // Gerar a chave secreta
 
         $rules = [

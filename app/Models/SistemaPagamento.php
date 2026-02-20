@@ -11,12 +11,14 @@ class SistemaPagamento extends Model
         'dia_vencimento',
         'data_proximo_pagamento',
         'valor',
-        'status'
+        'status',
+        'dados_assinatura'
     ];
 
     protected $casts = [
         'data_proximo_pagamento' => 'date',
-        'valor' => 'decimal:2'
+        'valor' => 'decimal:2',
+        'dados_assinatura' => 'array'
     ];
 
     public function licenca()

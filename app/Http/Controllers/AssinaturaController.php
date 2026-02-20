@@ -46,22 +46,35 @@ class AssinaturaController extends Controller
         }
 
         $request->validate([
-            'plano_id' => 'required|exists:sistema_planos,id',
+            'plano_id' => 'required|integer',
             'adicionais' => 'nullable|array',
             'adicionais.*.id' => 'exists:sistema_adicionais,id',
         ]);
 
-        $plano = SistemaPlano::find($request->plano_id);
-        $total = $plano->valor;
-
+        $total = 0;
         $carrinhoInfo = [
-            'plano_id' => $plano->id,
-            'plano_nome' => $plano->nome,
-            'plano_valor' => $plano->valor,
-            'meses_validade' => $plano->meses_validade,
-            'limite_dispositivos_base' => $plano->limite_dispositivos,
+            'plano_id' => null,
+            'plano_nome' => 'Nenhum / Manter Atual',
+            'plano_valor' => 0,
+            'meses_validade' => 0,
+            'limite_dispositivos_base' => ($licenca->limite_dispositivos ?? 1),
             'extras' => []
         ];
+
+        // Se escolheu um plano novo
+        if ($request->plano_id > 0) {
+            $plano = SistemaPlano::find($request->plano_id);
+            if ($plano) {
+                $total = $plano->valor;
+                $carrinhoInfo['plano_id'] = $plano->id;
+                $carrinhoInfo['plano_nome'] = $plano->nome;
+                $carrinhoInfo['plano_valor'] = $plano->valor;
+                $carrinhoInfo['meses_validade'] = $plano->meses_validade;
+                $carrinhoInfo['limite_dispositivos_base'] = $plano->limite_dispositivos;
+            }
+        }
+
+        $temExtra = false;
 
         if ($request->has('adicionais')) {
             foreach ($request->adicionais as $extraItemId => $extraFormData) {
@@ -70,6 +83,7 @@ class AssinaturaController extends Controller
 
                 $adicional = SistemaAdicional::find($extraItemId);
                 if ($adicional) {
+                    $temExtra = true;
                     $qtd = (isset($extraFormData['qtd']) && (int) $extraFormData['qtd'] > 0) ? (int) $extraFormData['qtd'] : 1;
                     $valorExtraItem = $adicional->valor * $qtd;
                     $total += $valorExtraItem;
@@ -86,17 +100,21 @@ class AssinaturaController extends Controller
             }
         }
 
+        if ($total <= 0 && !$temExtra) {
+            return back()->withErrors(['erro' => 'Você precisa selecionar um plano ou pelo menos um adicional para gerar a fatura.']);
+        }
+
         // Gera a Intenção de Pagamento (Fatura)
         $pagamento = SistemaPagamento::create([
             'licenca_id' => $licenca->id,
             'dia_vencimento' => now()->day,
             'valor' => $total,
             'status' => 'pendente',
-            'data_proximo_pagamento' => now()->addMonths($plano->meses_validade), // Previsão
+            'data_proximo_pagamento' => $carrinhoInfo['meses_validade'] > 0 ? now()->addMonths($carrinhoInfo['meses_validade']) : ($licenca->validade ?? now()->addMonths(1)), // Previsão
             'dados_assinatura' => $carrinhoInfo
         ]);
 
         return redirect()->route('pagamentos.gerar', $pagamento->id)
-            ->with('success', 'Fatura gerada com sucesso! Conclua o pagamento para renovar a licença e expandir sua loja.');
+            ->with('success', 'Fatura gerada com sucesso! Conclua o pagamento para habilitar os recursos na licença.');
     }
 }
