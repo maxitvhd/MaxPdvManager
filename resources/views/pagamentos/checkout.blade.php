@@ -52,6 +52,53 @@
                 </div>
             </div>
         </div>
-    </div>
 
+        <!-- Efeito Confetti e Auto-Update -->
+        <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                let isPaid = false;
+
+                const checkStatus = () => {
+                    if (isPaid) return;
+                    fetch("{{ route('pagamentos.status_json', $pagamento->id) }}")
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.status === 'pago') {
+                                isPaid = true;
+
+                                // Dispara confetes!
+                                var duration = 3 * 1000;
+                                var animationEnd = Date.now() + duration;
+                                var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+                                function randomInRange(min, max) {
+                                    return Math.random() * (max - min) + min;
+                                }
+
+                                var interval = setInterval(function () {
+                                    var timeLeft = animationEnd - Date.now();
+                                    if (timeLeft <= 0) return clearInterval(interval);
+
+                                    var particleCount = 50 * (timeLeft / duration);
+                                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+                                }, 250);
+
+                                // Atualiza texto para dar feedback ao usuário
+                                document.querySelector('.text-success').innerHTML = "PAGAMENTO APROVADO! <br><small>Redirecionando...</small>";
+
+                                // Espera a animação acabar e redireciona para faturas
+                                setTimeout(() => {
+                                    window.location.href = "{{ route('pagamentos.faturas') }}";
+                                }, 3500);
+                            }
+                        })
+                        .catch(e => console.error("Erro ao verificar PIX: ", e));
+                };
+
+                // Pula a cada 4 segundos
+                setInterval(checkStatus, 4000);
+            });
+        </script>
 @endsection

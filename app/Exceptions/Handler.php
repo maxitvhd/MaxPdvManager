@@ -37,5 +37,9 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+
+        $this->renderable(function (\Spatie\Permission\Exceptions\UnauthorizedException $e, $request) {
+            return redirect()->route('dashboard')->with('error', 'Ops! Você não tem permissão para acessar esta página administrativa.');
+        });
     }
 }

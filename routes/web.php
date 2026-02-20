@@ -174,12 +174,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/financeiro', [DashboardController::class, 'financeiro'])->name('dashboard.financeiro');
 
     // Módulo Financeiro / Planos / Pagamentos
-    Route::resource('planos', \App\Http\Controllers\SistemaPlanoController::class);
-    Route::resource('adicionais', \App\Http\Controllers\SistemaAdicionalController::class);
+    Route::prefix('admin')->middleware(['role:admin|super-admin'])->group(function () {
+        Route::resource('planos', \App\Http\Controllers\SistemaPlanoController::class);
+        Route::resource('adicionais', \App\Http\Controllers\SistemaAdicionalController::class);
+    });
     Route::get('/pagamentos/configuracoes', [\App\Http\Controllers\PagamentosController::class, 'configuracoesAdmin'])->name('pagamentos.configuracoes');
     Route::post('/pagamentos/configuracoes', [\App\Http\Controllers\PagamentosController::class, 'salvarConfiguracoes']);
     Route::get('/pagamentos/faturas', [\App\Http\Controllers\PagamentosController::class, 'indexFaturas'])->name('pagamentos.faturas');
     Route::get('/pagamentos/faturas/{pagamento}/gerar', [\App\Http\Controllers\PagamentosController::class, 'gerarFatura'])->name('pagamentos.gerar');
+    Route::get('/pagamentos/faturas/{pagamento}/status', [\App\Http\Controllers\PagamentosController::class, 'consultarStatus'])->name('pagamentos.status_json');
     Route::post('/pagamentos/transacoes/{transacao}/estornar', [\App\Http\Controllers\PagamentosController::class, 'reembolsar'])->name('pagamentos.estornar');
 
     // Carrinho Vitrine (Planos + Adicionais)

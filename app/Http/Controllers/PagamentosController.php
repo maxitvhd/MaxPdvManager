@@ -136,6 +136,23 @@ class PagamentosController extends Controller
     }
 
     /**
+     * Retorna o status atual da fatura (para auto-update do PIX)
+     */
+    public function consultarStatus(SistemaPagamento $pagamento)
+    {
+        // Por segurança, confere se o usuário tem acesso
+        $user = auth()->user();
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            $lojasIds = $this->getLojasPermitidas($user)->pluck('id')->toArray();
+            if (!in_array($pagamento->licenca->loja_id ?? 0, $lojasIds)) {
+                return response()->json(['error' => 'Acesso negado.'], 403);
+            }
+        }
+
+        return response()->json(['status' => $pagamento->status]);
+    }
+
+    /**
      * Admin - Realizar Estorno
      */
     public function reembolsar(SistemaTransacao $transacao, MercadoPagoService $mp)
