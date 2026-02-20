@@ -25,20 +25,29 @@ class LicencaController extends Controller
 
     public function store(Request $request)
     {
-
         $codigo = Str::random(30);
 
-        $request->validate([
+        $rules = [
             'loja_id' => 'required',
-            'codigo' =>  $codigo,
             'descricao' => 'required',
-            'validade' => 'required|date',
+        ];
 
-        ]);
-        $request['user_id'] = Auth::id();
-        $request['codigo'] = $codigo;
+        if (Auth::user()->hasRole('admin')) {
+            $rules['validade'] = 'required|date';
+        }
 
-        Licenca::create($request->all());
+        $request->validate($rules);
+
+        $data = $request->all();
+        $data['user_id'] = Auth::id();
+        $data['codigo'] = $codigo;
+
+        if (!Auth::user()->hasRole('admin')) {
+            unset($data['validade']);
+            $data['status'] = 'inativo'; // Requererá compra de plano
+        }
+
+        Licenca::create($data);
 
         return redirect()->route('licencas.index')->with('success', 'Licença criada com sucesso!');
     }
@@ -52,14 +61,25 @@ class LicencaController extends Controller
 
     public function update(Request $request, $id)
     {
-        $request->validate([
+        $rules = [
             'loja_id' => 'required',
-            'descricao' => 'required',
-            'validade' => 'required|date',
-        ]);
-       //dd($request);
+            'descricao' => 'required'
+        ];
+
+        // Bloqueia update de validade por lojistas
+        if (Auth::user()->hasRole('admin')) {
+            $rules['validade'] = 'required|date';
+        }
+
+        $request->validate($rules);
         $licenca = Licenca::findOrFail($id);
-        $licenca->update($request->all());
+
+        $data = $request->all();
+        if (!Auth::user()->hasRole('admin')) {
+            unset($data['validade']);
+        }
+
+        $licenca->update($data);
 
         return redirect()->route('licencas.index')->with('success', 'Licença atualizada com sucesso!');
     }

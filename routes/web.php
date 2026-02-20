@@ -109,27 +109,27 @@ Route::group(['middleware' => 'auth'], function () {
     Route::resource('licencas', LicencaController::class);
     Route::resource('lojas', LojasController::class);
     Route::resource('checkouts', CheckoutController::class);
-  });
+});
 
 #------------ ROTAS DE FUNCIONÁRIOS E PERMISSÕES --------------------------
 Route::group(['middleware' => 'auth'], function () {
-    
+
     // Rota Principal (Listagem e Filtro)
     Route::get('/funcionarios', [FuncionarioController::class, 'index'])->name('funcionarios.index');
 
     // Rotas de Ação (Adicionar, Editar, Excluir)
     // Usamos 'lojaCodigo' para deixar claro para o Laravel que é uma string
     Route::prefix('lojas/{lojaCodigo}')->group(function () {
-        
+
         // Rota auxiliar para redirecionar quem acessa via URL direta
         Route::get('/funcionarios', [FuncionarioController::class, 'lojaFuncionarios'])->name('lojas.funcionarios.index');
-        
+
         // Adicionar Funcionário
         Route::post('/funcionarios', [FuncionarioController::class, 'store'])->name('lojas.funcionarios.store');
-        
+
         // Atualizar Permissão
         Route::put('/permissoes/{permissao}', [FuncionarioController::class, 'updatePermissao'])->name('lojas.permissoes.update');
-        
+
         // Excluir Permissão
         Route::delete('/permissoes/{permissao}', [FuncionarioController::class, 'destroyPermissao'])->name('lojas.permissoes.destroy');
     });
@@ -148,12 +148,12 @@ Route::prefix('lojas/{loja}')->group(function () {
 });
 
 #------------ ROTAS DE API PARA CHECKOUT ------------------
-Route::post('/api/mensagens', [CheckoutController::class, 'mensagens']); 
+Route::post('/api/mensagens', [CheckoutController::class, 'mensagens']);
 Route::post('/api/licenca', [CheckoutController::class, 'licenca']);
 Route::post('/api/dados', [CheckoutController::class, 'dados']);
 Route::post('/api/produtos', [CheckoutController::class, 'produtos']);
 Route::post('/api/funcionarios', [CheckoutController::class, 'funcionarios']);
-Route::post('/api/clientes', [ CheckoutController::class, 'clientes']);
+Route::post('/api/clientes', [CheckoutController::class, 'clientes']);
 // Rota para sincronização de transações de crédito (POST)
 Route::post('/api/credito/sincronizar', [CheckoutController::class, 'sync']);
 Route::post('/api/cancelamento', [CheckoutController::class, 'cancelamentoChaves']);
@@ -168,12 +168,24 @@ Route::post('/api/upload-imagens-zip', [CheckoutController::class, 'uploadImagen
 Route::middleware(['auth'])->group(function () {
     // Dashboard Principal
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     // Relatórios Avançados
     Route::get('/dashboard/operacional', [DashboardController::class, 'operacional'])->name('dashboard.operacional');
     Route::get('/dashboard/financeiro', [DashboardController::class, 'financeiro'])->name('dashboard.financeiro');
+
+    // Módulo Financeiro / Planos / Pagamentos
+    Route::resource('planos', \App\Http\Controllers\SistemaPlanoController::class);
+    Route::get('/pagamentos/configuracoes', [\App\Http\Controllers\PagamentosController::class, 'configuracoesAdmin'])->name('pagamentos.configuracoes');
+    Route::post('/pagamentos/configuracoes', [\App\Http\Controllers\PagamentosController::class, 'salvarConfiguracoes']);
+    Route::get('/pagamentos/faturas', [\App\Http\Controllers\PagamentosController::class, 'indexFaturas'])->name('pagamentos.faturas');
+    Route::get('/pagamentos/faturas/{pagamento}/gerar', [\App\Http\Controllers\PagamentosController::class, 'gerarFatura'])->name('pagamentos.gerar');
+    Route::post('/pagamentos/transacoes/{transacao}/estornar', [\App\Http\Controllers\PagamentosController::class, 'reembolsar'])->name('pagamentos.estornar');
 });
 
+// Retornos de Pagamento MP
+Route::get('/pagamentos/sucesso', [\App\Http\Controllers\PagamentosController::class, 'sucesso'])->name('pagamentos.sucesso');
+Route::get('/pagamentos/falha', [\App\Http\Controllers\PagamentosController::class, 'falha'])->name('pagamentos.falha');
+Route::get('/pagamentos/pendente', [\App\Http\Controllers\PagamentosController::class, 'pendente'])->name('pagamentos.pendente');
 
 Route::get('/limpar-tudo', function () {
     $user = auth()->user();

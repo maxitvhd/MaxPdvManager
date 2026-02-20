@@ -7,7 +7,7 @@ use App\Models\Licenca;
 use App\Models\Loja;
 use App\Models\User;
 use App\Models\Produtos;
-use App\Models\ProdutoFull; 
+use App\Models\ProdutoFull;
 use App\Models\LojaCancelamentoKey;
 use App\Models\Mensagens;
 use App\Models\Cliente;
@@ -26,7 +26,7 @@ use App\Models\Produto;
 use Illuminate\Support\Facades\Auth;
 use ZipArchive;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB; 
+use Illuminate\Support\Facades\DB;
 
 class CheckoutController extends Controller
 {
@@ -97,7 +97,7 @@ class CheckoutController extends Controller
         return redirect()->route('checkouts.index')->with('success', 'Máquina excluída com sucesso!');
     }
 
-  
+
     public function licenca(Request $request)
     {
         $key = $request->header('Authorization');
@@ -109,20 +109,36 @@ class CheckoutController extends Controller
 
         $licenca = Licenca::where('key', $key)->first();
 
-        if (!$licenca || $licenca->status !== 'ativo') {
-            return response()->json(['error' => 'Licença inválida ou inativa'], 403);
+        // Usamos o método novo de validade com Grace Period
+        if (!$licenca || !$licenca->isValid()) {
+            return response()->json(['error' => 'Licença inválida, inativa ou com pagamentos pendentes.'], 403);
         }
 
         $dadosMaquina = $request->all();
-        $checkout = Checkout::where('licenca_id', $licenca->id)->first();
 
-        if ($checkout) {
+        // Verifica se essa máquina já está registrada nesse MAC/Código
+        $checkout_existente = Checkout::where('licenca_id', $licenca->id)
+            ->where('mac', $dadosMaquina['mac'] ?? null)
+            ->first();
+
+        if ($checkout_existente) {
+            $checkout_existente->update(['status' => 'ativo']); // Atualiza se estivesse inativo
             return response()->json([
                 'success' => 'Conexão bem-sucedida',
-                'mensagem' => 'Já existe um checkout registrado para esta licença.',
-                'validade' => $licenca->validade,  // Adicionado
-                'status' => $licenca->status,      // Adicionado
+                'mensagem' => 'O terminal já estava registrado e foi autenticado.',
+                'validade' => $licenca->validade,
+                'status' => $licenca->status,
             ]);
+        }
+
+        // Caso seja uma nova máquina, checar o limite maximo de dispositivos
+        $qntAtivos = Checkout::where('licenca_id', $licenca->id)->where('status', 'ativo')->count();
+
+        if ($qntAtivos >= $licenca->limite_dispositivos) {
+            return response()->json([
+                'error' => 'Limite de dispositivos atingido para este plano.',
+                'limite' => $licenca->limite_dispositivos
+            ], 403);
         }
 
         $checkout = Checkout::create([
@@ -140,48 +156,48 @@ class CheckoutController extends Controller
         return response()->json([
             'success' => 'Dados salvos com sucesso',
             'checkout' => $checkout,
-            'validade' => $licenca->validade,  // Adicionado
-            'status' => $licenca->status,      // Adicionado
+            'validade' => $licenca->validade,
+            'status' => $licenca->status,
         ]);
     }
 
-    
-       
 
-        public function dados(Request $request)
-{
-    $codigo = $request->input('codigo');
-    $mac = $request->input('mac');
 
-    if (!$codigo || !$mac) {
-        return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
+
+    public function dados(Request $request)
+    {
+        $codigo = $request->input('codigo');
+        $mac = $request->input('mac');
+
+        if (!$codigo || !$mac) {
+            return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
+        }
+
+        $checkout = Checkout::where('codigo', $codigo)
+            ->where('mac', $mac)
+            ->where('status', 'ativo')
+            ->first();
+
+        if (!$checkout) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
+
+        if (!$loja) {
+            return response()->json(['error' => 'Loja não encontrada'], 404);
+        }
+
+        // Busca o código do usuário associado à loja
+        $user = User::find($loja->user_id);
+        $user_codigo = $user ? $user->codigo : null;
+
+        return response()->json([
+            'success' => 'Dados da loja atualizados com sucesso',
+            'loja' => $loja,
+            'user_codigo' => $user_codigo,
+        ], 200);
     }
-
-    $checkout = Checkout::where('codigo', $codigo)
-                        ->where('mac', $mac)
-                        ->where('status', 'ativo')
-                        ->first();
-
-    if (!$checkout) {
-        return response()->json(['error' => 'Acesso negado'], 403);
-    }
-
-    $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
-
-    if (!$loja) {
-        return response()->json(['error' => 'Loja não encontrada'], 404);
-    }
-
-    // Busca o código do usuário associado à loja
-    $user = User::find($loja->user_id);
-    $user_codigo = $user ? $user->codigo : null;
-
-    return response()->json([
-        'success' => 'Dados da loja atualizados com sucesso',
-        'loja' => $loja,
-        'user_codigo' => $user_codigo,
-    ], 200);
-}
 
 
 
@@ -196,11 +212,11 @@ class CheckoutController extends Controller
             return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
         }
 
-        
+
         $checkout = Checkout::where('codigo', $codigo)
-                            ->where('mac', $mac)
-                            ->where('status', 'ativo')
-                            ->first();
+            ->where('mac', $mac)
+            ->where('status', 'ativo')
+            ->first();
         if (!$checkout) {
             Log::error('Checkout não encontrado ou inativo', ['codigo' => $codigo, 'mac' => $mac]);
             return response()->json(['error' => 'Acesso negado'], 403);
@@ -212,15 +228,15 @@ class CheckoutController extends Controller
             Log::error('Loja não encontrada', ['licenca_id' => $checkout->licenca->loja_id]);
             return response()->json(['error' => 'Loja não encontrada'], 404);
         }
-     /// buscando produtos pelo id da loja 
+        /// buscando produtos pelo id da loja 
 
         $user_codigo = User::find($loja->user_id)->codigo;
-//dd($user_codigo);
+        //dd($user_codigo);
 
         // Busca os produtos e seus lotes
         $produtos = Produto::where('loja_id', $loja->id)
-                           ->with('lotes')
-                           ->get();
+            ->with('lotes')
+            ->get();
         //dd ($produtos);
 
         // Cria a pasta do usuário no storage
@@ -257,12 +273,12 @@ class CheckoutController extends Controller
             }
             $zip->addEmptyDir('empty');
             $zip->close();
-          #  Log::info('ZIP criado com diretório vazio', ['path' => $zipPath]);
+            #  Log::info('ZIP criado com diretório vazio', ['path' => $zipPath]);
         } else {
             // Compacta a pasta inteira
             $zip = new ZipArchive();
             if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-           #     Log::error('Falha ao criar arquivo ZIP', ['path' => $zipPath]);
+                #     Log::error('Falha ao criar arquivo ZIP', ['path' => $zipPath]);
                 return response()->json(['error' => 'Falha ao criar arquivo ZIP'], 500);
             }
 
@@ -280,13 +296,13 @@ class CheckoutController extends Controller
                     $relativePath = substr($filePath, strlen($imagesDir) + 1);
                     $zip->addFile($filePath, $relativePath);
                     $imagesAdded++;
-                #    Log::info('Arquivo adicionado ao ZIP', ['file' => $relativePath, 'path' => $filePath]);
+                    #    Log::info('Arquivo adicionado ao ZIP', ['file' => $relativePath, 'path' => $filePath]);
                 }
             }
 
             // Fecha o ZIP e verifica se foi bem-sucedido
             if (!$zip->close()) {
-            #    Log::error('Falha ao fechar o arquivo ZIP', ['path' => $zipPath]);
+                #    Log::error('Falha ao fechar o arquivo ZIP', ['path' => $zipPath]);
                 return response()->json(['error' => 'Falha ao fechar o arquivo ZIP'], 500);
             }
 
@@ -298,7 +314,7 @@ class CheckoutController extends Controller
 
         // Verifica se o ZIP foi realmente criado
         if (!file_exists($zipPath)) {
-        #    Log::error('Arquivo ZIP não foi criado', ['path' => $zipPath]);
+            #    Log::error('Arquivo ZIP não foi criado', ['path' => $zipPath]);
             return response()->json(['error' => 'Falha ao criar arquivo ZIP: arquivo não encontrado'], 500);
         }
 
@@ -311,7 +327,7 @@ class CheckoutController extends Controller
         // Gera a URL para download do ZIP com o token
         $zipUrl = url("/api/download-zip/{$loja->codigo}?token={$token}");
 
-       Log::info('URL do ZIP gerada', ['url' => $zipUrl]);
+        Log::info('URL do ZIP gerada', ['url' => $zipUrl]);
 
         return response()->json([
             'success' => 'Produtos recuperados com sucesso',
@@ -331,13 +347,13 @@ class CheckoutController extends Controller
         // Verifica se o token é válido
         $tokenPath = storage_path("app/public/lojas/{$user_codigo}/{$user_codigo}_token.txt");
         if (!file_exists($tokenPath)) {
-        #    Log::error('Token não encontrado', ['user_codigo' => $user_codigo, 'token' => $token]);
+            #    Log::error('Token não encontrado', ['user_codigo' => $user_codigo, 'token' => $token]);
             return response()->json(['error' => 'Token inválido ou expirado'], 403);
         }
 
         $storedToken = file_get_contents($tokenPath);
         if ($token !== $storedToken) {
-        #    Log::error('Token inválido', ['user_codigo' => $user_codigo, 'token' => $token, 'stored_token' => $storedToken]);
+            #    Log::error('Token inválido', ['user_codigo' => $user_codigo, 'token' => $token, 'stored_token' => $storedToken]);
             return response()->json(['error' => 'Token inválido'], 403);
         }
 
@@ -346,31 +362,31 @@ class CheckoutController extends Controller
         $mac = $request->header('X-Mac');
 
         if (!$codigo || !$mac) {
-        #    Log::error('Código ou MAC ausentes nos cabeçalhos', ['codigo' => $codigo, 'mac' => $mac]);
+            #    Log::error('Código ou MAC ausentes nos cabeçalhos', ['codigo' => $codigo, 'mac' => $mac]);
             return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
         }
 
         $checkout = Checkout::where('codigo', $codigo)
-                            ->where('mac', $mac)
-                            ->where('status', 'ativo')
-                            ->first();
+            ->where('mac', $mac)
+            ->where('status', 'ativo')
+            ->first();
 
         if (!$checkout) {
             Log::error('Checkout não encontrado ou inativo', ['codigo' => $codigo, 'mac' => $mac]);
             return response()->json(['error' => 'Acesso negado'], 403);
         }
 
-       
+
         // Fornece o arquivo ZIP
         $zipPath = storage_path("app/public/lojas/{$user_codigo}/{$user_codigo}.zip");
         if (!file_exists($zipPath)) {
-         #   Log::error('Arquivo ZIP não encontrado no download', ['path' => $zipPath]);
+            #   Log::error('Arquivo ZIP não encontrado no download', ['path' => $zipPath]);
             return response()->json(['error' => 'Arquivo ZIP não encontrado'], 404);
         }
 
         // Remove o token após o download
         unlink($tokenPath);
-    #    Log::info('Token removido após download', ['path' => $tokenPath]);
+        #    Log::info('Token removido após download', ['path' => $tokenPath]);
 
         Log::info('ZIP baixado com sucesso', ['user_codigo' => $user_codigo, 'path' => $zipPath]);
 
@@ -381,7 +397,7 @@ class CheckoutController extends Controller
 
 
 
-        public function funcionarios(Request $request)
+    public function funcionarios(Request $request)
     {
         $codigo = $request->input('codigo');
         $mac = $request->input('mac');
@@ -391,9 +407,9 @@ class CheckoutController extends Controller
         }
 
         $checkout = Checkout::where('codigo', $codigo)
-                            ->where('mac', $mac)
-                            ->where('status', 'ativo')
-                            ->first();
+            ->where('mac', $mac)
+            ->where('status', 'ativo')
+            ->first();
 
         if (!$checkout) {
             return response()->json(['error' => 'Acesso negado'], 403);
@@ -424,9 +440,9 @@ class CheckoutController extends Controller
         }
 
         $checkout = Checkout::where('codigo', $codigo)
-                            ->where('mac', $mac)
-                            ->where('status', 'ativo')
-                            ->first();
+            ->where('mac', $mac)
+            ->where('status', 'ativo')
+            ->first();
 
         if (!$checkout) {
             return response()->json(['error' => 'Acesso negado'], 403);
@@ -468,9 +484,9 @@ class CheckoutController extends Controller
 
         // Verifica o checkout
         $checkout = Checkout::where('codigo', $codigo)
-                            ->where('mac', $mac)
-                            ->where('status', 'ativo')
-                            ->first();
+            ->where('mac', $mac)
+            ->where('status', 'ativo')
+            ->first();
         if (!$checkout) {
             return response()->json(['error' => 'Acesso negado'], 403);
         }
@@ -510,11 +526,11 @@ class CheckoutController extends Controller
                 $extractedImages = glob($tempDir . '/*.{jpg,png}', GLOB_BRACE);
                 Log::info('Imagens extraídas do ZIP: ' . implode(', ', $extractedImages));
             } else {
-        #        Log::error('Falha ao abrir o arquivo ZIP: ' . $zipFile->getClientOriginalName());
+                #        Log::error('Falha ao abrir o arquivo ZIP: ' . $zipFile->getClientOriginalName());
                 return response()->json(['error' => 'Falha ao processar o arquivo ZIP'], 400);
             }
         } else {
-        #    Log::warning('Nenhum arquivo ZIP recebido no campo imagens_zip');
+            #    Log::warning('Nenhum arquivo ZIP recebido no campo imagens_zip');
             return response()->json(['error' => 'Nenhum arquivo ZIP enviado'], 400);
         }
 
@@ -528,12 +544,12 @@ class CheckoutController extends Controller
             // Salva a imagem em produtos_full
             $fullFilename = "{$barcode}.{$extension}";
             Storage::disk('public')->put("produtos_full/{$fullFilename}", file_get_contents($imagePath));
-        #    Log::info("Imagem salva em produtos_full: {$fullFilename}");
+            #    Log::info("Imagem salva em produtos_full: {$fullFilename}");
 
             // Salva a imagem no diretório do usuário
             Storage::disk('public')->makeDirectory("lojas/{$loja->codigo}/produtos");
             Storage::disk('public')->put("lojas/{$loja->codigo}/produtos/{$fullFilename}", file_get_contents($imagePath));
-        #    Log::info("Imagem salva em usuario/{$loja->codigo}/produtos: {$fullFilename}");
+            #    Log::info("Imagem salva em usuario/{$loja->codigo}/produtos: {$fullFilename}");
 
             $processedImages[$barcode] = $fullFilename;
         }
@@ -564,9 +580,9 @@ class CheckoutController extends Controller
 
         // Verifica o checkout
         $checkout = Checkout::where('codigo', $codigo)
-                            ->where('mac', $mac)
-                            ->where('status', 'ativo')
-                            ->first();
+            ->where('mac', $mac)
+            ->where('status', 'ativo')
+            ->first();
         if (!$checkout) {
             return response()->json(['error' => 'Acesso negado'], 403);
         }
@@ -586,14 +602,14 @@ class CheckoutController extends Controller
 
         // Valida o JSON de produtos
         $productsJson = $request->input('products');
-     #   Log::info('Received products: ' . $productsJson);
+        #   Log::info('Received products: ' . $productsJson);
         if (empty($productsJson)) {
             return response()->json(['error' => 'O campo "products" é obrigatório'], 400);
         }
 
         $products = json_decode($productsJson, true);
         if (json_last_error() !== JSON_ERROR_NONE || !is_array($products)) {
-    #        Log::error('JSON decode error: ' . json_last_error_msg());
+            #        Log::error('JSON decode error: ' . json_last_error_msg());
             return response()->json(['error' => 'O campo "products" deve ser um JSON válido'], 400);
         }
 
@@ -624,10 +640,10 @@ class CheckoutController extends Controller
 
                 // Verifica se a imagem já foi salva pelo endpoint /upload-imagens-zip
                 $imagePathFull = Storage::disk('public')->exists("produtos_full/{$barcode}.jpg") ? "{$barcode}.jpg" :
-                                 (Storage::disk('public')->exists("produtos_full/{$barcode}.png") ? "{$barcode}.png" : null);
+                    (Storage::disk('public')->exists("produtos_full/{$barcode}.png") ? "{$barcode}.png" : null);
                 if ($imagePathFull) {
                     $full_data['imagem'] = $imagePathFull;
-            #        Log::info("Imagem associada em produtos_full: {$imagePathFull}");
+                    #        Log::info("Imagem associada em produtos_full: {$imagePathFull}");
                 }
 
                 $produto_full = ProdutoFull::create($full_data);
@@ -640,8 +656,8 @@ class CheckoutController extends Controller
 
             // Busca ou cria o Produto do usuário
             $produto = Produto::where('user_id', $user->id)
-                              ->where('produto_full_id', $produto_full_id)
-                              ->first();
+                ->where('produto_full_id', $produto_full_id)
+                ->first();
             if (!$produto) {
                 $produto_data = $product;
                 $produto_data['user_id'] = $user->id;
@@ -649,10 +665,10 @@ class CheckoutController extends Controller
 
                 // Verifica se a imagem já foi salva pelo endpoint /upload-imagens-zip
                 $imagePathUser = Storage::disk('public')->exists("lojas/{$loja->codigo}/produtos/{$barcode}.jpg") ? "{$barcode}.jpg" :
-                                 (Storage::disk('public')->exists("lojas/{$loja->codigo}/produtos/{$barcode}.png") ? "{$barcode}.png" : null);
+                    (Storage::disk('public')->exists("lojas/{$loja->codigo}/produtos/{$barcode}.png") ? "{$barcode}.png" : null);
                 if ($imagePathUser) {
                     $produto_data['imagem'] = $imagePathUser;
-                #    Log::info("Imagem associada em lojas/{$loja->codigo}/produtos: {$imagePathUser}");
+                    #    Log::info("Imagem associada em lojas/{$loja->codigo}/produtos: {$imagePathUser}");
                 }
 
                 $produto = Produto::create($produto_data);
@@ -668,55 +684,55 @@ class CheckoutController extends Controller
         ], 201);
     }
 
-      public function mensagens(Request $request)
-{
-    $codigo = $request->input('codigo');
-    $mac = $request->input('mac');
+    public function mensagens(Request $request)
+    {
+        $codigo = $request->input('codigo');
+        $mac = $request->input('mac');
 
-    if (!$codigo || !$mac) {
-        Log::error('Código ou MAC ausentes na requisição', ['codigo' => $codigo, 'mac' => $mac]);
-        return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
+        if (!$codigo || !$mac) {
+            Log::error('Código ou MAC ausentes na requisição', ['codigo' => $codigo, 'mac' => $mac]);
+            return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
+        }
+
+        $checkout = Checkout::where('codigo', $codigo)
+            ->where('mac', $mac)
+            ->where('status', 'ativo')
+            ->first();
+
+        if (!$checkout) {
+            Log::error('Checkout não encontrado ou inativo', ['codigo' => $codigo, 'mac' => $mac]);
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
+
+        if (!$loja) {
+            Log::error('Loja não encontrada', ['licenca_id' => $checkout->licenca->loja_id]);
+            return response()->json(['error' => 'Loja não encontrada'], 404);
+        }
+
+        $user_codigo = User::find($loja->user_id)->codigo;
+
+        // Busca mensagens globais (loja_codigo nulo) e personalizadas para a loja
+        $mensagens = Mensagens::where(function ($query) use ($loja) {
+            $query->whereNull('loja_codigo')
+                ->orWhere('loja_codigo', $loja->codigo);
+        })->where('ativo', true)
+            ->get(['id', 'texto', 'tipo', 'ativo', 'loja_codigo']);
+
+        Log::info('Mensagens recuperadas com sucesso', [
+            'loja_id' => $loja->id,
+            'total_mensagens' => $mensagens->count(),
+        ]);
+
+        return response()->json([
+            'success' => 'Mensagens recuperadas com sucesso',
+            'mensagens' => $mensagens,
+            'user_codigo' => $user_codigo,
+        ], 200);
     }
 
-    $checkout = Checkout::where('codigo', $codigo)
-                        ->where('mac', $mac)
-                        ->where('status', 'ativo')
-                        ->first();
-
-    if (!$checkout) {
-        Log::error('Checkout não encontrado ou inativo', ['codigo' => $codigo, 'mac' => $mac]);
-        return response()->json(['error' => 'Acesso negado'], 403);
-    }
-
-    $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
-
-    if (!$loja) {
-        Log::error('Loja não encontrada', ['licenca_id' => $checkout->licenca->loja_id]);
-        return response()->json(['error' => 'Loja não encontrada'], 404);
-    }
-
-    $user_codigo = User::find($loja->user_id)->codigo;
-
-    // Busca mensagens globais (loja_codigo nulo) e personalizadas para a loja
-    $mensagens = Mensagens::where(function ($query) use ($loja) {
-        $query->whereNull('loja_codigo')
-              ->orWhere('loja_codigo', $loja->codigo);
-    })->where('ativo', true)
-      ->get(['id', 'texto', 'tipo', 'ativo', 'loja_codigo']);
-
-    Log::info('Mensagens recuperadas com sucesso', [
-        'loja_id' => $loja->id,
-        'total_mensagens' => $mensagens->count(),
-    ]);
-
-    return response()->json([
-        'success' => 'Mensagens recuperadas com sucesso',
-        'mensagens' => $mensagens,
-        'user_codigo' => $user_codigo,
-    ], 200);
-}
-
-public function clientes(Request $request)
+    public function clientes(Request $request)
     {
         $codigo = $request->input('codigo');
         $mac = $request->input('mac');
@@ -725,17 +741,17 @@ public function clientes(Request $request)
         }
         // Validação do Checkout/PDV
         $checkout = Checkout::where('codigo', $codigo)
-                            ->where('mac', $mac)
-                            ->where('status', 'ativo')
-                            ->first();
+            ->where('mac', $mac)
+            ->where('status', 'ativo')
+            ->first();
         if (!$checkout) {
             return response()->json(['error' => 'Acesso negado'], 403);
         }
         // Identifica a loja associada à licença do checkout
         $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
-        
+
         if (!$loja) {
-             return response()->json(['error' => 'Loja não encontrada'], 404);
+            return response()->json(['error' => 'Loja não encontrada'], 404);
         }
         // Busca os clientes da loja
         // O Laravel descriptografa automaticamente os campos 'encrypted' ao serializar para JSON?
@@ -745,11 +761,11 @@ public function clientes(Request $request)
         // PORTANTO, o JSON de resposta enviará os dados "abertos" via HTTPS para o PDV,
         // que é o comportamento desejado para que o PDV possa ler os dados.
         // A criptografia acontece apenas no banco de dados do servidor (data at rest).
-        
 
-        
+
+
         $clientes = Cliente::where('loja_id', $loja->id)->get();
-        
+
         // Oculta os campos sensíveis apenas para esta resposta
         $clientes->makeHidden(['cpf', 'endereco', 'bairro', 'cidade', 'estado', 'cep']);
 
@@ -761,7 +777,7 @@ public function clientes(Request $request)
     }
 
 
-public function sync(Request $request)
+    public function sync(Request $request)
     {
         // ---------------------------------------------------------
         // 1. SEGURANÇA (Idêntica ao método Clientes)
@@ -775,9 +791,9 @@ public function sync(Request $request)
 
         // Validação do Checkout/PDV
         $checkout = Checkout::where('codigo', $codigo)
-                            ->where('mac', $mac)
-                            ->where('status', 'ativo')
-                            ->first();
+            ->where('mac', $mac)
+            ->where('status', 'ativo')
+            ->first();
 
         if (!$checkout) {
             return response()->json(['error' => 'Acesso negado ou PDV inativo'], 403);
@@ -787,13 +803,13 @@ public function sync(Request $request)
         $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
 
         if (!$loja) {
-             return response()->json(['error' => 'Loja não encontrada'], 404);
+            return response()->json(['error' => 'Loja não encontrada'], 404);
         }
 
         // ---------------------------------------------------------
         // 2. PROCESSAMENTO DAS TRANSAÇÕES
         // ---------------------------------------------------------
-        
+
         // Recebe o array de transações enviado pelo Python
         $transacoes = $request->input('transacoes', []);
         $uuids_confirmados = [];
@@ -803,7 +819,7 @@ public function sync(Request $request)
 
         try {
             foreach ($transacoes as $tr) {
-                
+
                 // A. Verifica se essa transação já foi processada antes (Proteção contra duplicidade)
                 // Usamos o UUID gerado pelo Python como chave única
                 $existe = ClienteTransacao::where('uuid', $tr['uuid'])->exists();
@@ -811,26 +827,26 @@ public function sync(Request $request)
                 if ($existe) {
                     // Se já existe, apenas confirmamos para o PDV não enviar de novo
                     $uuids_confirmados[] = $tr['uuid'];
-                    continue; 
+                    continue;
                 }
 
                 // B. Salva a transação no histórico da Nuvem
                 ClienteTransacao::create([
-                    'loja_id'        => $loja->id,
-                    'uuid'           => $tr['uuid'],
+                    'loja_id' => $loja->id,
+                    'uuid' => $tr['uuid'],
                     'cliente_codigo' => $tr['cliente_codigo'],
-                    'venda_codigo'   => $tr['venda_codigo'] ?? null,
-                    'tipo'           => $tr['tipo'], // 'debito' (compra) ou 'pagamento' (quitação)
-                    'valor'          => $tr['valor'],
-                    'data_hora'      => $tr['data_hora'],
+                    'venda_codigo' => $tr['venda_codigo'] ?? null,
+                    'tipo' => $tr['tipo'], // 'debito' (compra) ou 'pagamento' (quitação)
+                    'valor' => $tr['valor'],
+                    'data_hora' => $tr['data_hora'],
                     'usuario_codigo' => $tr['usuario_codigo'] ?? 'SYSTEM',
-                    'checkout_mac'   => $mac // Rastreabilidade: qual caixa enviou
+                    'checkout_mac' => $mac // Rastreabilidade: qual caixa enviou
                 ]);
 
                 // C. Atualiza o Saldo Mestre do Cliente (A fonte da verdade)
                 $cliente = Cliente::where('codigo', $tr['cliente_codigo'])
-                                  ->where('loja_id', $loja->id)
-                                  ->first();
+                    ->where('loja_id', $loja->id)
+                    ->first();
 
                 if ($cliente) {
                     // Lógica Financeira
@@ -838,13 +854,12 @@ public function sync(Request $request)
                         // Cliente comprou fiado: Aumenta dívida, diminui saldo disponível
                         $cliente->credito_usado += $tr['valor'];
                         $cliente->saldo -= $tr['valor']; // Pode ficar negativo se estourar limite offline
-                    } 
-                    elseif ($tr['tipo'] == 'pagamento' || $tr['tipo'] == 'estorno') {
+                    } elseif ($tr['tipo'] == 'pagamento' || $tr['tipo'] == 'estorno') {
                         // Cliente pagou: Diminui dívida, libera saldo
                         $cliente->credito_usado -= $tr['valor'];
                         $cliente->saldo += $tr['valor'];
                     }
-                    
+
                     $cliente->save();
                     $clientes_afetados[] = $cliente->codigo; // Guarda para log ou retorno futuro
                 }
@@ -867,13 +882,13 @@ public function sync(Request $request)
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Erro Sync Crédito Loja {$loja->id}: " . $e->getMessage());
-            
+
             return response()->json([
                 'error' => 'Erro interno ao processar transações',
                 'details' => $e->getMessage()
             ], 500);
         }
-    } 
+    }
 
     public function syncDashboard(Request $request)
     {
@@ -886,10 +901,10 @@ public function sync(Request $request)
         }
 
         $checkout = Checkout::where('codigo', $codigo)
-                            ->where('mac', $mac)
-                            ->where('status', 'ativo')
-                            ->with('licenca')
-                            ->first();
+            ->where('mac', $mac)
+            ->where('status', 'ativo')
+            ->with('licenca')
+            ->first();
 
         if (!$checkout || !$checkout->licenca) {
             return response()->json(['error' => 'Acesso negado'], 403);
@@ -996,27 +1011,27 @@ public function sync(Request $request)
                     $synced_uuids['vendas'][] = $v['uuid'];
                 }
 
-                    // D. SINCRONIZAR CANCELAMENTOS
-                    if (!empty($payload['cancelamentos'])) {
-                        foreach ($payload['cancelamentos'] as $cancel) {
-                            LojaCancelamento::updateOrCreate(
-                                ['uuid' => $cancel['uuid']], // Busca pelo UUID único
-                                [
-                                    'loja_id'        => $loja_id,
-                                    'usuario_codigo' => $cancel['usuario_codigo'] ?? 'SISTEMA',
-                                    'venda_codigo'   => $cancel['venda_codigo'] ?? null,
-                                    'produtos'       => $cancel['produtos'] ?? [], // O Model converte array para JSON autom.
-                                    'valor_total'    => $cancel['valor_total'],
-                                    'data_hora'      => $cancel['data_hora'],
-                                    'observacao'     => $cancel['observacao'] ?? null,
-                                    'autorizado_por' => $cancel['autorizado_por'] ?? null,
-                                    'checkout_mac'   => $mac
-                                ]
-                            );
-                            // Adiciona na lista de confirmação para o PDV
-                            $synced_uuids['cancelamentos'][] = $cancel['uuid'];
-                        }
+                // D. SINCRONIZAR CANCELAMENTOS
+                if (!empty($payload['cancelamentos'])) {
+                    foreach ($payload['cancelamentos'] as $cancel) {
+                        LojaCancelamento::updateOrCreate(
+                            ['uuid' => $cancel['uuid']], // Busca pelo UUID único
+                            [
+                                'loja_id' => $loja_id,
+                                'usuario_codigo' => $cancel['usuario_codigo'] ?? 'SISTEMA',
+                                'venda_codigo' => $cancel['venda_codigo'] ?? null,
+                                'produtos' => $cancel['produtos'] ?? [], // O Model converte array para JSON autom.
+                                'valor_total' => $cancel['valor_total'],
+                                'data_hora' => $cancel['data_hora'],
+                                'observacao' => $cancel['observacao'] ?? null,
+                                'autorizado_por' => $cancel['autorizado_por'] ?? null,
+                                'checkout_mac' => $mac
+                            ]
+                        );
+                        // Adiciona na lista de confirmação para o PDV
+                        $synced_uuids['cancelamentos'][] = $cancel['uuid'];
                     }
+                }
 
             }
 

@@ -22,7 +22,7 @@ class DashboardController extends Controller
             return Loja::orderBy('nome')->get();
         }
         return Loja::where('user_id', $user->id)
-            ->orWhereHas('permissoes', function($q) use ($user) {
+            ->orWhereHas('permissoes', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })
             ->orderBy('nome')->get();
@@ -32,43 +32,78 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         $lojas = $this->getLojasPermitidas($user);
-        
+
         // Se não passou código, pega a primeira permitida
         if (!$codigoAlvo) {
             return $lojas->first();
         }
 
         $loja = $lojas->firstWhere('codigo', $codigoAlvo);
-        
-        if (!$loja) abort(403, 'Acesso não autorizado a esta loja.');
-        
+
+        if (!$loja)
+            abort(403, 'Acesso não autorizado a esta loja.');
+
         return $loja;
     }
 
     /**
      * DASHBOARD PRINCIPAL (Visão Geral)
      */
-public function index(Request $request)
+    public function index(Request $request)
     {
+        // Visão Global para Super Admin/Owner
+        if (auth()->user()->hasRole('admin') && !$request->has('loja_codigo')) {
+            $lojasAtivas = \App\Models\Loja::where('status', 'ativo')
+                ->orWhere('status', '1')->count();
+
+            $pagamentosMes = \App\Models\SistemaTransacao::where('tipo', 'pagamento')
+                ->whereMonth('data_transacao', Carbon::now()->month)
+                ->sum('valor');
+
+            $estornosMes = \App\Models\SistemaTransacao::whereIn('tipo', ['estorno', 'estorno_reverso'])
+                ->where('valor', '<', 0)
+                ->whereMonth('data_transacao', Carbon::now()->month)
+                ->sum('valor'); // será negativo, podemos somar ao total se quisermos o líquido
+
+            $totalLiquidoMes = $pagamentosMes + $estornosMes;
+
+            $lojasVencer = \App\Models\Licenca::where('status', 'ativo')
+                ->whereDate('validade', '<=', Carbon::now()->addDays(7))
+                ->count();
+
+            $historicoGlobal = \App\Models\SistemaTransacao::where('tipo', 'pagamento')
+                ->where('data_transacao', '>=', Carbon::now()->subDays(15))
+                ->select(DB::raw('DATE(data_transacao) as data'), DB::raw('SUM(valor) as total'))
+                ->groupBy('data')
+                ->orderBy('data')
+                ->get();
+
+            $lojasPermitidas = $this->getLojasPermitidas(auth()->user());
+            $loja = null;
+
+            return view('dashboard.admin', compact('lojasAtivas', 'pagamentosMes', 'totalLiquidoMes', 'lojasVencer', 'historicoGlobal', 'lojasPermitidas', 'loja'));
+        }
+
         $loja = $this->validarAcessoLoja($request->get('loja_codigo'));
-        if (!$loja) return view('dashboard.vazio');
+        if (!$loja)
+            return view('dashboard.vazio');
 
         $hoje = Carbon::today();
         $mesAtual = Carbon::now()->startOfMonth();
         $mesPassado = Carbon::now()->subMonth()->startOfMonth();
 
         // --- 1. KPIs PODEROSOS ---
-        
+
         // Faturamento Hoje
         $vendasHoje = LojaVenda::where('loja_id', $loja->id)->whereDate('data_hora', $hoje)->sum('total');
-        
+
         // Comparativo: Mesmo dia da semana passada (Ex: Terça hoje vs Terça passada)
         $vendasSemanaPassadaDia = LojaVenda::where('loja_id', $loja->id)
             ->whereDate('data_hora', Carbon::today()->subWeek())
             ->sum('total');
-        
-        $crescimentoDiario = $vendasSemanaPassadaDia > 0 
-            ? (($vendasHoje - $vendasSemanaPassadaDia) / $vendasSemanaPassadaDia) * 100 
+
+        $crescimentoDiario = $vendasSemanaPassadaDia > 0
+            ? (($vendasHoje - $vendasSemanaPassadaDia) / $vendasSemanaPassadaDia) * 100
             : 100;
 
         // Lucro Bruto Hoje (Preço - Custo)
@@ -80,7 +115,7 @@ public function index(Request $request)
 
         // Quantidade de Vendas (Tickets)
         $qtdVendasHoje = LojaVenda::where('loja_id', $loja->id)->whereDate('data_hora', $hoje)->count();
-        
+
         // Ticket Médio Real
         $ticketMedio = $qtdVendasHoje > 0 ? $vendasHoje / $qtdVendasHoje : 0;
 
@@ -88,7 +123,7 @@ public function index(Request $request)
         $historico7Dias = LojaVenda::where('loja_id', $loja->id)
             ->where('data_hora', '>=', Carbon::now()->subDays(6)->startOfDay())
             ->select(
-                DB::raw('DATE(data_hora) as data'), 
+                DB::raw('DATE(data_hora) as data'),
                 DB::raw('SUM(total) as faturamento')
             )
             ->groupBy('data')
@@ -151,7 +186,7 @@ public function index(Request $request)
     public function operacional(Request $request)
     {
         $loja = $this->validarAcessoLoja($request->get('loja_codigo'));
-        
+
         // 1. MAPA DE CALOR (Horários de Pico)
         $fluxoHorario = LojaVenda::where('loja_id', $loja->id)
             ->select(DB::raw('HOUR(data_hora) as hora'), DB::raw('COUNT(*) as total_vendas'))
@@ -194,14 +229,14 @@ public function index(Request $request)
     public function financeiro(Request $request)
     {
         $loja = $this->validarAcessoLoja($request->get('loja_codigo'));
-        
+
         // Filtro de Data (Padrão: últimos 30 dias)
         $dataInicio = Carbon::now()->subDays(30);
         $dataFim = Carbon::now();
 
         // 1. KPI: TOTAIS GERAIS
         $totalReceber = Cliente::where('loja_id', $loja->id)->sum('credito_usado');
-        
+
         // Total Recebido (Pagamentos) este mês
         $totalRecebidoMes = DB::table('clientes_transacoes')
             ->where('loja_id', $loja->id)
