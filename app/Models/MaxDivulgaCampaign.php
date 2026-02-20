@@ -13,6 +13,7 @@ class MaxDivulgaCampaign extends Model
 
     protected $fillable = [
         'tenant_id',
+        'loja_id',
         'name',
         'type',
         'channels',
@@ -26,6 +27,7 @@ class MaxDivulgaCampaign extends Model
         'last_run_at',
         'next_run_at',
         'copy',
+        'copy_acompanhamento',
         'file_path'
     ];
 

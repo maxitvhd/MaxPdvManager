@@ -18,54 +18,75 @@ class CatalogRendererService
         $this->config = MaxDivulgaConfig::first();
     }
 
-    public function render(MaxDivulgaCampaign $campaign, $produtos)
+    public function render(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja = [])
     {
         try {
-            Log::info("[MAXDIVULGA-07] CatalogRendererService: Iniciando conversão de formato: " . $campaign->format);
+            Log::info("[MAXDIVULGA-07] Iniciando renderização. Formato: " . $campaign->format);
             switch ($campaign->format) {
                 case 'image':
-                    return $this->generateImage($campaign, $produtos);
+                    return $this->gerarImagem($campaign, $produtos, $dadosLoja);
                 case 'pdf':
-                    return $this->generatePdf($campaign, $produtos);
+                    return $this->gerarPdf($campaign, $produtos, $dadosLoja);
                 case 'audio':
-                    return $this->generateAudio($campaign, $produtos);
+                    return $this->gerarAudio($campaign, $produtos);
                 default:
-                    return $this->generateText($campaign, $produtos);
+                    return $campaign->copy;
             }
         } catch (\Exception $e) {
-            Log::error("[MAXDIVULGA-ERROR] Erro fatal CatalogRendererService (Campanha: {$campaign->id}): " . $e->getMessage());
+            Log::error("[MAXDIVULGA-ERROR] Erro fatal CatalogRendererService: " . $e->getMessage());
+            Log::error($e->getTraceAsString());
             return false;
         }
     }
 
-    protected function getHtml(MaxDivulgaCampaign $campaign, $produtos)
+    private function construirPastaSaida(MaxDivulgaCampaign $campaign, array $dadosLoja): string
+    {
+        // Pasta: storage/app/public/maxdivulga/lojas/{codigo_loja}/campanha_{id}/
+        $codigoLoja = Str::slug($dadosLoja['codigo'] ?? 'sem-codigo');
+        $pasta = "maxdivulga/lojas/{$codigoLoja}/campanha_{$campaign->id}";
+        $caminhoCompleto = storage_path("app/public/{$pasta}");
+
+        if (!is_dir($caminhoCompleto)) {
+            mkdir($caminhoCompleto, 0775, true);
+        }
+
+        // Garante que o diretório seja legível pelo servidor web
+        @chmod($caminhoCompleto, 0775);
+
+        return $pasta;
+    }
+
+    private function getHtml(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
     {
         $theme = $campaign->theme;
         if (!$theme || !view()->exists($theme->path)) {
             throw new \Exception('Tema não encontrado: ' . ($theme->path ?? 'nenhum'));
         }
-        return View::make($theme->path, ['campaign' => $campaign, 'produtos' => $produtos])->render();
+
+        return View::make($theme->path, [
+            'campaign' => $campaign,
+            'produtos' => $produtos,
+            'loja' => $dadosLoja,
+            'copyTexto' => $campaign->copy,
+        ])->render();
     }
 
-    protected function generateImage(MaxDivulgaCampaign $campaign, $produtos)
+    private function gerarImagem(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
     {
-        Log::info("[MAXDIVULGA-07A] Analisando Tema para Imagem...");
-        $html = $this->getHtml($campaign, $produtos);
-        $fileName = 'maxdivulga/campaigns/image_' . $campaign->id . '_' . Str::random(5) . '.png';
-        $fullPath = storage_path('app/public/' . $fileName);
+        Log::info("[MAXDIVULGA-07A] Preparando HTML para imagem...");
+        $html = $this->getHtml($campaign, $produtos, $dadosLoja);
+        $pasta = $this->construirPastaSaida($campaign, $dadosLoja);
+        $arquivo = 'imagem_' . Str::random(5) . '.png';
+        $caminho = storage_path("app/public/{$pasta}/{$arquivo}");
 
-        if (!is_dir(dirname($fullPath))) {
-            mkdir(dirname($fullPath), 0755, true);
-        }
+        Log::info("[MAXDIVULGA-08] Invocando Browsershot HTML→PNG em: {$caminho}");
 
-        Log::info("[MAXDIVULGA-08] Invocando pacote Spatie Browsershot para HTML->PNG...");
         try {
             $browsershot = Browsershot::html($html)
-                ->windowSize(1080, 1920) // tamanho ideal para stories
-                ->deviceScaleFactor(1.5)
+                ->windowSize(1080, 1920)
+                ->deviceScaleFactor(2)
                 ->noSandbox();
 
-            // Tenta detectar node e npm path se estiver em ambiente comum de servidor
             if (file_exists('/usr/bin/node')) {
                 $browsershot->setNodeBinary('/usr/bin/node');
             }
@@ -73,42 +94,52 @@ class CatalogRendererService
                 $browsershot->setNpmBinary('/usr/bin/npm');
             }
 
-            $browsershot->save($fullPath);
+            $browsershot->save($caminho);
+
+            @chmod($caminho, 0664);
+            Log::info("[MAXDIVULGA-08B] PNG salvo com sucesso!");
         } catch (\Exception $e) {
-            Log::error("[MAXDIVULGA-08A] Erro ao executar Browsershot: " . $e->getMessage());
+            Log::error("[MAXDIVULGA-08A] Erro no Browsershot: " . $e->getMessage());
             throw $e;
         }
 
-        Log::info("[MAXDIVULGA-08B] Imagem PNG salva com sucesso!");
-        return 'storage/' . $fileName;
+        return "storage/{$pasta}/{$arquivo}";
     }
 
-    protected function generatePdf(MaxDivulgaCampaign $campaign, $produtos)
+    private function gerarPdf(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
     {
-        $html = $this->getHtml($campaign, $produtos);
-        $fileName = 'maxdivulga/campaigns/pdf_' . $campaign->id . '_' . Str::random(5) . '.pdf';
-        $fullPath = storage_path('app/public/' . $fileName);
+        Log::info("[MAXDIVULGA-07B] Preparando HTML para PDF...");
+        $html = $this->getHtml($campaign, $produtos, $dadosLoja);
+        $pasta = $this->construirPastaSaida($campaign, $dadosLoja);
+        $arquivo = 'catalogo_' . Str::random(5) . '.pdf';
+        $caminho = storage_path("app/public/{$pasta}/{$arquivo}");
 
-        if (!is_dir(dirname($fullPath))) {
-            mkdir(dirname($fullPath), 0755, true);
+        try {
+            $browsershot = Browsershot::html($html)
+                ->format('A4')
+                ->margins(10, 10, 10, 10)
+                ->noSandbox();
+
+            if (file_exists('/usr/bin/node')) {
+                $browsershot->setNodeBinary('/usr/bin/node');
+            }
+            if (file_exists('/usr/bin/npm')) {
+                $browsershot->setNpmBinary('/usr/bin/npm');
+            }
+
+            $browsershot->save($caminho);
+            @chmod($caminho, 0664);
+        } catch (\Exception $e) {
+            Log::error("[MAXDIVULGA-PDFERR] Erro no Browsershot PDF: " . $e->getMessage());
+            throw $e;
         }
 
-        Browsershot::html($html)
-            ->format('A4')
-            ->margins(10, 10, 10, 10)
-            ->noSandbox()
-            ->save($fullPath);
-
-        return 'storage/' . $fileName;
+        return "storage/{$pasta}/{$arquivo}";
     }
 
-    protected function generateAudio(MaxDivulgaCampaign $campaign, $produtos)
+    private function gerarAudio(MaxDivulgaCampaign $campaign, $produtos): string
     {
-        return 'audio_mock_para_implementar.mp3';
-    }
-
-    protected function generateText(MaxDivulgaCampaign $campaign, $produtos)
-    {
-        return $campaign->copy;
+        // TODO: Integração TTS
+        return 'audio_pendente.mp3';
     }
 }
