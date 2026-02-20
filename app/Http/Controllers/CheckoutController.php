@@ -146,6 +146,11 @@ class CheckoutController extends Controller
         $licenca = Licenca::where('key', $key)->first();
         Log::info('Licença localizada no BD: ' . ($licenca ? 'SIM, ID ' . $licenca->id : 'NÃO'));
 
+        if (!$licenca) {
+            Log::warning('Tentativa falhou: Chave de licença informada não existe no servidor Mestre.');
+            return response()->json(['error' => 'Licença Inválida ou Inexistente! Verifique sua Chave Key.'], 403);
+        }
+
         $dadosMaquina = $request->all();
         $licencaValid = $licenca && $licenca->isValid();
 
