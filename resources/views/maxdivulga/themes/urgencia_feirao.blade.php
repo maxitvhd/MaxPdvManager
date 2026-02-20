@@ -148,10 +148,40 @@
 
         .grid-produtos {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
             gap: 16px;
             padding: 22px 48px;
             flex: 1;
+        }
+
+        .grid-produtos.qty-1 {
+            grid-template-columns: repeat(1, 1fr);
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        .grid-produtos.qty-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-produtos.qty-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-produtos.qty-4 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-produtos.qty-5,
+        .grid-produtos.qty-6 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-produtos.qty-7,
+        .grid-produtos.qty-8,
+        .grid-produtos.qty-9,
+        .grid-produtos.qty-10,
+        .grid-produtos.qty-many {
+            grid-template-columns: repeat(3, 1fr);
         }
 
         .card {
@@ -328,7 +358,8 @@
 
     <div class="label-feirao">🏷️ &nbsp; PRODUTOS DO FEIRÃO &nbsp; 🏷️</div>
 
-    <div class="grid-produtos">
+    @php $qtyClass = count($produtos) <= 9 ? 'qty-' . count($produtos) : 'qty-many'; @endphp
+    <div class="grid-produtos {{ $qtyClass }}">
         @forelse($produtos as $i => $prod)
             <div class="card {{ $i === 0 ? 'card-principal' : '' }}">
                 <div class="card-topo">

@@ -122,24 +122,49 @@
             margin-top: 4px;
         }
 
-        /* ===== GRID PRODUTOS ===== */
-        .label-secao {
-            background: #1a1a1a;
-            color: var(--amarelo);
-            text-align: center;
-            font-size: 0.8rem;
-            font-weight: 700;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            padding: 10px 0;
-        }
+        /* ===== GRID PRODUTOS — adaptável pela quantidade ===== */
+        .label-secao {}
 
         .grid-produtos {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
             gap: 14px;
             padding: 20px;
             background: #f7f7f7;
+        }
+
+        /* 1 produto: 1 coluna centralizada bem grande */
+        .grid-produtos.qty-1 {
+            grid-template-columns: repeat(1, 1fr);
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        /* 2 a 3 produtos: 2 ou 3 colunas */
+        .grid-produtos.qty-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-produtos.qty-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        /* 4 a 6 produtos: 3 colunas */
+        .grid-produtos.qty-4 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-produtos.qty-5,
+        .grid-produtos.qty-6 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        /* 7 a 20 produtos: 4 colunas */
+        .grid-produtos.qty-7,
+        .grid-produtos.qty-8,
+        .grid-produtos.qty-9,
+        .grid-produtos.qty-10,
+        .grid-produtos.qty-many {
+            grid-template-columns: repeat(4, 1fr);
         }
 
         .card {
@@ -164,12 +189,47 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100px;
+            min-height: 90px;
+        }
+
+        /* Imagem maior quando poucos produtos */
+        .qty-1 .card-topo,
+        .qty-2 .card-topo,
+        .qty-3 .card-topo {
+            min-height: 160px;
+        }
+
+        .qty-4 .card-topo,
+        .qty-5 .card-topo,
+        .qty-6 .card-topo {
+            min-height: 120px;
         }
 
         .card-topo span {
             font-size: 2rem;
             opacity: .6;
+        }
+
+        /* Fontes maiores quando poucos produtos */
+        .qty-1 .card-nome,
+        .qty-2 .card-nome {
+            font-size: 1rem;
+        }
+
+        .qty-3 .card-nome {
+            font-size: 0.9rem;
+        }
+
+        .qty-1 .card-preco-por {
+            font-size: 1.6rem;
+        }
+
+        .qty-2 .card-preco-por {
+            font-size: 1.4rem;
+        }
+
+        .qty-3 .card-preco-por {
+            font-size: 1.3rem;
         }
 
         .tag-oferta {
@@ -313,7 +373,8 @@
 
     <div class="label-secao">⭐ PROMOÇÕES SELECIONADAS ⭐</div>
 
-    <div class="grid-produtos">
+    @php $qtyClass = count($produtos) <= 9 ? 'qty-' . count($produtos) : 'qty-many'; @endphp
+    <div class="grid-produtos {{ $qtyClass }}">
         @forelse($produtos as $i => $prod)
             <div class="card {{ $i === 0 ? 'card-destaque' : '' }}">
                 <div class="card-topo">
