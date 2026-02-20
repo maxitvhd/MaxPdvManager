@@ -91,6 +91,13 @@ class LicencaController extends Controller
 
         $licenca->update($data);
 
+        // Se a licença, após a atualização, estiver vencida ou inativa, desativa todos os PDVs conectados a ela
+        if (!$licenca->isValid()) {
+            Checkout::where('licenca_id', $licenca->id)
+                ->where('status', 'ativo')
+                ->update(['status' => 'inativo']);
+        }
+
         return redirect()->route('licencas.index')->with('success', 'Licença atualizada com sucesso!');
     }
 

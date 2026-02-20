@@ -191,10 +191,10 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('adicionais', \App\Http\Controllers\SistemaAdicionalController::class);
 
         // MaxDivulga Administrativo
-        Route::get('/maxdivulga', [MaxDivulgaAdminController::class, 'index'])->name('admin.maxdivulga.index');
-        Route::post('/maxdivulga/config', [MaxDivulgaAdminController::class, 'storeConfig'])->name('admin.maxdivulga.store_config');
-        Route::get('/maxdivulga/themes', [MaxDivulgaAdminController::class, 'themes'])->name('admin.maxdivulga.themes');
-        Route::post('/maxdivulga/themes', [MaxDivulgaAdminController::class, 'storeTheme'])->name('admin.maxdivulga.store_theme');
+        Route::get('/MaxDivulga', [MaxDivulgaAdminController::class, 'index'])->name('admin.maxdivulga.index');
+        Route::post('/MaxDivulga/config', [MaxDivulgaAdminController::class, 'storeConfig'])->name('admin.maxdivulga.store_config');
+        Route::get('/MaxDivulga/themes', [MaxDivulgaAdminController::class, 'themes'])->name('admin.maxdivulga.themes');
+        Route::post('/MaxDivulga/themes', [MaxDivulgaAdminController::class, 'storeTheme'])->name('admin.maxdivulga.store_theme');
     });
     Route::get('/pagamentos/configuracoes', [\App\Http\Controllers\PagamentosController::class, 'configuracoesAdmin'])->name('pagamentos.configuracoes');
     Route::post('/pagamentos/configuracoes', [\App\Http\Controllers\PagamentosController::class, 'salvarConfiguracoes']);
@@ -212,6 +212,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [MaxDivulgaController::class, 'index'])->name('lojista.maxdivulga.index');
         Route::get('/create', [MaxDivulgaController::class, 'create'])->name('lojista.maxdivulga.create');
         Route::post('/store', [MaxDivulgaController::class, 'store'])->name('lojista.maxdivulga.store');
+        Route::get('/{campaign}/show', [MaxDivulgaController::class, 'show'])->name('lojista.maxdivulga.show');
+        Route::get('/{campaign}/edit', [MaxDivulgaController::class, 'edit'])->name('lojista.maxdivulga.edit');
+        Route::put('/{campaign}', [MaxDivulgaController::class, 'update'])->name('lojista.maxdivulga.update');
+        Route::delete('/{campaign}', [MaxDivulgaController::class, 'destroy'])->name('lojista.maxdivulga.destroy');
         Route::get('/{campaign}/download', [MaxDivulgaController::class, 'download'])->name('lojista.maxdivulga.download');
         Route::get('/api/produtos', [MaxDivulgaController::class, 'apiProducts'])->name('lojista.maxdivulga.api_products');
     });

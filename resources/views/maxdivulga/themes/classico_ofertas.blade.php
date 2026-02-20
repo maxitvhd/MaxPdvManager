@@ -88,14 +88,15 @@
     </div>
 
     <div class="grid">
-        <!-- Loop Simulando Produtos -->
-        @for($i = 1; $i <= 6; $i++)
+        @forelse($produtos as $prod)
             <div class="product">
-                <div class="product-name">Produto Exemplo {{ $i }}</div>
-                <div class="price-old">R$ 1{{$i}},99</div>
-                <div class="price-new">R$ 0{{$i}},99</div>
+                <div class="product-name">{{ $prod['nome'] }}</div>
+                <div class="price-old">R$ {{ $prod['preco_original'] }}</div>
+                <div class="price-new">R$ {{ $prod['preco_novo'] }}</div>
             </div>
-        @endfor
+        @empty
+            <div class="product">Nenhum produto selecionado.</div>
+        @endforelse
     </div>
 
     <div class="footer">

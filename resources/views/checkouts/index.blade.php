@@ -28,13 +28,17 @@
                     </td>
                     <td>
                         <!-- Toggle de Status -->
+                        @php
+                            $podeLigar = $checkout->licenca && $checkout->licenca->isValid();
+                        @endphp
                         <form action="{{ route('checkouts.toggleStatus', $checkout->id) }}" method="POST"
                             style="display:inline;">
                             @csrf
                             @method('PATCH')
                             <button type="submit"
                                 class="btn btn-sm {{ $checkout->status === 'ativo' ? 'btn-outline-danger' : 'btn-outline-success' }} mb-0 me-1"
-                                title="{{ $checkout->status === 'ativo' ? 'Desativar Conexão' : 'Autorizar Conexão' }}">
+                                title="{{ $checkout->status === 'ativo' ? 'Desativar Conexão' : (!$podeLigar ? 'Licença Vencida ou Inválida' : 'Autorizar Conexão') }}"
+                                {{ $checkout->status === 'inativo' && !$podeLigar ? 'disabled' : '' }}>
                                 {{ $checkout->status === 'ativo' ? 'Desligar' : 'Ligar PDV' }}
                             </button>
                         </form>

@@ -66,12 +66,23 @@
                                                 <span class="badge badge-sm bg-gradient-warning">{{ ucfirst($camp->status) }}</span>
                                             @endif
                                         </td>
-                                        <td class="align-middle">
-                                            <a href="{{ route('lojista.maxdivulga.download', $camp->id) }}"
-                                                class="text-secondary font-weight-bold text-xs" data-toggle="tooltip"
-                                                data-original-title="Baixar">
+                                        <td class="align-middle text-center">
+                                            <a href="{{ route('lojista.maxdivulga.show', $camp->id) }}" class="text-primary font-weight-bold text-xs mx-1" data-toggle="tooltip" data-original-title="Visualizar">
+                                                <i class="fas fa-eye"></i> Ver
+                                            </a>
+                                            <a href="{{ route('lojista.maxdivulga.edit', $camp->id) }}" class="text-info font-weight-bold text-xs mx-1" data-toggle="tooltip" data-original-title="Editar">
+                                                <i class="fas fa-edit"></i> Editar
+                                            </a>
+                                            <a href="{{ route('lojista.maxdivulga.download', $camp->id) }}" class="text-secondary font-weight-bold text-xs mx-1" data-toggle="tooltip" data-original-title="Baixar">
                                                 <i class="fas fa-download"></i> Baixar
                                             </a>
+                                            <a href="#" class="text-danger font-weight-bold text-xs mx-1" data-toggle="tooltip" data-original-title="Excluir" onclick="event.preventDefault(); if(confirm('Tem certeza que deseja apagar esta campanha?')) document.getElementById('delete-form-{{ $camp->id }}').submit();">
+                                                <i class="fas fa-trash"></i> Excluir
+                                            </a>
+                                            <form id="delete-form-{{ $camp->id }}" action="{{ route('lojista.maxdivulga.destroy', $camp->id) }}" method="POST" style="display: none;">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
                                         </td>
                                     </tr>
                                 @empty

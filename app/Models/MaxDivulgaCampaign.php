@@ -24,7 +24,9 @@ class MaxDivulgaCampaign extends Model
         'format',
         'status',
         'last_run_at',
-        'next_run_at'
+        'next_run_at',
+        'copy',
+        'file_path'
     ];
 
     protected $casts = [

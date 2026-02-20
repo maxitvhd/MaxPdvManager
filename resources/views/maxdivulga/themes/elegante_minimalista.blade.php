@@ -77,12 +77,14 @@
     </div>
 
     <div class="grid">
-        @for($i = 1; $i <= 6; $i++)
+        @forelse($produtos as $prod)
             <div class="product">
-                <div class="product-name">Item Exclusivo {{ $i }}</div>
-                <div class="price-new">R$ 1{{$i}}9,00</div>
+                <div class="product-name">{{ $prod['nome'] }}</div>
+                <div class="price-new">R$ {{ $prod['preco_novo'] }}</div>
             </div>
-        @endfor
+        @empty
+            <div class="product">Nenhum produto selecionado.</div>
+        @endforelse
     </div>
 
     <div class="footer">

@@ -67,7 +67,12 @@
         <p class="copy">
             {{ $campaign->copy ?? 'Desempenho máximo, câmera de cinema. O melhor da tecnologia nas suas mãos. Oferta imperdível por tempo limitado!' }}
         </p>
-        <div class="price">R$ 1.999</div>
+        @if(count($produtos) > 0)
+            <h2 style="font-size: 1.5em; margin-bottom:5px;">{{ $produtos[0]['nome'] }}</h2>
+            <div class="price">R$ {{ $produtos[0]['preco_novo'] }}</div>
+        @else
+            <div class="price">Consulte Ofertas!</div>
+        @endif
     </div>
 </body>
 

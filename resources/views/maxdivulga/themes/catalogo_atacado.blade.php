@@ -72,14 +72,14 @@
             </tr>
         </thead>
         <tbody>
-            @for($i = 1; $i <= 10; $i++)
+            @foreach($produtos as $index => $prod)
                 <tr>
-                    <td>{{ 1000 + $i }}</td>
-                    <td>Caixa Produto Base {{ $i }}</td>
-                    <td>12 un.</td>
-                    <td><strong>R$ {{$i}}4,50</strong></td>
+                    <td>{{ 1000 + $index }}</td>
+                    <td>{{ $prod['nome'] }}</td>
+                    <td>1 un.</td>
+                    <td><strong>R$ {{ $prod['preco_novo'] }}</strong></td>
                 </tr>
-            @endfor
+            @endforeach
         </tbody>
     </table>
 </body>
