@@ -17,6 +17,8 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CancelamentoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\MaxDivulgaAdminController;
+use App\Http\Controllers\MaxDivulgaController;
 
 #----- bibliotecas para resetar cache spatie -----
 use Illuminate\Support\Facades\Artisan;
@@ -187,6 +189,12 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin')->middleware(['role:admin|super-admin'])->group(function () {
         Route::resource('planos', \App\Http\Controllers\SistemaPlanoController::class);
         Route::resource('adicionais', \App\Http\Controllers\SistemaAdicionalController::class);
+
+        // MaxDivulga Administrativo
+        Route::get('/maxdivulga', [MaxDivulgaAdminController::class, 'index'])->name('admin.maxdivulga.index');
+        Route::post('/maxdivulga/config', [MaxDivulgaAdminController::class, 'storeConfig'])->name('admin.maxdivulga.store_config');
+        Route::get('/maxdivulga/themes', [MaxDivulgaAdminController::class, 'themes'])->name('admin.maxdivulga.themes');
+        Route::post('/maxdivulga/themes', [MaxDivulgaAdminController::class, 'storeTheme'])->name('admin.maxdivulga.store_theme');
     });
     Route::get('/pagamentos/configuracoes', [\App\Http\Controllers\PagamentosController::class, 'configuracoesAdmin'])->name('pagamentos.configuracoes');
     Route::post('/pagamentos/configuracoes', [\App\Http\Controllers\PagamentosController::class, 'salvarConfiguracoes']);
@@ -198,6 +206,15 @@ Route::middleware(['auth'])->group(function () {
     // Carrinho Vitrine (Planos + Adicionais)
     Route::get('/assinaturas/{licenca}', [\App\Http\Controllers\AssinaturaController::class, 'index'])->name('assinaturas.index');
     Route::post('/assinaturas/{licenca}/checkout', [\App\Http\Controllers\AssinaturaController::class, 'checkout'])->name('assinaturas.checkout');
+
+    // Módulo Lojista MaxDivulga
+    Route::prefix('lojista/maxdivulga')->group(function () {
+        Route::get('/', [MaxDivulgaController::class, 'index'])->name('lojista.maxdivulga.index');
+        Route::get('/create', [MaxDivulgaController::class, 'create'])->name('lojista.maxdivulga.create');
+        Route::post('/store', [MaxDivulgaController::class, 'store'])->name('lojista.maxdivulga.store');
+        Route::get('/{campaign}/download', [MaxDivulgaController::class, 'download'])->name('lojista.maxdivulga.download');
+        Route::get('/api/produtos', [MaxDivulgaController::class, 'apiProducts'])->name('lojista.maxdivulga.api_products');
+    });
 });
 
 // Retornos de Pagamento MP

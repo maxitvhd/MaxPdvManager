@@ -51,14 +51,21 @@ class Licenca extends Model
             return false;
         }
 
-        // Se tiver grace period ativado e a data atual for maior que ele = inativo automatizado.
-        if ($this->data_inativacao_grace_period && now()->greaterThan($this->data_inativacao_grace_period)) {
+        // Se o grace period estiver preenchido manualmente no BD e for menor que agora
+        if ($this->data_inativacao_grace_period && now()->startOfDay()->greaterThan($this->data_inativacao_grace_period)) {
             return false;
         }
 
-        // Validade básica 
-        if ($this->validade && now()->startOfDay()->greaterThan($this->validade) && !$this->data_inativacao_grace_period) {
-            return false;
+        // Verifica a validade somando com a carência de dias padrão do sistema
+        if ($this->validade) {
+            $config = SistemaConfiguracao::first();
+            $diasCarencia = $config ? ($config->carencia_dias ?? 0) : 0;
+
+            $dataLimite = \Carbon\Carbon::parse($this->validade)->addDays($diasCarencia);
+
+            if (now()->startOfDay()->greaterThan($dataLimite)) {
+                return false;
+            }
         }
 
         return true;
