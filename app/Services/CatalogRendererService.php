@@ -148,62 +148,41 @@ class CatalogRendererService
         $html = $this->getHtml($campaign, $produtos, $dadosLoja);
         $pasta = $this->construirPastaSaida($campaign, $dadosLoja);
 
-        // Salva o HTML primeiro (sempre funciona, é o fallback)
         $arquivoHtml = 'campanha_' . Str::random(6) . '.html';
         $caminhoHtml = storage_path("app/public/{$pasta}/{$arquivoHtml}");
         file_put_contents($caminhoHtml, $html);
         @chmod($caminhoHtml, 0664);
-        Log::info("[MAXDIVULGA-07A-HTML] HTML salvo: {$caminhoHtml}");
 
-        // Tenta gerar PNG
         $arquivoPng = 'imagem_' . Str::random(6) . '.png';
         $caminhoPng = storage_path("app/public/{$pasta}/{$arquivoPng}");
-        Log::info("[MAXDIVULGA-08] Gerando PNG: {$caminhoPng}");
 
         try {
+            Log::info("[MAXDIVULGA-08] Invocando Playwright (Firefox) HTML→PNG...");
+
             $nodeBin = $this->encontrarBinario(['/usr/local/bin/node', '/usr/bin/node', 'node']);
-            $npmBin = $this->encontrarBinario(['/usr/local/bin/npm', '/usr/bin/npm', 'npm']);
+            if (!$nodeBin)
+                throw new \Exception("Binário do Node.js não encontrado");
 
-            $chromePaths = [
-                '/usr/bin/chromium',
-                '/usr/bin/chromium-browser',
-                '/usr/bin/google-chrome-stable',
-                '/usr/bin/google-chrome',
-            ];
-            $chromePath = null;
-            foreach ($chromePaths as $p) {
-                if (file_exists($p)) {
-                    $chromePath = $p;
-                    break;
-                }
+            $script = base_path('render-playwright.cjs');
+            if (!file_exists($script))
+                throw new \Exception("Script {$script} ausente");
+
+            $cmd = "cd " . escapeshellarg(base_path()) . " && {$nodeBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPng) . " image 2>&1";
+
+            Log::info("[MAXDIVULGA-08-CMD] Executando: {$cmd}");
+            $saida = shell_exec($cmd);
+            Log::info("[MAXDIVULGA-08-OUTPUT] {$saida}");
+
+            if (!file_exists($caminhoPng)) {
+                throw new \Exception("Arquivo final não foi gerado. Saida: {$saida}");
             }
 
-            $browsershot = Browsershot::html($html)
-                ->windowSize(1080, 1920)
-                ->deviceScaleFactor(2)
-                ->setOption('args', $this->chromiumArgs());
-
-            if ($chromePath)
-                $browsershot->setChromePath($chromePath);
-            if ($nodeBin)
-                $browsershot->setNodeBinary($nodeBin);
-            if ($npmBin)
-                $browsershot->setNpmBinary($npmBin);
-
-            // NODE_PATH apontando para node_modules LOCAL do projeto
-            $nodeModules = base_path('node_modules');
-            if (is_dir($nodeModules)) {
-                $browsershot->setEnvironmentOptions(['NODE_PATH' => $nodeModules]);
-            }
-
-            $browsershot->save($caminhoPng);
             @chmod($caminhoPng, 0664);
-            Log::info("[MAXDIVULGA-08B] PNG gerado com sucesso!");
+            Log::info("[MAXDIVULGA-08B] PNG gerado com sucesso pelo Playwright!");
             return "storage/{$pasta}/{$arquivoPng}";
 
         } catch (\Exception $e) {
-            Log::error("[MAXDIVULGA-08A] Browsershot falhou — usando fallback HTML. Erro: " . $e->getMessage());
-            // Retorna o HTML como fallback aplicável
+            Log::error("[MAXDIVULGA-08A] Playwright falhou — usando fallback HTML. Erro: " . $e->getMessage());
             return "storage/{$pasta}/{$arquivoHtml}";
         }
     }
@@ -223,46 +202,26 @@ class CatalogRendererService
         $caminho = storage_path("app/public/{$pasta}/{$arquivo}");
 
         try {
+            Log::info("[MAXDIVULGA-08-PDF] Invocando Playwright (Firefox) HTML→PDF...");
             $nodeBin = $this->encontrarBinario(['/usr/local/bin/node', '/usr/bin/node', 'node']);
-            $npmBin = $this->encontrarBinario(['/usr/local/bin/npm', '/usr/bin/npm', 'npm']);
+            if (!$nodeBin)
+                throw new \Exception("Binário Node ausente");
 
-            $chromePaths = [
-                '/usr/bin/chromium',
-                '/usr/bin/chromium-browser',
-                '/usr/bin/google-chrome-stable',
-                '/usr/bin/google-chrome',
-            ];
-            $chromePath = null;
-            foreach ($chromePaths as $p) {
-                if (file_exists($p)) {
-                    $chromePath = $p;
-                    break;
-                }
+            $script = base_path('render-playwright.cjs');
+            $cmd = "cd " . escapeshellarg(base_path()) . " && {$nodeBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminho) . " pdf 2>&1";
+
+            $saida = shell_exec($cmd);
+            Log::info("[MAXDIVULGA-08-OUTPUT] {$saida}");
+            if (!file_exists($caminho)) {
+                throw new \Exception("Falha na geração: {$saida}");
             }
 
-            $browsershot = Browsershot::html($html)
-                ->format('A4')
-                ->margins(10, 10, 10, 10)
-                ->setOption('args', $this->chromiumArgs());
-
-            if ($chromePath)
-                $browsershot->setChromePath($chromePath);
-            if ($nodeBin)
-                $browsershot->setNodeBinary($nodeBin);
-            if ($npmBin)
-                $browsershot->setNpmBinary($npmBin);
-
-            $nodeModules = base_path('node_modules');
-            if (is_dir($nodeModules)) {
-                $browsershot->setEnvironmentOptions(['NODE_PATH' => $nodeModules]);
-            }
-
-            $browsershot->save($caminho);
             @chmod($caminho, 0664);
+            Log::info("[MAXDIVULGA-08B-PDF] PDF gerado com sucesso!");
             return "storage/{$pasta}/{$arquivo}";
 
         } catch (\Exception $e) {
-            Log::error("[MAXDIVULGA-PDFERR] Erro no Browsershot PDF. Usando fallback HTML alternativo: " . $e->getMessage());
+            Log::error("[MAXDIVULGA-PDFERR] Playwright PDF falhou. Usando fallback HTML alternativo: " . $e->getMessage());
             return "storage/{$pasta}/{$arquivoHtml}";
         }
     }

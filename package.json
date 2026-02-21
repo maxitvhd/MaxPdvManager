@@ -19,6 +19,6 @@
         "sass-loader": "^12.3.0"
     },
     "dependencies": {
-        "puppeteer": "^24.37.5"
+        "playwright": "^1.58.2"
     }
 }
