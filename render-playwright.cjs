@@ -20,10 +20,12 @@ const path = require('path');
 
     let browser;
     try {
-        // Inicializa Firefox. O Playwright gerencia seu próprio binário.
+        // Força a pasta raiz do projeto como cache dos browsers (resolve permissões de hospedagem)
+        const browsersPath = path.resolve(__dirname, 'playwright-browsers');
+        process.env.PLAYWRIGHT_BROWSERS_PATH = browsersPath;
+
         browser = await firefox.launch({
             headless: true,
-            // Firefox não requer no-sandbox e lida melhor com restrições OpenVZ
         });
 
         const context = await browser.newContext({
@@ -32,10 +34,10 @@ const path = require('path');
         });
 
         const page = await context.newPage();
-        
+
         // Resolve URL absoluto
         const fileUrl = 'file://' + path.resolve(htmlPath);
-        
+
         // Carrega página e aguarda requisições (fontes/imagens) concluírem
         await page.goto(fileUrl, { waitUntil: 'networkidle', timeout: 30000 });
 
@@ -43,9 +45,9 @@ const path = require('path');
             await page.screenshot({ path: outputPath, fullPage: true, type: 'png' });
         } else if (format === 'pdf') {
             await page.emulateMedia({ media: 'screen' });
-            await page.pdf({ 
-                path: outputPath, 
-                format: 'A4', 
+            await page.pdf({
+                path: outputPath,
+                format: 'A4',
                 margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' },
                 printBackground: true
             });
