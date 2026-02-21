@@ -97,6 +97,7 @@ class CatalogRendererService
         $arquivoPng = 'imagem_' . Str::random(6) . '.png';
         $caminhoPng = storage_path("app/public/{$pasta}/{$arquivoPng}");
 
+
         try {
             Log::info("[MAXDIVULGA-08] Invocando Python (WeasyPrint+PyMuPDF) HTML→PNG...");
 

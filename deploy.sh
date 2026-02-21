@@ -35,9 +35,7 @@ ssh -t $SSH_USER@$SSH_HOST << EOF
     composer install --no-interaction --prefer-dist --optimize-autoloader
     npm ci --omit=dev 2>/dev/null || npm install --omit=dev
     
-    # Instala Firefox explicitamente na pasta raiz do projeto pra não dar erro de permissão no painel
-    export PLAYWRIGHT_BROWSERS_PATH=$PWD/playwright-browsers
-    npx playwright install firefox
+    
 
     php artisan migrate --force
     php artisan storage:link 2>/dev/null || true
