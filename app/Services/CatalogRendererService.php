@@ -212,31 +212,58 @@ class CatalogRendererService
         Log::info("[MAXDIVULGA-07B] Preparando HTML para PDF...");
         $html = $this->getHtml($campaign, $produtos, $dadosLoja);
         $pasta = $this->construirPastaSaida($campaign, $dadosLoja);
+
+        $arquivoHtml = 'campanha_' . Str::random(5) . '_print.html';
+        $caminhoHtml = storage_path("app/public/{$pasta}/{$arquivoHtml}");
+        file_put_contents($caminhoHtml, $html);
+        @chmod($caminhoHtml, 0664);
+
         $arquivo = 'catalogo_' . Str::random(5) . '.pdf';
         $caminho = storage_path("app/public/{$pasta}/{$arquivo}");
 
         try {
+            $nodeBin = $this->encontrarBinario(['/usr/local/bin/node', '/usr/bin/node', 'node']);
+            $npmBin = $this->encontrarBinario(['/usr/local/bin/npm', '/usr/bin/npm', 'npm']);
+
+            $chromePaths = [
+                '/usr/bin/chromium',
+                '/usr/bin/chromium-browser',
+                '/usr/bin/google-chrome-stable',
+                '/usr/bin/google-chrome',
+            ];
+            $chromePath = null;
+            foreach ($chromePaths as $p) {
+                if (file_exists($p)) {
+                    $chromePath = $p;
+                    break;
+                }
+            }
+
             $browsershot = Browsershot::html($html)
-                ->setChromePath('/usr/bin/chromium') // <-- ADICIONADO AQUI
                 ->format('A4')
                 ->margins(10, 10, 10, 10)
-                ->noSandbox();
+                ->setOption('args', $this->chromiumArgs());
 
-            if (file_exists('/usr/bin/node')) {
-                $browsershot->setNodeBinary('/usr/bin/node');
-            }
-            if (file_exists('/usr/bin/npm')) {
-                $browsershot->setNpmBinary('/usr/bin/npm');
+            if ($chromePath)
+                $browsershot->setChromePath($chromePath);
+            if ($nodeBin)
+                $browsershot->setNodeBinary($nodeBin);
+            if ($npmBin)
+                $browsershot->setNpmBinary($npmBin);
+
+            $nodeModules = base_path('node_modules');
+            if (is_dir($nodeModules)) {
+                $browsershot->setEnvironmentOptions(['NODE_PATH' => $nodeModules]);
             }
 
             $browsershot->save($caminho);
             @chmod($caminho, 0664);
-        } catch (\Exception $e) {
-            Log::error("[MAXDIVULGA-PDFERR] Erro no Browsershot PDF: " . $e->getMessage());
-            throw $e;
-        }
+            return "storage/{$pasta}/{$arquivo}";
 
-        return "storage/{$pasta}/{$arquivo}";
+        } catch (\Exception $e) {
+            Log::error("[MAXDIVULGA-PDFERR] Erro no Browsershot PDF. Usando fallback HTML alternativo: " . $e->getMessage());
+            return "storage/{$pasta}/{$arquivoHtml}";
+        }
     }
 
     private function gerarAudio(MaxDivulgaCampaign $campaign, $produtos): string
