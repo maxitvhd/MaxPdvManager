@@ -75,6 +75,53 @@ class CatalogRendererService
         ])->render();
     }
 
+    private function configurarBrowsershot(\Spatie\Browsershot\Browsershot $browsershot): \Spatie\Browsershot\Browsershot
+    {
+        // Caminhos dos binários node/npm
+        $nodeBin = $this->encontrarBinario(['node', '/usr/local/bin/node', '/usr/bin/node']);
+        $npmBin = $this->encontrarBinario(['npm', '/usr/local/bin/npm', '/usr/bin/npm']);
+
+        if ($nodeBin)
+            $browsershot->setNodeBinary($nodeBin);
+        if ($npmBin)
+            $browsershot->setNpmBinary($npmBin);
+
+        // NODE_PATH apontando para o node_modules LOCAL do projeto (dentro da hospedagem)
+        // Isso garante que o puppeteer instalado via npm ci seja encontrado
+        $nodeModulesLocal = base_path('node_modules');
+        if (is_dir($nodeModulesLocal)) {
+            $browsershot->setEnvironmentOptions(['NODE_PATH' => $nodeModulesLocal]);
+        }
+
+        // Chromium path (comum em servidores Linux)
+        $chromePaths = [
+            '/usr/bin/chromium-browser',
+            '/usr/bin/chromium',
+            '/usr/bin/google-chrome',
+            '/usr/bin/google-chrome-stable',
+        ];
+        foreach ($chromePaths as $path) {
+            if (file_exists($path)) {
+                $browsershot->setChromePath($path);
+                break;
+            }
+        }
+
+        return $browsershot;
+    }
+
+    private function encontrarBinario(array $caminhos): ?string
+    {
+        foreach ($caminhos as $caminho) {
+            $found = trim(shell_exec("which {$caminho} 2>/dev/null") ?? '');
+            if ($found && file_exists($found))
+                return $found;
+            if (file_exists($caminho))
+                return $caminho;
+        }
+        return null;
+    }
+
     private function gerarImagem(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
     {
         Log::info("[MAXDIVULGA-07A] Preparando HTML para imagem...");
@@ -87,6 +134,7 @@ class CatalogRendererService
 
         try {
             $browsershot = Browsershot::html($html)
+                ->setChromePath('/usr/bin/chromium') // <-- ADICIONADO AQUI
                 ->windowSize(1080, 1920)
                 ->deviceScaleFactor(2)
                 ->noSandbox();
@@ -120,6 +168,7 @@ class CatalogRendererService
 
         try {
             $browsershot = Browsershot::html($html)
+                ->setChromePath('/usr/bin/chromium') // <-- ADICIONADO AQUI
                 ->format('A4')
                 ->margins(10, 10, 10, 10)
                 ->noSandbox();
