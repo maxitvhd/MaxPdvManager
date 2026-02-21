@@ -138,6 +138,7 @@ class CatalogRendererService
             '--disable-sync',
             '--metrics-recording-only',
             '--mute-audio',
+            '--crash-dumps-dir=/tmp/crashpad_dumps', // <-- FORÇA O CAMINHO DO BANCO DE DADOS DO CRASHPAD
         ];
     }
 
