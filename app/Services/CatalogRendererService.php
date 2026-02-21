@@ -108,7 +108,8 @@ class CatalogRendererService
             if (!file_exists($script))
                 throw new \Exception("Script {$script} ausente");
 
-            $cmd = "cd " . escapeshellarg(base_path()) . " && {$nodeBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPng) . " image 2>&1";
+            $browsersPath = base_path('playwright-browsers');
+            $cmd = "cd " . escapeshellarg(base_path()) . " && env PLAYWRIGHT_BROWSERS_PATH=" . escapeshellarg($browsersPath) . " {$nodeBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPng) . " image 2>&1";
 
             Log::info("[MAXDIVULGA-08-CMD] Executando: {$cmd}");
             $saida = shell_exec($cmd);
@@ -149,7 +150,8 @@ class CatalogRendererService
                 throw new \Exception("Binário Node ausente");
 
             $script = base_path('render-playwright.cjs');
-            $cmd = "cd " . escapeshellarg(base_path()) . " && {$nodeBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPdf) . " pdf 2>&1";
+            $browsersPath = base_path('playwright-browsers');
+            $cmd = "cd " . escapeshellarg(base_path()) . " && env PLAYWRIGHT_BROWSERS_PATH=" . escapeshellarg($browsersPath) . " {$nodeBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPdf) . " pdf 2>&1";
 
             $saida = shell_exec($cmd);
             Log::info("[MAXDIVULGA-08-OUTPUT] {$saida}");
