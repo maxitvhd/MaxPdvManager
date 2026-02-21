@@ -23,18 +23,42 @@ def main():
         # O Base URL pega o diretorio do HTML para carregar imagens relativas corretamente
         base_dir = os.path.dirname(os.path.abspath(html_path))
         
-        # Renderiza o PDF
-        HTML(filename=html_path, base_url=base_dir).write_pdf(pdf_temp)
+        # CSS adicional para forçar renderização mobile/Instagram (1080x1920) e remover margens
+        from weasyprint import CSS
+        if fmt == 'image':
+            custom_css = CSS(string='''
+                @page { 
+                    size: 1080px 1920px; 
+                    margin: 0; 
+                }
+                body {
+                    margin: 0;
+                    padding: 0;
+                    width: 1080px;
+                    height: 1920px;
+                    overflow: hidden;
+                    background-color: white;
+                }
+            ''')
+            HTML(filename=html_path, base_url=base_dir).write_pdf(pdf_temp, stylesheets=[custom_css])
+        else:
+            # Para PDF normal, usa o padrão do WeasyPrint (A4 com margens do próprio CSS ou default)
+            custom_css = CSS(string='@page { margin: 10mm; }')
+            HTML(filename=html_path, base_url=base_dir).write_pdf(pdf_temp, stylesheets=[custom_css])
 
         if fmt == "image":
             # Converte a primeira pagina do PDF para PNG usando PyMuPDF
             doc = fitz.open(pdf_temp)
             page = doc.load_page(0)
             
+            # Corta a imagem estritamente no tamanho definido 1080x1920 (considerando proporção do PDF point)
+            # O Weasyprint usa 96dpi (1px = 0.75pt). 1080px = 810pt. 1920px = 1440pt.
+            clip_rect = fitz.Rect(0, 0, 810, 1440)
+            
             # Aumenta a resolucao (scale) - Fator 2x equivale a alta resolucao
             zoom = 2.0
             mat = fitz.Matrix(zoom, zoom)
-            pix = page.get_pixmap(matrix=mat)
+            pix = page.get_pixmap(matrix=mat, clip=clip_rect)
             
             pix.save(output_path)
             doc.close()
