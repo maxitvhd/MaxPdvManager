@@ -36,4 +36,6 @@ venv/
 *.zip
 storage/app/public/lojas/
 storage/app/public/produtos_full/
-public/phpmyadmin/
+public/phpmyadmin/playwright-browsers/
+playwright-browsers/
+playwright-browsers/
