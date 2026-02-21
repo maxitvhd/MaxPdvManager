@@ -27,7 +27,7 @@ class CatalogRendererService
                 case 'pdf':
                     return $this->gerarPdf($campaign, $produtos, $dadosLoja);
                 case 'audio':
-                    return $this->gerarAudio($campaign, $produtos);
+                    return $this->gerarAudio($campaign, $produtos, $dadosLoja);
                 default:
                     return $campaign->copy;
             }
@@ -168,9 +168,58 @@ class CatalogRendererService
         }
     }
 
-    private function gerarAudio(MaxDivulgaCampaign $campaign, $produtos): string
+    private function gerarAudio(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
     {
-        // TODO: Integração TTS
-        return 'audio_pendente.mp3';
+        Log::info("[MAXDIVULGA-TTS] Iniciando geração de áudio via AIconect API...");
+
+        $textoBase = $campaign->copy ?? 'Olá! Confira as nossas novidades imperdíveis.';
+        // Limpar emojis e caracteres extras para ajudar a API de voz
+        $textoLimpo = strip_tags($textoBase);
+        $textoLimpo = preg_replace('/[\x{1F600}-\x{1F64F}]/u', '', $textoLimpo); // Emoticons
+        $textoLimpo = preg_replace('/[\x{1F300}-\x{1F5FF}]/u', '', $textoLimpo); // Simbolos e Pctograficos
+        $textoLimpo = preg_replace('/[\x{1F680}-\x{1F6FF}]/u', '', $textoLimpo); // Transportes
+        $textoLimpo = preg_replace('/[\x{1F700}-\x{1F77F}]/u', '', $textoLimpo); // Alquimicos
+        $textoLimpo = preg_replace('/[\x{1F780}-\x{1F7FF}]/u', '', $textoLimpo); // Geometricos
+        $textoLimpo = preg_replace('/[\x{1F800}-\x{1F8FF}]/u', '', $textoLimpo); // Setas
+        $textoLimpo = preg_replace('/[\x{1F900}-\x{1F9FF}]/u', '', $textoLimpo); // Simbolos e Pctograficos Suplemento
+        $textoLimpo = preg_replace('/[\x{1FA00}-\x{1FA6F}]/u', '', $textoLimpo); // Chess
+        $textoLimpo = preg_replace('/[\x{2600}-\x{26FF}]/u', '', $textoLimpo); // Misc symbols
+        $textoLimpo = preg_replace('/[\x{2700}-\x{27BF}]/u', '', $textoLimpo); // Dingbats
+
+        // Remove cabeçalhos HEADLINE / SUBTITULO
+        $textoLimpo = preg_replace('/HEADLINE:.*?\n/i', '', $textoLimpo);
+        $textoLimpo = preg_replace('/SUBTITULO:.*?\n/i', '', $textoLimpo);
+        $textoLimpo = trim($textoLimpo);
+
+        $pasta = $this->construirPastaSaida($campaign, $dadosLoja);
+        $arquivoMp3 = 'locucao_' . Str::random(6) . '.mp3';
+        $caminhoMp3 = storage_path("app/public/{$pasta}/{$arquivoMp3}");
+
+        $voice = $campaign->voice ?? 'pt-BR-FabioNeural';
+        $speed = $campaign->audio_speed ?? 1.25;
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(60)->get('http://192.168.1.13:5000/tts', [
+                'q' => $textoLimpo,
+                'voice' => $voice,
+                'speed' => $speed,
+                'key' => 'A9fK3M7Q2Z8LxPR',
+                'format' => 'mp3',
+                'play' => 0
+            ]);
+
+            if ($response->successful()) {
+                file_put_contents($caminhoMp3, $response->body());
+                @chmod($caminhoMp3, 0664);
+
+                Log::info("[MAXDIVULGA-TTS-OK] Áudio salvo em: {$caminhoMp3}");
+                return "storage/{$pasta}/{$arquivoMp3}";
+            } else {
+                throw new \Exception("A API Voice retornou status " . $response->status());
+            }
+        } catch (\Exception $e) {
+            Log::error("[MAXDIVULGA-TTS-ERR] Falha ao gerar áudio final: " . $e->getMessage());
+            return "erro_audio.mp3";
+        }
     }
 }

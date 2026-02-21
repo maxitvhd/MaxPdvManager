@@ -89,6 +89,8 @@ class MaxDivulgaController extends Controller
             'theme_id' => $request->theme_id,
             'persona' => $request->persona,
             'format' => $request->format,
+            'voice' => $request->voice,
+            'audio_speed' => $request->audio_speed,
             'status' => 'active',
             'is_scheduled' => $request->boolean('is_scheduled', false),
             'scheduled_days' => $request->input('scheduled_days', []),
@@ -227,7 +229,7 @@ class MaxDivulgaController extends Controller
             'copy_acompanhamento' => $copyAcompanhamento,
         ]);
 
-        if (in_array($campaign->format, ['image', 'pdf'])) {
+        if (in_array($campaign->format, ['image', 'pdf', 'audio'])) {
             Log::info("[MAXDIVULGA-06] Iniciando Renderização (CatalogRendererService)");
             $renderService = new \App\Services\CatalogRendererService();
             // Passa também os dados da loja

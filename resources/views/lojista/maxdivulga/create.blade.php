@@ -93,7 +93,8 @@
                                                     <label class="btn btn-sm mb-0 px-2 py-1"
                                                         :class="scheduledDays.includes(dayNum.toString()) ? 'btn-success' : 'btn-outline-secondary'">
                                                         <input type="checkbox" name="scheduled_days[]" :value="dayNum"
-                                                            class="d-none" x-model="scheduledDays" :disabled="scheduleType !== 'scheduled'">
+                                                            class="d-none" x-model="scheduledDays"
+                                                            :disabled="scheduleType !== 'scheduled'">
                                                         <span x-text="dayName"></span>
                                                     </label>
                                                 </template>
@@ -110,7 +111,8 @@
                                                 <template x-for="time in scheduledTimes" :key="time">
                                                     <span class="badge bg-secondary d-flex align-items-center gap-1">
                                                         <span x-text="time"></span>
-                                                        <input type="hidden" name="scheduled_times[]" :value="time" :disabled="scheduleType !== 'scheduled'">
+                                                        <input type="hidden" name="scheduled_times[]" :value="time"
+                                                            :disabled="scheduleType !== 'scheduled'">
                                                         <i class="fas fa-times cursor-pointer ms-1" style="cursor:pointer;"
                                                             @click="removeTime(time)"></i>
                                                     </span>
@@ -121,7 +123,8 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <input type="hidden" name="is_scheduled" value="1" :disabled="scheduleType !== 'scheduled'">
+                                    <input type="hidden" name="is_scheduled" value="1"
+                                        :disabled="scheduleType !== 'scheduled'">
                                 </div>
 
                                 <div class="mb-3">
@@ -503,8 +506,32 @@
                                         required>
                                         <option value="image">🖼️ Imagem PNG (Ideal para Stories e Feed)</option>
                                         <option value="pdf">📄 Catálogo PDF (Ideal para WhatsApp Business)</option>
+                                        <option value="audio">🔊 Áudio Locução (Para Rádio, Loja ou Carro de Som)</option>
                                         <option value="text">📝 Apenas o Texto da IA (Para copiar e colar)</option>
                                     </select>
+                                </div>
+
+                                <div class="row mb-4" x-show="formatFinal === 'audio'" x-transition>
+                                    <div class="col-md-6 form-group">
+                                        <label class="form-label font-weight-bold">Voz do Locutor</label>
+                                        <select name="voice" class="form-control form-control-lg" x-model="voice"
+                                            :required="formatFinal === 'audio'">
+                                            <option value="pt-BR-FabioNeural">Fábio (Padrão/Masculino)</option>
+                                            <option value="pt-BR-AntonioNeural">Antônio (Masculino Médio)</option>
+                                            <option value="pt-BR-DonatoNeural">Donato (Rápido/Agudo)</option>
+                                            <option value="pt-BR-HumbertoNeural">Humberto (Grave/Robusto)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 form-group">
+                                        <label class="form-label font-weight-bold">Velocidade da Locução</label>
+                                        <select name="audio_speed" class="form-control form-control-lg" x-model="audioSpeed"
+                                            :required="formatFinal === 'audio'">
+                                            <option value="0.9">Lenta (0.9x)</option>
+                                            <option value="1.0">Normal (1.0x)</option>
+                                            <option value="1.25">Rápida (1.25x)</option>
+                                            <option value="1.5">Muito Rápida (1.5x - Feirão Promocional)</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div class="form-group mb-3" x-show="formatFinal === 'image' || formatFinal === 'pdf'">
@@ -604,6 +631,8 @@
                 ruleValue: '',
                 persona: 'surpreendame',
                 formatFinal: 'image',
+                voice: 'pt-BR-FabioNeural',
+                audioSpeed: '1.25',
                 searchQuery: '',
                 searchResults: [],
                 selectedProducts: [],

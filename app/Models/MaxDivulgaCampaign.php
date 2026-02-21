@@ -32,7 +32,9 @@ class MaxDivulgaCampaign extends Model
         'is_scheduled',
         'scheduled_days',
         'scheduled_times',
-        'is_active'
+        'is_active',
+        'voice',
+        'audio_speed'
     ];
 
     protected $casts = [
