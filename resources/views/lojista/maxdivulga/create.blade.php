@@ -70,12 +70,58 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label font-weight-bold">Programação</label>
-                                        <select name="schedule_type" class="form-control" required>
-                                            <option value="unique">📅 Gerar Agora (Única)</option>
-                                            <option value="daily">🔄 Repetir Diariamente</option>
-                                            <option value="weekly">📆 Repetir Semanalmente</option>
+                                        <select name="schedule_type" class="form-control" x-model="scheduleType" required>
+                                            <option value="unique">🚀 Disparar Agora (Criar Imediatamente)</option>
+                                            <option value="scheduled">⏱️ Programar / Repetir no Piloto Automático</option>
                                         </select>
                                     </div>
+                                </div>
+
+                                <div x-show="scheduleType === 'scheduled'" class="mb-4 p-3 border rounded"
+                                    style="background:rgba(16,185,129,0.05); border-color:rgba(16,185,129,0.2)!important;"
+                                    x-transition>
+                                    <h6 class="font-weight-bold text-success mb-3"><i class="fas fa-robot me-1"></i> Piloto
+                                        Automático de Promoções</h6>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label text-sm font-weight-bold">Dias de Disparo</label>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <template
+                                                    x-for="(dayName, dayNum) in {1:'Seg', 2:'Ter', 3:'Qua', 4:'Qui', 5:'Sex', 6:'Sáb', 0:'Dom'}"
+                                                    :key="dayNum">
+                                                    <label class="btn btn-sm mb-0 px-2 py-1"
+                                                        :class="scheduledDays.includes(dayNum.toString()) ? 'btn-success' : 'btn-outline-secondary'">
+                                                        <input type="checkbox" name="scheduled_days[]" :value="dayNum"
+                                                            class="d-none" x-model="scheduledDays" :disabled="scheduleType !== 'scheduled'">
+                                                        <span x-text="dayName"></span>
+                                                    </label>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label text-sm font-weight-bold">Horários</label>
+                                            <div class="d-flex gap-2">
+                                                <input type="time" class="form-control form-control-sm" x-model="newTime">
+                                                <button type="button" class="btn btn-sm btn-dark mb-0"
+                                                    @click="addTime()">Add</button>
+                                            </div>
+                                            <div class="mt-2 d-flex flex-wrap gap-2">
+                                                <template x-for="time in scheduledTimes" :key="time">
+                                                    <span class="badge bg-secondary d-flex align-items-center gap-1">
+                                                        <span x-text="time"></span>
+                                                        <input type="hidden" name="scheduled_times[]" :value="time" :disabled="scheduleType !== 'scheduled'">
+                                                        <i class="fas fa-times cursor-pointer ms-1" style="cursor:pointer;"
+                                                            @click="removeTime(time)"></i>
+                                                    </span>
+                                                </template>
+                                                <template x-if="scheduledTimes.length === 0">
+                                                    <small class="text-muted">Nenhum horário adicionado.</small>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="is_scheduled" value="1" :disabled="scheduleType !== 'scheduled'">
                                 </div>
 
                                 <div class="mb-3">
@@ -196,7 +242,8 @@
                             <div x-show="step === 3" style="display:none;" x-transition>
                                 <h5 class="font-weight-bolder mb-1">Passo 3: Seleção de Produtos</h5>
                                 <p class="text-muted text-sm mb-4">Escolha quais produtos aparecerão na campanha. Máximo:
-                                    <strong x-text="productQty"></strong> produtos.</p>
+                                    <strong x-text="productQty"></strong> produtos.
+                                </p>
 
                                 <div class="form-group mb-3">
                                     <label class="form-label font-weight-bold">Método de Seleção</label>
@@ -241,32 +288,30 @@
                                     <div x-show="!loadingProducts && autoProducts.length > 0">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <p class="text-xs text-muted mb-0">
-                                                ✅ <strong x-text="selectedProducts.length"></strong> de
-                                                <strong x-text="autoProducts.length"></strong> produtos selecionados.
+                                                Exibindo <strong x-text="autoProducts.length"></strong> produtos. Escolha-os
+                                                na lista com desconto ou clique para adicionar.
                                             </p>
-                                            <small class="text-muted">Desmarque para excluir</small>
                                         </div>
                                         <div class="border rounded"
-                                            style="max-height:320px;overflow-y:auto;border-radius:10px!important;">
+                                            style="max-height:220px;overflow-y:auto;border-radius:10px!important;">
                                             <table class="table table-sm align-items-center mb-0">
                                                 <template x-for="product in autoProducts" :key="product.id">
-                                                    <tr :class="isSelected(product.id) ? '' : 'opacity-50'">
-                                                        <td class="px-3 py-2" style="width:40px;">
-                                                            <input type="checkbox" class="form-check-input"
-                                                                :checked="isSelected(product.id)"
-                                                                @change="toggleAutoProduct(product)">
-                                                        </td>
-                                                        <td class="py-2">
+                                                    <tr :class="isSelected(product.id) ? 'bg-light' : ''">
+                                                        <td class="py-2 px-3">
                                                             <span class="text-sm font-weight-bold"
                                                                 x-text="product.nome"></span>
-                                                            <template x-if="isSelected(product.id)">
-                                                                <input type="hidden" name="selected_products[]"
-                                                                    :value="product.id">
-                                                            </template>
                                                         </td>
                                                         <td class="py-2 text-end px-3">
-                                                            <span class="text-sm text-success font-weight-bold"
+                                                            <span class="text-sm text-muted"
                                                                 x-text="'R$ ' + parseFloat(product.preco).toFixed(2).replace('.',',')"></span>
+                                                        </td>
+                                                        <td class="py-2 px-3" style="width:100px;">
+                                                            <button type="button" class="btn btn-xs mb-0"
+                                                                :class="isSelected(product.id) ? 'btn-secondary' : 'btn-outline-success'"
+                                                                @click="toggleAutoProduct(product)">
+                                                                <span
+                                                                    x-text="isSelected(product.id) ? 'Remover' : 'Adicionar'"></span>
+                                                            </button>
                                                         </td>
                                                     </tr>
                                                 </template>
@@ -315,37 +360,8 @@
                                                                 </button>
                                                             </template>
                                                             <template x-if="isSelected(product.id)">
-                                                                <span class="badge bg-success">✓ Na Lista</span>
+                                                                <span class="badge bg-success">✓ Adicionado</span>
                                                             </template>
-                                                        </td>
-                                                    </tr>
-                                                </template>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <h6 class="mt-2">📋 Selecionados (<span x-text="selectedProducts.length"></span> / <span
-                                            x-text="productQty"></span>)</h6>
-                                    <div class="border rounded" style="max-height:200px;overflow-y:auto;">
-                                        <table class="table table-sm mb-0">
-                                            <tbody>
-                                                <template x-if="selectedProducts.length === 0">
-                                                    <tr>
-                                                        <td colspan="3" class="text-center text-muted py-3 text-sm">Ainda
-                                                            não há produtos. Busque acima.</td>
-                                                    </tr>
-                                                </template>
-                                                <template x-for="product in selectedProducts" :key="product.id">
-                                                    <tr>
-                                                        <td class="px-3 py-2">
-                                                            <input type="hidden" name="selected_products[]"
-                                                                :value="product.id">
-                                                            <span class="text-sm" x-text="product.nome"></span>
-                                                        </td>
-                                                        <td class="py-2 px-3 text-end">
-                                                            <button type="button" class="btn btn-xs btn-outline-danger mb-0"
-                                                                @click="removeProduct(product.id)">
-                                                                <i class="fas fa-times"></i>
-                                                            </button>
                                                         </td>
                                                     </tr>
                                                 </template>
@@ -354,18 +370,78 @@
                                     </div>
                                 </div>
 
-                                <hr class="mt-4 mb-3">
-                                <div class="form-group mb-0">
-                                    <label class="form-label font-weight-bold">
-                                        <i class="fas fa-percent text-info me-1"></i> Desconto na Campanha (%)
-                                    </label>
-                                    <p class="text-xs text-muted mb-2">A IA aplicará o desconto visualmente mostrando preço
-                                        DE/POR na arte.</p>
-                                    <div class="input-group" style="max-width:200px;">
+                                {{-- COMPILADO FINAL DOS PRODUTOS SELECIONADOS + DESCONTOS --}}
+                                <h6 class="mt-4 border-top pt-3 text-primary">🛒 Produtos Selecionados e Descontos (<span
+                                        x-text="selectedProducts.length"></span> / <span x-text="productQty"></span>)</h6>
+
+                                <div class="d-flex gap-2 align-items-center mb-3 p-2 bg-light rounded"
+                                    x-show="selectedProducts.length > 0">
+                                    <span class="text-sm font-weight-bold">Desconto em Massa:</span>
+                                    <div class="input-group input-group-sm mb-0" style="width:120px;">
+                                        <input type="number" class="form-control" placeholder="Ex: 10"
+                                            x-model="globalDiscount">
                                         <span class="input-group-text">%</span>
-                                        <input type="number" name="discount_rules[percentage]" class="form-control"
-                                            placeholder="0" value="0" min="0" max="90">
                                     </div>
+                                    <button type="button" class="btn btn-sm btn-dark mb-0"
+                                        @click="applyGlobalDiscount()">Aplicar a Todos</button>
+                                </div>
+
+                                <div class="border rounded" style="max-height:350px;overflow-y:auto;">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead class="bg-gray-100">
+                                            <tr>
+                                                <th class="text-xs font-weight-bolder text-uppercase text-secondary">Produto
+                                                </th>
+                                                <th
+                                                    class="text-xs font-weight-bolder text-uppercase text-secondary text-center">
+                                                    Desconto %</th>
+                                                <th
+                                                    class="text-xs font-weight-bolder text-uppercase text-secondary text-end">
+                                                    Preços</th>
+                                                <th class="text-xs font-weight-bolder text-uppercase text-secondary"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template x-if="selectedProducts.length === 0">
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-muted py-3 text-sm">Adicione os
+                                                        produtos acima.</td>
+                                                </tr>
+                                            </template>
+                                            <template x-for="(product, index) in selectedProducts" :key="product.id">
+                                                <tr>
+                                                    <td class="px-3 py-2">
+                                                        <input type="hidden" name="selected_products[]" :value="product.id">
+                                                        <p class="text-sm font-weight-bold mb-0 text-wrap"
+                                                            style="max-width:200px;" x-text="product.nome"></p>
+                                                    </td>
+                                                    <td class="py-2 text-center" style="width:120px;">
+                                                        <div class="input-group input-group-sm mb-0 mx-auto">
+                                                            <input type="number" :name="'discount_products['+product.id+']'"
+                                                                class="form-control text-center" x-model="product.discount"
+                                                                @input="calculateDiscounted(index)" placeholder="0" min="0"
+                                                                max="99">
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-2 px-3 text-end">
+                                                        <div class="d-flex flex-column">
+                                                            <small class="text-decoration-line-through text-muted"
+                                                                x-show="product.discount > 0"
+                                                                x-text="'R$ ' + parseFloat(product.preco).toFixed(2).replace('.',',')"></small>
+                                                            <span class="text-sm font-weight-bold text-success"
+                                                                x-text="'R$ ' + getDiscountedPrice(product)"></span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-2 px-3 text-end" style="width:50px;">
+                                                        <button type="button"
+                                                            class="btn btn-xs btn-outline-danger mb-0 px-2"
+                                                            @click="removeProduct(product.id)"><i
+                                                                class="fas fa-trash"></i></button>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
@@ -377,44 +453,40 @@
 
                                 <input type="hidden" name="persona" :value="persona">
                                 <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="card cursor-pointer border-2 p-3 h-100" @click="persona = 'urgencia'"
+                                            :class="persona == 'urgencia' ? 'border-primary shadow' : 'border-light'">
+                                            <h6 class="font-weight-bold text-sm">🔥 Urgência</h6>
+                                            <p class="text-xs text-muted mb-0">"É SÓ HOJE!"</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card cursor-pointer border-2 p-3 h-100" @click="persona = 'premium'"
+                                            :class="persona == 'premium' ? 'border-primary shadow' : 'border-light'">
+                                            <h6 class="font-weight-bold text-sm">💎 Premium</h6>
+                                            <p class="text-xs text-muted mb-0">"Exclusivo para você."</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card cursor-pointer border-2 p-3 h-100" @click="persona = 'mercado'"
+                                            :class="persona == 'mercado' ? 'border-primary shadow' : 'border-light'">
+                                            <h6 class="font-weight-bold text-sm">🛒 Varejão</h6>
+                                            <p class="text-xs text-muted mb-0">"Olha o preço passando!"</p>
+                                        </div>
+                                    </div>
                                     <div class="col-md-6">
-                                        <div class="card cursor-pointer border-2 p-3 h-100"
-                                            style="border-radius:12px; cursor:pointer; transition:all 0.2s;"
-                                            :class="persona == 'urgencia' ? 'border-danger shadow' : 'border-light'"
-                                            @click="persona = 'urgencia'">
-                                            <h6 class="font-weight-bold">🔥 Urgência e Escassez</h6>
-                                            <p class="text-xs text-muted mb-0">"É SÓ HOJE!! Corre que já tá acabando!" Cria
-                                                medo de perder a oportunidade.</p>
+                                        <div class="card cursor-pointer border-2 p-3 h-100" @click="persona = 'emocional'"
+                                            :class="persona == 'emocional' ? 'border-primary shadow' : 'border-light'">
+                                            <h6 class="font-weight-bold text-sm">😍 Emocional</h6>
+                                            <p class="text-xs text-muted mb-0">"Família e bons momentos."</p>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="card cursor-pointer border-2 p-3 h-100"
-                                            style="border-radius:12px; cursor:pointer; transition:all 0.2s;"
-                                            :class="persona == 'premium' ? 'border-warning shadow' : 'border-light'"
-                                            @click="persona = 'premium'">
-                                            <h6 class="font-weight-bold">💎 Premium e Exclusivo</h6>
-                                            <p class="text-xs text-muted mb-0">"O melhor selecionado para você." Para
-                                                produtos de alto valor e sofisticação.</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="card cursor-pointer border-2 p-3 h-100"
-                                            style="border-radius:12px; cursor:pointer; transition:all 0.2s;"
-                                            :class="persona == 'mercado' ? 'border-success shadow' : 'border-light'"
-                                            @click="persona = 'mercado'">
-                                            <h6 class="font-weight-bold">🛒 Locutor de Varejão</h6>
-                                            <p class="text-xs text-muted mb-0">"Olha o preço passando!" Animado, direto,
-                                                próximo. Para textos populares e de varejo.</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="card cursor-pointer border-2 p-3 h-100"
-                                            style="border-radius:12px; cursor:pointer; transition:all 0.2s;"
-                                            :class="persona == 'emocional' ? 'border-info shadow' : 'border-light'"
-                                            @click="persona = 'emocional'">
-                                            <h6 class="font-weight-bold">😍 Gatilho Emocional</h6>
-                                            <p class="text-xs text-muted mb-0">"Você merece isso!" Foca em família, momentos
-                                                especiais e realização de sonhos.</p>
+                                            @click="persona = 'surpreendame'"
+                                            :class="persona == 'surpreendame' ? 'border-primary shadow' : 'border-light'">
+                                            <h6 class="font-weight-bold text-sm">🎲 Surpreenda-me</h6>
+                                            <p class="text-xs text-muted mb-0">A IA escolhe baseada nos produtos.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -520,89 +592,124 @@
 
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('wizardData', () => ({
-            step: 1,
-            productQty: 10,
-            productRule: 'best_sellers',
-            ruleValue: '',
-            persona: 'urgencia',
-            formatFinal: 'image',
-            searchQuery: '',
-            searchResults: [],
-            selectedProducts: [],
-            autoProducts: [],
-            loadingProducts: false,
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('wizardData', () => ({
+                step: 1,
+                scheduleType: 'unique',
+                scheduledDays: [],
+                scheduledTimes: [],
+                newTime: '09:00',
+                productQty: 10,
+                productRule: 'best_sellers',
+                ruleValue: '',
+                persona: 'surpreendame',
+                formatFinal: 'image',
+                searchQuery: '',
+                searchResults: [],
+                selectedProducts: [],
+                autoProducts: [],
+                loadingProducts: false,
+                globalDiscount: '',
 
-            init() {
-                // Nada a fazer no init
-            },
+                init() { },
 
-            nextStep() {
-                // Ao avançar do passo 2 para 3, busca automático se for best_sellers
-                if (this.step === 2 && this.productRule === 'best_sellers' && this.autoProducts.length === 0) {
-                    this.fetchAutoProducts();
+                addTime() {
+                    if (this.newTime && !this.scheduledTimes.includes(this.newTime)) {
+                        this.scheduledTimes.push(this.newTime);
+                    }
+                },
+
+                removeTime(time) {
+                    this.scheduledTimes = this.scheduledTimes.filter(t => t !== time);
+                },
+
+                nextStep() {
+                    if (this.step === 2 && this.productRule === 'best_sellers' && this.autoProducts.length === 0) {
+                        this.fetchAutoProducts();
+                    }
+                    if (this.step < 6) this.step++;
+                },
+
+                fetchAutoProducts() {
+                    this.loadingProducts = true;
+                    this.autoProducts = [];
+                    const url = `{{ route('lojista.maxdivulga.api_products') }}?rule=${this.productRule}&search=${encodeURIComponent(this.ruleValue)}&limit=${this.productQty}`;
+                    fetch(url)
+                        .then(res => res.json())
+                        .then(data => {
+                            this.autoProducts = Array.isArray(data) ? data : [];
+                            // Popula selectedProducts com discount=0
+                            this.selectedProducts = this.autoProducts.map(p => ({ ...p, discount: 0 }));
+                            this.loadingProducts = false;
+                        }).catch(err => {
+                            console.error('Erro ao buscar produtos:', err);
+                            this.loadingProducts = false;
+                        });
+                },
+
+                fetchManualProducts() {
+                    const termo = this.searchQuery.trim();
+                    if (termo.length < 2) return;
+                    this.loadingProducts = true;
+                    const url = `{{ route('lojista.maxdivulga.api_products') }}?rule=search&search=${encodeURIComponent(termo)}`;
+                    fetch(url)
+                        .then(res => res.json())
+                        .then(data => {
+                            this.searchResults = Array.isArray(data) ? data : [];
+                            this.loadingProducts = false;
+                        }).catch(() => { this.loadingProducts = false; });
+                },
+
+                addProduct(product) {
+                    if (this.selectedProducts.length >= this.productQty) {
+                        alert(`Máximo de ${this.productQty} produtos atingido!`);
+                        return;
+                    }
+                    if (!this.isSelected(product.id)) {
+                        this.selectedProducts.push({ ...product, discount: 0 });
+                    }
+                },
+
+                removeProduct(productId) {
+                    this.selectedProducts = this.selectedProducts.filter(p => p.id !== productId);
+                },
+
+                toggleAutoProduct(product) {
+                    const idx = this.selectedProducts.findIndex(p => p.id === product.id);
+                    if (idx >= 0) {
+                        this.selectedProducts.splice(idx, 1);
+                    } else {
+                        if (this.selectedProducts.length >= this.productQty) return;
+                        this.selectedProducts.push({ ...product, discount: 0 });
+                    }
+                },
+
+                isSelected(productId) {
+                    return !!this.selectedProducts.find(p => p.id === productId);
+                },
+
+                applyGlobalDiscount() {
+                    let disc = parseInt(this.globalDiscount);
+                    if (isNaN(disc) || disc < 0) disc = 0;
+                    this.selectedProducts.forEach(p => p.discount = disc);
+                },
+
+                calculateDiscounted(index) {
+                    let disc = parseInt(this.selectedProducts[index].discount) || 0;
+                    if (disc < 0) disc = 0;
+                    if (disc > 100) disc = 100;
+                    this.selectedProducts[index].discount = disc;
+                },
+
+                getDiscountedPrice(product) {
+                    let p = parseFloat(product.preco);
+                    let d = parseInt(product.discount) || 0;
+                    if (d > 0 && d <= 100) {
+                        p = p - (p * (d / 100));
+                    }
+                    return p.toFixed(2).replace('.', ',');
                 }
-                if (this.step < 6) this.step++;
-            },
-
-            fetchAutoProducts() {
-                this.loadingProducts = true;
-                this.autoProducts = [];
-                const url = `{{ route('lojista.maxdivulga.api_products') }}?rule=${this.productRule}&search=${encodeURIComponent(this.ruleValue)}&limit=${this.productQty}`;
-                fetch(url)
-                    .then(res => res.json())
-                    .then(data => {
-                        this.autoProducts = Array.isArray(data) ? data : [];
-                        this.selectedProducts = this.autoProducts.map(p => ({ ...p }));
-                        this.loadingProducts = false;
-                    }).catch(err => {
-                        console.error('Erro ao buscar produtos:', err);
-                        this.loadingProducts = false;
-                    });
-            },
-
-            fetchManualProducts() {
-                const termo = this.searchQuery.trim();
-                if (termo.length < 2) return;
-                this.loadingProducts = true;
-                const url = `{{ route('lojista.maxdivulga.api_products') }}?rule=search&search=${encodeURIComponent(termo)}`;
-                fetch(url)
-                    .then(res => res.json())
-                    .then(data => {
-                        this.searchResults = Array.isArray(data) ? data : [];
-                        this.loadingProducts = false;
-                    }).catch(() => { this.loadingProducts = false; });
-            },
-
-            addProduct(product) {
-                if (this.selectedProducts.length >= this.productQty) {
-                    alert(`Máximo de ${this.productQty} produtos atingido!`);
-                    return;
-                }
-                if (!this.isSelected(product.id)) {
-                    this.selectedProducts.push({ ...product });
-                }
-            },
-
-            removeProduct(productId) {
-                this.selectedProducts = this.selectedProducts.filter(p => p.id !== productId);
-            },
-
-            toggleAutoProduct(product) {
-                const idx = this.selectedProducts.findIndex(p => p.id === product.id);
-                if (idx >= 0) {
-                    this.selectedProducts.splice(idx, 1);
-                } else {
-                    if (this.selectedProducts.length >= this.productQty) return;
-                    this.selectedProducts.push({ ...product });
-                }
-            },
-
-            isSelected(productId) {
-                return !!this.selectedProducts.find(p => p.id === productId);
-            }
-        }));
-    });
+            }));
+        });
     </script>
 @endsection

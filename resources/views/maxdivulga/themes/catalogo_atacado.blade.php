@@ -217,7 +217,7 @@
             <div class="nome-loja">
                 @if(!empty($loja['logo_url']))
                     <img src="{{ $loja['logo_url'] }}" alt="{{ $loja['nome'] ?? '' }}"
-                        style="max-height:55px;max-width:180px;object-fit:contain;vertical-align:middle;">
+                        style="max-height:120px;max-width:240px;object-fit:contain;vertical-align:middle;">
                 @else
                     {{ $loja['nome'] ?? 'Seu Mercado Atacado' }}
                 @endif

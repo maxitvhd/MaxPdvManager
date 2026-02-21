@@ -151,12 +151,21 @@
                                     <h6 class="font-weight-bolder mb-0" style="font-size:0.9rem; line-height:1.3;">{{ $camp->name }}
                                     </h6>
                                     @if($camp->status == 'active')
-                                        <span class="badge bg-gradient-success ms-2" style="flex-shrink:0;">Ativa</span>
+                                        <span class="badge bg-gradient-success ms-2" style="flex-shrink:0;">Concluída</span>
                                     @else
                                         <span class="badge bg-gradient-secondary ms-2"
                                             style="flex-shrink:0;">{{ ucfirst($camp->status) }}</span>
                                     @endif
                                 </div>
+
+                                @if($camp->is_scheduled)
+                                    <div class="form-check form-switch ps-0 mb-3 d-flex align-items-center">
+                                        <input class="form-check-input ms-0 mt-0" type="checkbox" id="toggle-{{ $camp->id }}"
+                                            {{ $camp->is_active ? 'checked' : '' }}
+                                            onchange="toggleCampaign({{ $camp->id }}, this)">
+                                        <label class="form-check-label text-xs fw-bold ms-2 mb-0" for="toggle-{{ $camp->id }}">Piloto Automático</label>
+                                    </div>
+                                @endif
 
                                 <div class="d-flex flex-wrap gap-1 mb-3">
                                     <span class="badge"
@@ -201,4 +210,29 @@
             </div>
         @endif
     </div>
+
+    <script>
+    function toggleCampaign(id, el) {
+        const isActive = el.checked;
+        fetch(`/lojista/maxdivulga/${id}/toggle-active`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ is_active: isActive })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(!data.success) {
+                alert('Erro ao alterar status');
+                el.checked = !isActive;
+            }
+        })
+        .catch(err => {
+            alert('Erro de conexão');
+            el.checked = !isActive;
+        });
+    }
+    </script>
 @endsection

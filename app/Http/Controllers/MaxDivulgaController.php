@@ -90,6 +90,10 @@ class MaxDivulgaController extends Controller
             'persona' => $request->persona,
             'format' => $request->format,
             'status' => 'active',
+            'is_scheduled' => $request->boolean('is_scheduled', false),
+            'scheduled_days' => $request->input('scheduled_days', []),
+            'scheduled_times' => $request->input('scheduled_times', []),
+            'is_active' => true,
         ]);
 
         Log::info("[MAXDIVULGA-01] Campanha #{$campaign->id} '{$campaign->name}' criada para loja: {$loja->nome} ({$loja->codigo})");
@@ -133,11 +137,15 @@ class MaxDivulgaController extends Controller
 
         Log::info("[MAXDIVULGA-03] Total de produtos para o catálogo: " . $produtos->count());
 
-        $descontoPct = floatval($request->input('discount_rules.percentage', 0));
+        $descontoGlobalPct = floatval($request->input('discount_rules.percentage', 0));
+        $descontosIndividuais = $request->input('discount_products', []); // Array com o formato [product_id => discount_percentage]
         $produtosParaCatalogo = [];
 
         foreach ($produtos as $prod) {
             $precoOriginal = floatval($prod->preco);
+            // Verifica se o produto tem desconto individual setado (sobrepõe o global)
+            $descontoPct = isset($descontosIndividuais[$prod->id]) ? floatval($descontosIndividuais[$prod->id]) : $descontoGlobalPct;
+
             $precoNovo = $descontoPct > 0
                 ? $precoOriginal - ($precoOriginal * ($descontoPct / 100))
                 : $precoOriginal;
@@ -197,7 +205,24 @@ class MaxDivulgaController extends Controller
 
         $copyPrincipal = $aiService->generateCopy($produtosParaCatalogo, $campaign->persona);
         $copyAcompanhamento = $aiService->generateCopySocial($produtosParaCatalogo, $campaign->persona, $dadosLoja);
+
+        // Lógica para rotear automaticamente o Renderizador para o template adequado (1 vs Múltiplos)
+        $themeId = $campaign->theme_id;
+        $qtdProdutos = count($produtosParaCatalogo);
+        $temaOriginal = \App\Models\MaxDivulgaTheme::find($themeId);
+
+        if ($qtdProdutos === 1) {
+            $temaDestaque = \App\Models\MaxDivulgaTheme::where('path', 'maxdivulga.themes.destaque_unico')->first();
+            if ($temaDestaque)
+                $themeId = $temaDestaque->id;
+        } elseif ($qtdProdutos > 1 && $temaOriginal && $temaOriginal->path === 'maxdivulga.themes.destaque_unico') {
+            $temaClassico = \App\Models\MaxDivulgaTheme::where('path', 'maxdivulga.themes.classico_ofertas')->first();
+            if ($temaClassico)
+                $themeId = $temaClassico->id;
+        }
+
         $campaign->update([
+            'theme_id' => $themeId,
             'copy' => $copyPrincipal,
             'copy_acompanhamento' => $copyAcompanhamento,
         ]);
@@ -237,6 +262,13 @@ class MaxDivulgaController extends Controller
             'status' => $request->status ?? 'active',
         ]);
         return redirect()->route('lojista.maxdivulga.index')->with('success', 'Campanha atualizada!');
+    }
+
+    public function toggleActive(MaxDivulgaCampaign $campaign)
+    {
+        $campaign->is_active = !$campaign->is_active;
+        $campaign->save();
+        return response()->json(['success' => true, 'is_active' => $campaign->is_active]);
     }
 
     public function destroy(MaxDivulgaCampaign $campaign)

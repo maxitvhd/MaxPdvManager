@@ -124,15 +124,16 @@
             align-items: center;
             gap: 0;
             background: #fff;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
         }
 
         .produto-simbolo {
-            width: 90px;
-            min-height: 90px;
-            background: var(--dark);
+            width: 140px;
+            min-height: 140px;
+            background: #fdfbf8;
+            border-right: 1px solid #f0ebe1;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -234,7 +235,7 @@
             <div class="nome">
                 @if(!empty($loja['logo_url']))
                     <img src="{{ $loja['logo_url'] }}" alt="{{ $loja['nome'] ?? '' }}"
-                        style="max-height:45px;max-width:150px;object-fit:contain;vertical-align:middle;">
+                        style="max-height:120px;max-width:240px;object-fit:contain;vertical-align:middle;">
                 @else
                     {{ $loja['nome'] ?? 'Sua Loja' }}
                 @endif
@@ -272,7 +273,7 @@
                 <div class="produto-simbolo">
                     @if(!empty($prod['imagem_url']))
                         <img src="{{ $prod['imagem_url'] }}" alt="{{ $prod['nome'] }}"
-                            style="max-height:80px;max-width:80px;object-fit:contain;">
+                            style="max-height:120px;max-width:120px;object-fit:contain;">
                     @else
                         🛍️
                     @endif

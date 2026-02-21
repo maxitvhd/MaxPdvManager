@@ -186,12 +186,13 @@
 
         .card {
             background: #252525;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             border: 1.5px solid #333;
             position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
 
         .card-principal {
@@ -213,7 +214,7 @@
             justify-content: center;
             align-items: center;
             background: rgba(255, 255, 255, 0.06);
-            min-height: 90px;
+            min-height: 140px;
             font-size: 2.4rem;
         }
 
@@ -333,7 +334,7 @@
         <div class="header-loja">
             @if(!empty($loja['logo_url']))
                 <img src="{{ $loja['logo_url'] }}" alt="{{ $loja['nome'] ?? '' }}"
-                    style="max-height:50px;max-width:160px;object-fit:contain;vertical-align:middle;">
+                    style="max-height:120px;max-width:240px;object-fit:contain;vertical-align:middle;">
             @else
                 <strong>{{ $loja['nome'] ?? 'Seu Mercado' }}</strong>
             @endif
@@ -365,7 +366,7 @@
                 <div class="card-topo">
                     @if(!empty($prod['imagem_url']))
                         <img src="{{ $prod['imagem_url'] }}" alt="{{ $prod['nome'] }}"
-                            style="max-height:90px;max-width:100%;object-fit:contain;">
+                            style="max-height:150px;max-width:100%;object-fit:contain;">
                     @else
                         🛒
                     @endif

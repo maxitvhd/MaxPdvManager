@@ -169,13 +169,13 @@
 
         .card {
             background: var(--branco);
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-bottom: 12px;
+            padding-bottom: 14px;
         }
 
         .card-destaque {
@@ -185,11 +185,11 @@
         .card-topo {
             width: 100%;
             background: #fafafa;
-            padding: 16px 10px;
+            padding: 20px 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 90px;
+            min-height: 140px;
         }
 
         /* Imagem maior quando poucos produtos */
@@ -337,7 +337,7 @@
             <div class="nome-loja">
                 @if(!empty($loja['logo_url']))
                     <img src="{{ $loja['logo_url'] }}" alt="{{ $loja['nome'] ?? '' }}"
-                        style="max-height:50px;max-width:160px;object-fit:contain;vertical-align:middle;">
+                        style="max-height:120px;max-width:240px;object-fit:contain;vertical-align:middle;">
                 @else
                     {{ $loja['nome'] ?? 'Seu Mercado' }}
                 @endif
@@ -380,7 +380,7 @@
                 <div class="card-topo">
                     @if(!empty($prod['imagem_url']))
                         <img src="{{ $prod['imagem_url'] }}" alt="{{ $prod['nome'] }}"
-                            style="max-height:100px;max-width:100%;object-fit:contain;">
+                            style="max-height:160px;max-width:100%;object-fit:contain;">
                     @else
                         <span>🛒</span>
                     @endif

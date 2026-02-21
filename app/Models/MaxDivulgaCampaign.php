@@ -28,13 +28,21 @@ class MaxDivulgaCampaign extends Model
         'next_run_at',
         'copy',
         'copy_acompanhamento',
-        'file_path'
+        'file_path',
+        'is_scheduled',
+        'scheduled_days',
+        'scheduled_times',
+        'is_active'
     ];
 
     protected $casts = [
         'channels' => 'array',
         'product_selection_rule' => 'array',
         'discount_rules' => 'array',
+        'scheduled_days' => 'array',
+        'scheduled_times' => 'array',
+        'is_scheduled' => 'boolean',
+        'is_active' => 'boolean',
         'last_run_at' => 'datetime',
         'next_run_at' => 'datetime',
     ];

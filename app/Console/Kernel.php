@@ -32,6 +32,9 @@ class Kernel extends ConsoleKernel
         }
 
         $schedule->command('app:verificar-pagamentos')->daily();
+
+        // Motor automático de criação de Campanhas e Catálogos do MaxDivulga
+        $schedule->command('maxdivulga:run-schedules')->everyMinute();
     }
 
     /**

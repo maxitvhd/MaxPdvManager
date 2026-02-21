@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 class AiCopyWriterService
 {
     protected $config;
+    protected $resolvedPersona = null;
 
     public function __construct()
     {
@@ -24,13 +25,14 @@ class AiCopyWriterService
         $nomes = strtolower(implode(' ', array_column($products, 'nome')));
 
         $temas = [
+            'acougue_frios' => ['carne', 'bife', 'suíno', 'suino', 'peixe', 'linguiça', 'linguica', 'salsicha', 'mortadela', 'presunto', 'coxão', 'patinho', 'músculo', 'costela', 'frango', 'coxa', 'sobrecoxa', 'bacon'],
+            'hortifruti' => ['fruta', 'verdura', 'legume', 'tomate', 'batata', 'cebola', 'alface', 'cenoura', 'beterraba', 'banana', 'maçã', 'maca', 'laranja', 'limão', 'limao', 'uva', 'manga', 'abacate', 'mamão', 'mamao', 'melancia', 'melão'],
             'cafe_da_manha' => ['café', 'cafe', 'pão', 'pao', 'bolo', 'manteiga', 'queijo', 'leite', 'requeijão', 'requeijao', 'achocolatado', 'sucrilhos', 'granola', 'iogurte', 'tapioca', 'nescafe', 'capuccino', 'biscoito', 'bolacha'],
-            'churrasco' => ['carne', 'picanha', 'alcatra', 'frango', 'linguiça', 'linguica', 'calabresa', 'costela', 'contrafile', 'contrafilé', 'carvão', 'carvao', 'tempero', 'churrasqueira', 'espetinho', 'maminha', 'file', 'filé'],
-            'almoco' => ['arroz', 'feijão', 'feijao', 'macarrão', 'macarrao', 'farofa', 'molho', 'azeite', 'mandioca', 'batata', 'macaxeira', 'inhame', 'caldo'],
+            'churrasco' => ['picanha', 'alcatra', 'contrafile', 'contrafilé', 'carvão', 'carvao', 'churrasqueira', 'espetinho', 'maminha', 'file', 'filé'],
+            'almoco' => ['arroz', 'feijão', 'feijao', 'macarrão', 'macarrao', 'farofa', 'molho', 'azeite', 'mandioca', 'macaxeira', 'inhame', 'caldo', 'óleo', 'oleo'],
             'bebidas' => ['cerveja', 'refrigerante', 'suco', 'água', 'agua', 'vinho', 'vodka', 'whisky', 'dose', 'energético', 'energetico', 'isotônico', 'isotonco', 'kombucha'],
-            'hortifruti' => ['fruta', 'verdura', 'legume', 'tomate', 'batata', 'cebola', 'alface', 'cenoura', 'beterraba', 'banana', 'maçã', 'maca', 'laranja', 'limão', 'limao', 'uva', 'manga', 'abacate'],
-            'limpeza' => ['detergente', 'sabão', 'sabao', 'desinfetante', 'amaciante', 'alvejante', 'esponja', 'vassoura', 'balde', 'rodo', 'pano'],
-            'padaria' => ['pão', 'pao', 'broa', 'baguete', 'ciabatta', 'croissant', 'bisnaguinha', 'pãozinho', 'paozinho', 'forma', 'integral', 'brioche'],
+            'limpeza' => ['detergente', 'sabão', 'sabao', 'desinfetante', 'amaciante', 'alvejante', 'esponja', 'vassoura', 'balde', 'rodo', 'pano', 'água sanitária'],
+            'padaria' => ['broa', 'baguete', 'ciabatta', 'croissant', 'bisnaguinha', 'forma', 'integral', 'brioche', 'salgado', 'coxinha', 'empada'],
         ];
 
         $pontuacao = [];
@@ -90,6 +92,19 @@ class AiCopyWriterService
         }
     }
 
+    private function getResolvedPersona(string $persona): string
+    {
+        if ($this->resolvedPersona)
+            return $this->resolvedPersona;
+        if (in_array(strtolower($persona), ['surpreendame', 'aleatorio'])) {
+            $personas = ['urgencia', 'premium', 'mercado', 'emocional'];
+            $this->resolvedPersona = $personas[array_rand($personas)];
+        } else {
+            $this->resolvedPersona = $persona;
+        }
+        return $this->resolvedPersona;
+    }
+
     /**
      * Copy PRINCIPAL — headline + subtítulo para a ARTE (dentro da imagem/PDF).
      */
@@ -102,38 +117,42 @@ class AiCopyWriterService
 
         $tema = $this->detectarTema($products);
         $contextoTema = $this->textoTema($tema);
-        $personaInstrucao = $this->instrucaoPersona($persona);
+
+        $personaResolvida = $this->getResolvedPersona($persona);
+        $personaInstrucao = $this->instrucaoPersona($personaResolvida);
 
         $prompt = <<<PROMPT
-Você é um copywriter expert em marketing de varejo brasileiro.
+Você é um copywriter expert em marketing de varejo brasileiro com a seguinte PERSONA (Tom de Voz):
+[ {$personaInstrucao} ]
+REGRA #1: É OBRIGATÓRIO que você encarne essa persona em cada palavra. O seu tom de voz é a prioridade absoluta.
 
 MISSÃO: Criar UMA HEADLINE poderosa e UM SUBTÍTULO curto para exibir no TOPO de um encarte/catálogo de ofertas.
 
 CONTEXTO DA CAMPANHA:
-- Tema detectado: {$contextoTema}
-- Tom / Persona: {$personaInstrucao}
-- Produtos do catálogo (contexto — NÃO cite os nomes):
+- Tema detectado da lista: {$contextoTema}
+- Produtos em destaque (apenas para contexto, NÃO cite os nomes deles):
 {$listaContexto}
 
-REGRAS:
-✅ Use pelo menos 1 destes gatilhos: ESCASSEZ, URGÊNCIA, AUTORIDADE, CURIOSIDADE, PROVA SOCIAL
-✅ Headline: impactante, máximo 8 palavras, MAIÚSCULAS estratégicas
-✅ Subtítulo: complementa headline, máximo 12 palavras
-❌ NÃO mencione o nome dos produtos — eles já aparecem no layout
-❌ NÃO use hashtags, asteriscos ou markdown
+REGRAS ESTritas:
+✅ Headline: impactante, máximo 8 palavras, MAIÚSCULAS onde for estratégico
+✅ Subtítulo: complemente a headline, máximo 12 palavras
+❌ NÃO mencione os nomes dos produtos (pois eles já ocupam a imagem do encarte)
+❌ NÃO use hashtags, asteriscos ou formatação markdown (sem ** ** na headline)
 
-Responda SOMENTE neste formato exato:
+Responda SOMENTE neste formato exato (sem chaves ou explicações extras):
 HEADLINE: [sua headline aqui]
 SUBTITULO: [seu subtítulo aqui]
 PROMPT;
 
-        $resultado = $this->chamarIA($prompt, 120);
+        $resultado = $this->chamarIA($prompt, 150);
 
         if (!$resultado) {
             $fallbacks = [
                 'cafe_da_manha' => "HEADLINE: O Café da Manhã Mais Gostoso da Cidade!\nSUBTITULO: Tudo fresquinho para começar seu dia com energia.",
                 'churrasco' => "HEADLINE: CHURRASCO INESQUECÍVEL Te Espera!\nSUBTITULO: As melhores carnes, preços que cabem no bolso.",
                 'bebidas' => "HEADLINE: Geladeira CHEIA Por Menos!\nSUBTITULO: Bebidas geladas com desconto imperdível.",
+                'acougue_frios' => "HEADLINE: O Melhor do Açougue Especial Para Você!\nSUBTITULO: Carnes nobres e cortes frescos com ofertas imbatíveis.",
+                'hortifruti' => "HEADLINE: Da Roça Direto Para Sua Mesa!\nSUBTITULO: Qualidade, sabor e saúde no nosso Hortifruti fresquinho.",
                 'default' => "HEADLINE: Ofertas Que Você Não Pode Deixar Passar!\nSUBTITULO: Preços válidos enquanto durar o estoque.",
             ];
             return $fallbacks[$tema] ?? $fallbacks['default'];
@@ -162,41 +181,41 @@ PROMPT;
         $endereco = $dadosLoja['endereco'] ?? '';
         $cidade = $dadosLoja['cidade'] ?? '';
         $cnpj = !empty($dadosLoja['cnpj']) ? "CNPJ: {$dadosLoja['cnpj']}" : '';
-        $personaInstrucao = $this->instrucaoPersona($persona);
+
+        $personaResolvida = $this->getResolvedPersona($persona);
+        $personaInstrucao = $this->instrucaoPersona($personaResolvida);
 
         $prompt = <<<PROMPT
-Você é um copywriter especialista em marketing digital para varejo brasileiro.
+Você é um copywriter especialista em marketing digital para varejo brasileiro com a seguinte PERSONA (Tom de Voz):
+[ {$personaInstrucao} ]
+REGRA #1: É OBRIGATÓRIO que você encarne essa persona em cada palavra do seu texto.
 
-MISSÃO: Escrever o TEXTO DE ACOMPANHAMENTO DA IMAGEM, perfeito para WhatsApp Business, Instagram Stories e Facebook.
+MISSÃO: Escrever o TEXTO LEGENDA (ACOMPANHAMENTO DA IMAGEM), perfeito para WhatsApp Business, Instagram Stories e Feed.
 
-TEMA DA CAMPANHA: {$contextoTema}
-PERSONA / TOM: {$personaInstrucao}
+TEMA DA CAMPANHA DE OFERTAS: {$contextoTema}
 
-ESTRUTURA OBRIGATÓRIA (nessa ordem):
-1. 🔥 ABERTURA — 1 linha poderosa com emojis e gatilho de curiosidade/urgência (ex: "Você vai se ARREPENDER se não ver isso!")
-2. 💬 CONEXÃO — frase de prova social ou autoridade (ex: "Mais de 500 famílias já aproveitam nossos preços!")
-3. 📋 LISTA DE PRODUTOS — use a lista abaixo mantendo o formato visual com preços
-4. ⏰ ESCASSEZ — "Válido somente [hoje/esta semana/enquanto durar o estoque]!"
-5. 👉 CTA — chamada clara e direta para ação (ex: "Corre para a loja!" ou "Manda mensagem agora!")
-6. 📍 ASSINATURA — nome da loja, endereço e contato
+ESTRUTURA OBRIGATÓRIA (siga exatamente este esqueleto):
+1. 🔥 ABERTURA — 1 linha poderosa com emojis e o gatilho da sua persona (Ex: urgência, empatia, luxo, etc).
+2. 💬 CONEXÃO — Frase para ancorar o valor ou a oportunidade única baseada no tom escolhido.
+3. 📋 LISTA DE PRODUTOS — Use a lista abaixo mantendo exatamente o formato dos preços.
+4. ⏰ ESCASSEZ/FECHAMENTO — Avise do limite ou convide com autoridade.
+5. 👉 CTA — Chamada clara e amigável/urgente para ação ("Manda mensagem", "Corre pra cá").
+6. 📍 ASSINATURA — Nome da loja e contato.
 
-DADOS DA LOJA:
-- Nome: {$lojaNome}
-- WhatsApp/Telefone: {$contato}
-- Endereço: {$endereco}, {$cidade}
+DADOS DA LOJA (para a assinatura):
+- Loja: {$lojaNome}
+- WhatsApp/Fone: {$contato}
+- Local: {$endereco}, {$cidade}
 {$cnpj}
 
-PRODUTOS EM OFERTA:
+PRODUTOS EM OFERTA (Copiar Exatamente Esta Lista para a seção 3):
 {$listaPrecos}
 
 REGRAS:
-✅ Entre 180-300 palavras
-✅ Use emojis estrategicamente (não exagere)
-✅ Intensifique o gatilho emocional do tema ({$contextoTema})
-✅ Tom animado, próximo, como um amigo avisando de oportunidade
-❌ Não use asteriscos duplos ou markdown
-
-Escreva APENAS o texto final, pronto para copiar e colar.
+✅ Mantenha o texto na faixa de 150 a 300 palavras.
+✅ Use emojis, mas de forma agradável e visualmente espaçada.
+✅ A Persona ({$personaResolvida}) define O JEITO que você escreve e os gatilhos mentais aplicados.
+❌ NUNCA use asteriscos duplos (**) ou formatação markdown complexa. Deixe o texto cru, apenas com quebras de linha e emojis.
 PROMPT;
 
         $resultado = $this->chamarIA($prompt, 600);
@@ -236,12 +255,13 @@ PROMPT;
         return match ($tema) {
             'cafe_da_manha' => 'Café da Manhã — produtos para um começo de dia especial e gostoso',
             'churrasco' => 'Churrasco / Almoço em Família — carnes, temperos e tudo para o churrasquinho',
+            'acougue_frios' => 'Açougue e Frios — as melhores carnes, aves e cortes nobres para o dia a dia',
             'almoco' => 'Almoço do Dia a Dia — itens essenciais da mesa brasileira',
             'bebidas' => 'Bebidas — refrigerantes, cervejas e sucos para refrescar',
-            'hortifruti' => 'Hortifruti — frutas, legumes e verduras fresquinhos',
-            'limpeza' => 'Limpeza e Higiene — produtos para o lar',
+            'hortifruti' => 'Hortifruti — saúde, frutas, legumes e verduras fresquinhos que acabaram de chegar',
+            'limpeza' => 'Limpeza e Higiene — produtos para deixar o lar brilhando',
             'padaria' => 'Padaria — pães, bolos e delícias artesanais',
-            default => 'Catálogo Geral — variedade de ofertas para toda a família',
+            default => 'Catálogo Geral — grande variedade e ofertas pesadas para a família inteira',
         };
     }
 
@@ -252,11 +272,12 @@ PROMPT;
     {
         return match ($tema) {
             'cafe_da_manha' => '☕',
-            'churrasco' => '🥩',
+            'churrasco' => '🔥',
+            'acougue_frios' => '🥩',
             'almoco' => '🍽️',
             'bebidas' => '🥤',
             'hortifruti' => '🥦',
-            'limpeza' => '🧹',
+            'limpeza' => '✨',
             'padaria' => '🍞',
             default => '🛒',
         };
