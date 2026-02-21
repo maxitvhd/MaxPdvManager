@@ -98,18 +98,17 @@ class CatalogRendererService
         $caminhoPng = storage_path("app/public/{$pasta}/{$arquivoPng}");
 
         try {
-            Log::info("[MAXDIVULGA-08] Invocando Playwright (Firefox) HTML→PNG...");
+            Log::info("[MAXDIVULGA-08] Invocando Python (WeasyPrint+PyMuPDF) HTML→PNG...");
 
-            $nodeBin = $this->encontrarBinario(['/usr/local/bin/node', '/usr/bin/node', 'node']);
-            if (!$nodeBin)
-                throw new \Exception("Binário do Node.js não encontrado");
+            $pythonBin = $this->encontrarBinario(['/usr/bin/python3', '/usr/bin/python', '/usr/local/bin/python3', 'python3', 'python']);
+            if (!$pythonBin)
+                throw new \Exception("Binário do Python não encontrado");
 
-            $script = base_path('render-playwright.cjs');
+            $script = base_path('render_weasyprint.py');
             if (!file_exists($script))
                 throw new \Exception("Script {$script} ausente");
 
-            $browsersPath = base_path('playwright-browsers');
-            $cmd = "cd " . escapeshellarg(base_path()) . " && env PLAYWRIGHT_BROWSERS_PATH=" . escapeshellarg($browsersPath) . " {$nodeBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPng) . " image 2>&1";
+            $cmd = "cd " . escapeshellarg(base_path()) . " && {$pythonBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPng) . " image 2>&1";
 
             Log::info("[MAXDIVULGA-08-CMD] Executando: {$cmd}");
             $saida = shell_exec($cmd);
@@ -120,7 +119,7 @@ class CatalogRendererService
             }
 
             @chmod($caminhoPng, 0664);
-            Log::info("[MAXDIVULGA-08B] PNG gerado com sucesso pelo Playwright!");
+            Log::info("[MAXDIVULGA-08B] PNG gerado com sucesso pelo Python!");
             return "storage/{$pasta}/{$arquivoPng}";
 
         } catch (\Exception $e) {
@@ -144,14 +143,13 @@ class CatalogRendererService
         $caminhoPdf = storage_path("app/public/{$pasta}/{$arquivoPdf}");
 
         try {
-            Log::info("[MAXDIVULGA-08-PDF] Invocando Playwright (Firefox) HTML→PDF...");
-            $nodeBin = $this->encontrarBinario(['/usr/local/bin/node', '/usr/bin/node', 'node']);
-            if (!$nodeBin)
-                throw new \Exception("Binário Node ausente");
+            Log::info("[MAXDIVULGA-08-PDF] Invocando Python (WeasyPrint) HTML→PDF...");
+            $pythonBin = $this->encontrarBinario(['/usr/bin/python3', '/usr/bin/python', '/usr/local/bin/python3', 'python3', 'python']);
+            if (!$pythonBin)
+                throw new \Exception("Binário Python ausente");
 
-            $script = base_path('render-playwright.cjs');
-            $browsersPath = base_path('playwright-browsers');
-            $cmd = "cd " . escapeshellarg(base_path()) . " && env PLAYWRIGHT_BROWSERS_PATH=" . escapeshellarg($browsersPath) . " {$nodeBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPdf) . " pdf 2>&1";
+            $script = base_path('render_weasyprint.py');
+            $cmd = "cd " . escapeshellarg(base_path()) . " && {$pythonBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPdf) . " pdf 2>&1";
 
             $saida = shell_exec($cmd);
             Log::info("[MAXDIVULGA-08-OUTPUT] {$saida}");
@@ -160,7 +158,7 @@ class CatalogRendererService
             }
 
             @chmod($caminhoPdf, 0664);
-            Log::info("[MAXDIVULGA-08B-PDF] PDF gerado com sucesso pelo Playwright!");
+            Log::info("[MAXDIVULGA-08B-PDF] PDF gerado com sucesso pelo Python!");
             return "storage/{$pasta}/{$arquivoPdf}";
 
         } catch (\Exception $e) {
