@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\MaxDivulgaCampaign;
 use App\Models\MaxDivulgaConfig;
 use Illuminate\Support\Facades\Log;
-use Spatie\Browsershot\Browsershot;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
@@ -21,7 +20,7 @@ class CatalogRendererService
     public function render(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja = [])
     {
         try {
-            Log::info("[MAXDIVULGA-07] Iniciando renderização. Formato: " . $campaign->format);
+            Log::info("[MAXDIVULGA-07] Iniciando renderização Playwright. Formato: " . $campaign->format);
             switch ($campaign->format) {
                 case 'image':
                     return $this->gerarImagem($campaign, $produtos, $dadosLoja);
@@ -41,8 +40,6 @@ class CatalogRendererService
 
     private function construirPastaSaida(MaxDivulgaCampaign $campaign, array $dadosLoja): string
     {
-        // Pasta: storage/app/public/lojas/{codigo}/campanhas/{tema}_{ddmmyyyy}/
-        // Ex: lojas/y0yZBKLa/campanhas/cafe_da_manha_20022026
         $codigoLoja = $dadosLoja['codigo'] ?? 'sem-codigo';
         $tema = $dadosLoja['tema_campanha'] ?? 'catalogo_geral';
         $data = now()->format('dmY');
@@ -59,7 +56,6 @@ class CatalogRendererService
         return $pasta;
     }
 
-
     private function getHtml(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
     {
         $theme = $campaign->theme;
@@ -75,41 +71,6 @@ class CatalogRendererService
         ])->render();
     }
 
-    private function configurarBrowsershot(\Spatie\Browsershot\Browsershot $browsershot): \Spatie\Browsershot\Browsershot
-    {
-        // Caminhos dos binários node/npm
-        $nodeBin = $this->encontrarBinario(['node', '/usr/local/bin/node', '/usr/bin/node']);
-        $npmBin = $this->encontrarBinario(['npm', '/usr/local/bin/npm', '/usr/bin/npm']);
-
-        if ($nodeBin)
-            $browsershot->setNodeBinary($nodeBin);
-        if ($npmBin)
-            $browsershot->setNpmBinary($npmBin);
-
-        // NODE_PATH apontando para o node_modules LOCAL do projeto (dentro da hospedagem)
-        // Isso garante que o puppeteer instalado via npm ci seja encontrado
-        $nodeModulesLocal = base_path('node_modules');
-        if (is_dir($nodeModulesLocal)) {
-            $browsershot->setEnvironmentOptions(['NODE_PATH' => $nodeModulesLocal]);
-        }
-
-        // Chromium path (comum em servidores Linux)
-        $chromePaths = [
-            '/usr/bin/chromium-browser',
-            '/usr/bin/chromium',
-            '/usr/bin/google-chrome',
-            '/usr/bin/google-chrome-stable',
-        ];
-        foreach ($chromePaths as $path) {
-            if (file_exists($path)) {
-                $browsershot->setChromePath($path);
-                break;
-            }
-        }
-
-        return $browsershot;
-    }
-
     private function encontrarBinario(array $caminhos): ?string
     {
         foreach ($caminhos as $caminho) {
@@ -120,26 +81,6 @@ class CatalogRendererService
                 return $caminho;
         }
         return null;
-    }
-
-    private function chromiumArgs(): array
-    {
-        // Flags essenciais para ambientes sem display/sandbox (hospedagem compartilhada, VPS, Docker)
-        return [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',    // usa /tmp em vez de /dev/shm (essencial em hospedagem)
-            '--disable-gpu',              // sem aceleração gráfica (servidores sem GPU)
-            '--no-zygote',               // não usa processo zygote
-            '--disable-crash-reporter',  // desabilita relatório de crash (resolve crashpad)
-            '--no-crashpad',             // desativa crashpad handler (resolve o erro atual)
-            '--disable-extensions',
-            '--disable-background-networking',
-            '--disable-sync',
-            '--metrics-recording-only',
-            '--mute-audio',
-            '--crash-dumps-dir=/tmp/crashpad_dumps', // <-- FORÇA O CAMINHO DO BANCO DE DADOS DO CRASHPAD
-        ];
     }
 
     private function gerarImagem(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
@@ -198,8 +139,8 @@ class CatalogRendererService
         file_put_contents($caminhoHtml, $html);
         @chmod($caminhoHtml, 0664);
 
-        $arquivo = 'catalogo_' . Str::random(5) . '.pdf';
-        $caminho = storage_path("app/public/{$pasta}/{$arquivo}");
+        $arquivoPdf = 'catalogo_' . Str::random(5) . '.pdf';
+        $caminhoPdf = storage_path("app/public/{$pasta}/{$arquivoPdf}");
 
         try {
             Log::info("[MAXDIVULGA-08-PDF] Invocando Playwright (Firefox) HTML→PDF...");
@@ -208,17 +149,17 @@ class CatalogRendererService
                 throw new \Exception("Binário Node ausente");
 
             $script = base_path('render-playwright.cjs');
-            $cmd = "cd " . escapeshellarg(base_path()) . " && {$nodeBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminho) . " pdf 2>&1";
+            $cmd = "cd " . escapeshellarg(base_path()) . " && {$nodeBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPdf) . " pdf 2>&1";
 
             $saida = shell_exec($cmd);
             Log::info("[MAXDIVULGA-08-OUTPUT] {$saida}");
-            if (!file_exists($caminho)) {
+            if (!file_exists($caminhoPdf)) {
                 throw new \Exception("Falha na geração: {$saida}");
             }
 
-            @chmod($caminho, 0664);
-            Log::info("[MAXDIVULGA-08B-PDF] PDF gerado com sucesso!");
-            return "storage/{$pasta}/{$arquivo}";
+            @chmod($caminhoPdf, 0664);
+            Log::info("[MAXDIVULGA-08B-PDF] PDF gerado com sucesso pelo Playwright!");
+            return "storage/{$pasta}/{$arquivoPdf}";
 
         } catch (\Exception $e) {
             Log::error("[MAXDIVULGA-PDFERR] Playwright PDF falhou. Usando fallback HTML alternativo: " . $e->getMessage());
