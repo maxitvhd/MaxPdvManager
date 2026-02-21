@@ -122,40 +122,89 @@ class CatalogRendererService
         return null;
     }
 
+    private function chromiumArgs(): array
+    {
+        // Flags essenciais para ambientes sem display/sandbox (hospedagem compartilhada, VPS, Docker)
+        return [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',    // usa /tmp em vez de /dev/shm (essencial em hospedagem)
+            '--disable-gpu',              // sem aceleração gráfica (servidores sem GPU)
+            '--no-zygote',               // não usa processo zygote
+            '--disable-crash-reporter',  // desabilita relatório de crash (resolve crashpad)
+            '--no-crashpad',             // desativa crashpad handler (resolve o erro atual)
+            '--disable-extensions',
+            '--disable-background-networking',
+            '--disable-sync',
+            '--metrics-recording-only',
+            '--mute-audio',
+        ];
+    }
+
     private function gerarImagem(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
     {
         Log::info("[MAXDIVULGA-07A] Preparando HTML para imagem...");
         $html = $this->getHtml($campaign, $produtos, $dadosLoja);
         $pasta = $this->construirPastaSaida($campaign, $dadosLoja);
-        $arquivo = 'imagem_' . Str::random(5) . '.png';
-        $caminho = storage_path("app/public/{$pasta}/{$arquivo}");
 
-        Log::info("[MAXDIVULGA-08] Invocando Browsershot HTML→PNG em: {$caminho}");
+        // Salva o HTML primeiro (sempre funciona, é o fallback)
+        $arquivoHtml = 'campanha_' . Str::random(6) . '.html';
+        $caminhoHtml = storage_path("app/public/{$pasta}/{$arquivoHtml}");
+        file_put_contents($caminhoHtml, $html);
+        @chmod($caminhoHtml, 0664);
+        Log::info("[MAXDIVULGA-07A-HTML] HTML salvo: {$caminhoHtml}");
+
+        // Tenta gerar PNG
+        $arquivoPng = 'imagem_' . Str::random(6) . '.png';
+        $caminhoPng = storage_path("app/public/{$pasta}/{$arquivoPng}");
+        Log::info("[MAXDIVULGA-08] Gerando PNG: {$caminhoPng}");
 
         try {
+            $nodeBin = $this->encontrarBinario(['/usr/local/bin/node', '/usr/bin/node', 'node']);
+            $npmBin = $this->encontrarBinario(['/usr/local/bin/npm', '/usr/bin/npm', 'npm']);
+
+            $chromePaths = [
+                '/usr/bin/chromium',
+                '/usr/bin/chromium-browser',
+                '/usr/bin/google-chrome-stable',
+                '/usr/bin/google-chrome',
+            ];
+            $chromePath = null;
+            foreach ($chromePaths as $p) {
+                if (file_exists($p)) {
+                    $chromePath = $p;
+                    break;
+                }
+            }
+
             $browsershot = Browsershot::html($html)
-                ->setChromePath('/usr/bin/chromium') // <-- ADICIONADO AQUI
                 ->windowSize(1080, 1920)
                 ->deviceScaleFactor(2)
-                ->noSandbox();
+                ->setOption('args', $this->chromiumArgs());
 
-            if (file_exists('/usr/bin/node')) {
-                $browsershot->setNodeBinary('/usr/bin/node');
+            if ($chromePath)
+                $browsershot->setChromePath($chromePath);
+            if ($nodeBin)
+                $browsershot->setNodeBinary($nodeBin);
+            if ($npmBin)
+                $browsershot->setNpmBinary($npmBin);
+
+            // NODE_PATH apontando para node_modules LOCAL do projeto
+            $nodeModules = base_path('node_modules');
+            if (is_dir($nodeModules)) {
+                $browsershot->setEnvironmentOptions(['NODE_PATH' => $nodeModules]);
             }
-            if (file_exists('/usr/bin/npm')) {
-                $browsershot->setNpmBinary('/usr/bin/npm');
-            }
 
-            $browsershot->save($caminho);
+            $browsershot->save($caminhoPng);
+            @chmod($caminhoPng, 0664);
+            Log::info("[MAXDIVULGA-08B] PNG gerado com sucesso!");
+            return "storage/{$pasta}/{$arquivoPng}";
 
-            @chmod($caminho, 0664);
-            Log::info("[MAXDIVULGA-08B] PNG salvo com sucesso!");
         } catch (\Exception $e) {
-            Log::error("[MAXDIVULGA-08A] Erro no Browsershot: " . $e->getMessage());
-            throw $e;
+            Log::error("[MAXDIVULGA-08A] Browsershot falhou — usando fallback HTML. Erro: " . $e->getMessage());
+            // Retorna o HTML como fallback aplicável
+            return "storage/{$pasta}/{$arquivoHtml}";
         }
-
-        return "storage/{$pasta}/{$arquivo}";
     }
 
     private function gerarPdf(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
