@@ -194,6 +194,11 @@ class SocialAuthController extends Controller
             $result = $service->postToChat($request->target_id, $account->token, $imagePath, $message);
 
             if (isset($result['ok']) && $result['ok']) {
+                // Se for formato Completo e tiver áudio, envia o áudio também
+                if (!empty($campaign->audio_file_path) && file_exists(storage_path('app/public/' . str_replace('storage/', '', $campaign->audio_file_path)))) {
+                    $audioPath = storage_path('app/public/' . str_replace('storage/', '', $campaign->audio_file_path));
+                    $service->postAudioToChat($request->target_id, $account->token, $audioPath, "Confira a locução desta oferta! 🔊");
+                }
                 return back()->with('success', 'Publicado com sucesso no Telegram!');
             }
 

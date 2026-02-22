@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class MakeMaxDivulgaCronJob extends Command
 {
@@ -262,12 +263,62 @@ class MakeMaxDivulgaCronJob extends Command
             // Atualiza o Template Pai informando a última vez que rodou o cron
             $campaign->update(['last_run_at' => now(), 'status' => 'active']);
 
-            // 7. Enviar WhatsApp (Simulado/Fila)
-            $phoneLoja = preg_replace('/\D/', '', $dadosLoja['telefone']);
-            if ($phoneLoja) {
-                if (env('LOG_MAXDIVULGA', true))
-                    \Illuminate\Support\Facades\Log::info("[MAXDIVULGA-CRON] Mensagem ENVIADA PARA FILA ({$phoneLoja}): " . substr($copyAcompanhamento, 0, 50) . "...");
-                $this->info("Mensagem simulada enviada para o logista no numero {$phoneLoja}");
+            // 7. Enviar Redes Sociais se houver canais configurados
+            $channels = $campaign->channels ?? [];
+            if (!empty($channels)) {
+                $this->info("Iniciando disparos sociais para " . count($channels) . " canais...");
+                foreach ($channels as $channelStr) {
+                    try {
+                        $parts = explode('|', $channelStr);
+                        if (count($parts) < 3)
+                            continue;
+
+                        $provider = $parts[0];
+                        $targetType = $parts[1];
+                        $targetId = $parts[2];
+
+                        $account = \App\Models\SocialAccount::where('loja_id', $campaign->loja_id)
+                            ->where('provider', $provider)
+                            ->when($provider === 'telegram', function ($q) use ($targetId) {
+                                return $q->where('provider_id', $targetId);
+                            })
+                            ->first();
+
+                        if (!$account) {
+                            Log::warning("[MAXDIVULGA-CRON] Conta social não encontrada para {$provider} na Loja {$campaign->loja_id}");
+                            continue;
+                        }
+
+                        $cleanImagePath = str_replace('storage/', '', $filePath);
+                        $absImagePath = storage_path('app/public/' . $cleanImagePath);
+                        $message = $novaCampanha->copy_acompanhamento ?? $copyAcompanhamento;
+
+                        if ($provider === 'facebook') {
+                            $fbService = new \App\Services\FacebookPostService();
+                            if ($targetType === 'page') {
+                                $page = collect($account->meta_data['pages'] ?? [])->where('id', $targetId)->first();
+                                $token = $page['access_token'] ?? $account->token;
+                                $fbService->postToPage($targetId, $token, $absImagePath, $message);
+                            } else {
+                                $fbService->postToGroup($targetId, $account->token, $absImagePath, $message);
+                            }
+                        }
+
+                        if ($provider === 'telegram') {
+                            $tgService = new \App\Services\TelegramPostService();
+                            // Envia Foto
+                            $tgService->postToChat($targetId, $account->token, $absImagePath, $message);
+
+                            // Se tiver áudio e for formato 'completo' (implícito se audioPath existir)
+                            if ($audioPath && file_exists(storage_path('app/public/' . str_replace('storage/', '', $audioPath)))) {
+                                $absAudioPath = storage_path('app/public/' . str_replace('storage/', '', $audioPath));
+                                $tgService->postAudioToChat($targetId, $account->token, $absAudioPath, "Escute as ofertas de hoje! 🔊");
+                            }
+                        }
+                    } catch (\Exception $eSocial) {
+                        Log::error("[MAXDIVULGA-CRON] Erro ao postar no canal {$channelStr}: " . $eSocial->getMessage());
+                    }
+                }
             }
 
             // 8. Logar Sucesso atrelando à campanha filha gerada

@@ -46,6 +46,42 @@ class TelegramPostService
     }
 
     /**
+     * Envia um arquivo de áudio (locução) para um chat do Telegram.
+     */
+    public function postAudioToChat($chatId, $botToken, $audioPath, $message)
+    {
+        try {
+            $chatId = trim($chatId);
+            $url = "https://api.telegram.org/bot{$botToken}/sendAudio";
+
+            if (env('LOG_MAXDIVULGA', true)) {
+                Log::info("[TELEGRAM-AUDIO] Enviando para Chat: {$chatId} | Bot: " . substr($botToken, 0, 6) . "...");
+            }
+
+            $response = Http::attach(
+                'audio',
+                file_get_contents($audioPath),
+                basename($audioPath)
+            )->post($url, [
+                        'chat_id' => $chatId,
+                        'caption' => mb_strlen($message) > 1024 ? mb_substr($message, 0, 1021) . '...' : $message,
+                        'parse_mode' => 'HTML'
+                    ]);
+
+            $result = $response->json();
+
+            if (!$response->successful()) {
+                Log::error("Erro Telegram Audio Post: " . json_encode($result));
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            Log::error("Exceção Telegram Audio Post: " . $e->getMessage());
+            return ['ok' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Testa a conexão do bot e obtém informações básicas.
      */
     public function getMe($botToken)
