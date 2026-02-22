@@ -4,9 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Folheto de Ofertas Vibrante</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700;900&display=swap"
+        rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap');
-
         * {
             margin: 0;
             padding: 0;
@@ -14,132 +15,174 @@
         }
 
         :root {
-            --vermelho: #D32F2F;
-            --amarelo: #FDD835;
-            --branco: #fff;
-            --cinza: #f5f5f5;
-            --dark: #1a1a1a;
+            /* Cores vibrantes baseadas nas referências */
+            --vermelho-vivo: #E60012;
+            --vermelho-escuro: #b30000;
+            --amarelo-ouro: #FFD700;
+            --amarelo-escuro: #FFC107;
+            --branco: #ffffff;
+            --cinza-texto: #333333;
+            --borda-tracejada: #cccccc;
         }
 
         body {
-            font-family: 'Poppins', Arial, sans-serif;
-            background: #fff;
+            font-family: 'Roboto Condensed', Arial, sans-serif;
+            background: var(--vermelho-vivo);
+            /* Fundo geral vermelho */
             width: 1080px;
             min-height: 1920px;
             display: flex;
             flex-direction: column;
+            padding: 20px;
+            /* Margem vermelha externa */
         }
 
-        /* ===== HEADER ===== */
+        /* Container principal para simular a folha de papel */
+        body>div,
+        body>header,
+        body>footer {
+            background: var(--branco);
+        }
+
+        /* Pequeno ajuste para que os elementos filhos preencham o body */
+        body>* {
+            width: 100%;
+        }
+
+
+        /* ===== HEADER IMPACTANTE ===== */
         .header {
-            background: var(--vermelho);
-            color: var(--branco);
+            background: var(--vermelho-vivo);
+            color: var(--amarelo-ouro);
             display: flex;
-            align-items: stretch;
-            min-height: 200px;
+            align-items: center;
+            min-height: 220px;
+            padding: 20px;
+            border-bottom: 4px solid var(--amarelo-ouro);
+            /* Fundo decorativo sutil */
+            background-image: radial-gradient(circle at 10% 20%, rgba(255, 215, 0, 0.2) 10px, transparent 11px),
+                radial-gradient(circle at 90% 80%, rgba(255, 215, 0, 0.2) 20px, transparent 21px);
         }
 
         .header-logo {
-            background: #b71c1c;
-            padding: 30px 28px;
+            flex: 1;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            align-items: center;
-            min-width: 280px;
+            align-items: flex-start;
+            border-right: 2px dashed rgba(255, 215, 0, 0.3);
         }
 
         .header-logo .nome-loja {
-            font-size: 1.6rem;
+            background: var(--vermelho-escuro);
+            padding: 10px 25px;
+            border-radius: 30px;
+            font-size: 1.4rem;
             font-weight: 900;
             text-align: center;
-            letter-spacing: -0.5px;
-            line-height: 1.2;
             text-transform: uppercase;
+            color: var(--branco);
+            display: inline-block;
+            box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.2);
         }
 
         .header-logo .tagline {
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.7);
-            margin-top: 6px;
+            font-size: 1rem;
+            color: var(--amarelo-ouro);
+            margin-top: 12px;
             text-transform: uppercase;
+            font-weight: 700;
             letter-spacing: 1px;
         }
 
         .header-info {
-            flex: 1;
-            padding: 28px 32px;
+            flex: 2;
+            padding: 20px 40px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: center;
+            align-items: flex-start;
         }
 
         .header-badge {
             display: inline-block;
-            background: var(--amarelo);
-            color: var(--dark);
+            color: var(--branco);
             font-weight: 900;
-            font-size: 2rem;
-            padding: 8px 22px;
-            border-radius: 8px;
-            letter-spacing: -0.5px;
+            font-size: 3.8rem;
+            /* Fonte bem grande */
+            line-height: 1;
             text-transform: uppercase;
+            text-shadow: 3px 3px 0px var(--vermelho-escuro);
+            margin-bottom: 10px;
         }
 
         .header-sub {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: rgba(255, 255, 255, 0.9);
-            margin-top: 8px;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--amarelo-ouro);
+            text-transform: uppercase;
+            text-shadow: 2px 2px 0px var(--vermelho-escuro);
+            margin-bottom: 10px;
         }
 
         .header-data {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.65);
-            margin-top: 4px;
+            font-size: 1.1rem;
+            color: var(--branco);
+            font-weight: 700;
+            background: var(--vermelho-escuro);
+            padding: 5px 15px;
+            border-radius: 4px;
         }
 
-        /* ===== FAIXA COPY ===== */
+        /* ===== FAIXA COPY (Amarela) ===== */
         .faixa-copy {
-            background: var(--amarelo);
-            color: var(--dark);
-            padding: 18px 36px;
+            background: var(--amarelo-ouro);
+            color: var(--vermelho-vivo);
+            padding: 20px 36px;
             text-align: center;
+            border-bottom: 2px dashed var(--amarelo-escuro);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            z-index: 2;
         }
 
         .faixa-copy .headline {
-            font-size: 1.55rem;
+            font-size: 2rem;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: -0.5px;
-            line-height: 1.2;
+            line-height: 1.1;
+            text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5);
         }
 
         .faixa-copy .subtitulo {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #5d4037;
-            margin-top: 4px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--vermelho-escuro);
+            margin-top: 5px;
         }
 
-        /* ===== GRID PRODUTOS — adaptável pela quantidade ===== */
-        .label-secao {}
+        .label-secao {
+            display: none;
+            /* Ocultando pois não combina com o estilo vibrante */
+        }
 
+        /* ===== GRID PRODUTOS ===== */
         .grid-produtos {
             display: grid;
-            gap: 14px;
-            padding: 20px;
-            background: #f7f7f7;
+            gap: 25px;
+            padding: 30px 40px;
+            background: var(--branco);
+            flex-grow: 1;
         }
 
-        /* 1 produto: 1 coluna centralizada bem grande */
+        /* Lógica de colunas mantida */
         .grid-produtos.qty-1 {
             grid-template-columns: repeat(1, 1fr);
-            max-width: 480px;
+            max-width: 600px;
             margin: 0 auto;
         }
 
-        /* 2 a 3 produtos: 2 ou 3 colunas */
         .grid-produtos.qty-2 {
             grid-template-columns: repeat(2, 1fr);
         }
@@ -148,7 +191,6 @@
             grid-template-columns: repeat(3, 1fr);
         }
 
-        /* 4 a 6 produtos: 3 colunas */
         .grid-produtos.qty-4 {
             grid-template-columns: repeat(2, 1fr);
         }
@@ -158,174 +200,184 @@
             grid-template-columns: repeat(3, 1fr);
         }
 
-        /* 7 a 20 produtos: 4 colunas */
         .grid-produtos.qty-7,
         .grid-produtos.qty-8,
         .grid-produtos.qty-9,
         .grid-produtos.qty-10,
         .grid-produtos.qty-many {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
+            /* Mudado para 3 colunas para ficar igual a referencia */
         }
 
+        /* ===== CARD ESTILO FOLHETO ===== */
         .card {
             background: var(--branco);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            /* Borda tracejada cinza como na referência */
+            border: 3px dashed var(--borda-tracejada);
+            border-radius: 15px;
+            overflow: visible;
+            /* Necessário para a tag sair para fora */
+            position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-bottom: 14px;
+            padding: 20px 15px;
+            box-shadow: none;
+            /* Removendo sombra padrão */
         }
 
+        /* Neutralizando o destaque para manter padrão visual */
         .card-destaque {
-            background: var(--vermelho);
+            background: var(--branco);
         }
+
+        /* Etiqueta de Oferta Inclinada */
+        .tag-oferta {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: auto;
+            background: var(--vermelho-vivo);
+            color: var(--branco);
+            font-size: 0.8rem;
+            font-weight: 900;
+            padding: 6px 18px;
+            text-transform: uppercase;
+            transform: rotate(15deg);
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 2;
+            border-radius: 4px;
+        }
+
+        .card-destaque .tag-oferta {
+            background: var(--vermelho-vivo);
+            color: var(--branco);
+        }
+
 
         .card-topo {
             width: 100%;
-            background: #fafafa;
-            padding: 20px 10px;
+            background: transparent;
+            /* Fundo transparente */
+            padding: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 140px;
+            min-height: 180px;
+            /* Altura fixa para alinhar */
+            margin-bottom: 10px;
         }
 
-        /* Imagem maior quando poucos produtos */
+        /* Ajuste de imagem */
         .qty-1 .card-topo,
         .qty-2 .card-topo,
         .qty-3 .card-topo {
-            min-height: 160px;
+            min-height: 200px;
         }
 
         .qty-4 .card-topo,
         .qty-5 .card-topo,
         .qty-6 .card-topo {
-            min-height: 120px;
+            min-height: 180px;
         }
 
-        .card-topo span {
-            font-size: 2rem;
-            opacity: .6;
-        }
-
-        /* Fontes maiores quando poucos produtos */
-        .qty-1 .card-nome,
-        .qty-2 .card-nome {
-            font-size: 1rem;
-        }
-
-        .qty-3 .card-nome {
-            font-size: 0.9rem;
-        }
-
-        .qty-1 .card-preco-por {
-            font-size: 1.6rem;
-        }
-
-        .qty-2 .card-preco-por {
-            font-size: 1.4rem;
-        }
-
-        .qty-3 .card-preco-por {
-            font-size: 1.3rem;
-        }
-
-        .tag-oferta {
-            background: var(--vermelho);
-            color: var(--branco);
-            font-size: 0.68rem;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            padding: 3px 10px;
-            width: 100%;
-            text-align: center;
-            text-transform: uppercase;
-        }
-
-        .card-destaque .tag-oferta {
-            background: #fff;
-            color: var(--vermelho);
-        }
-
+        /* Nomes dos produtos */
         .card-nome {
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: #333;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--cinza-texto);
             text-align: center;
-            padding: 8px 10px 4px;
-            line-height: 1.3;
+            padding: 5px 10px;
+            line-height: 1.2;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            flex-grow: 1;
+            /* Ocupa espaço para alinhar preços */
         }
 
         .card-destaque .card-nome {
-            color: #fff;
+            color: var(--cinza-texto);
         }
 
+
+        /* Preços */
         .card-preco-de {
-            font-size: 0.72rem;
-            color: #aaa;
+            font-size: 0.9rem;
+            color: #777;
             text-decoration: line-through;
             text-align: center;
+            margin-bottom: 5px;
+            font-weight: 600;
         }
 
         .card-destaque .card-preco-de {
-            color: rgba(255, 255, 255, 0.65);
+            color: #777;
         }
 
+        /* Box de Preço Amarelo */
         .card-preco-por {
-            background: var(--amarelo);
-            color: var(--dark);
+            background: var(--amarelo-ouro);
+            /* Borda sólida amarela */
+            border: 3px solid var(--amarelo-escuro);
+            color: var(--vermelho-vivo);
             font-weight: 900;
-            font-size: 1.15rem;
+            font-size: 2.2rem;
+            /* Preço bem grande */
             text-align: center;
-            padding: 6px 12px;
-            border-radius: 6px;
-            margin: 6px 10px 0;
-            width: calc(100% - 20px);
+            padding: 8px 5px;
+            border-radius: 12px;
+            margin: 0 auto;
+            width: 95%;
+            line-height: 1;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
+            /* Sombra dura embaixo */
+            letter-spacing: -1px;
+        }
+
+        /* Pequeno ajuste para o 'R$' ficar menor se possível via CSS puro (truque) */
+        .card-preco-por::first-letter {
+            font-size: 0.6em;
+            vertical-align: super;
+            margin-right: 2px;
         }
 
         .card-destaque .card-preco-por {
-            background: #fff;
-            color: var(--vermelho);
+            background: var(--amarelo-ouro);
+            color: var(--vermelho-vivo);
         }
 
-        /* ===== FAIXA ENDEREÇO ===== */
+        /* ===== FAIXA ENDEREÇO (Rodapé Vermelho) ===== */
         .faixa-endereco {
-            background: var(--dark);
+            background: var(--vermelho-vivo);
             color: var(--branco);
-            padding: 14px 28px;
+            padding: 25px 40px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 8px;
             margin-top: auto;
+            border-top: 4px solid var(--amarelo-ouro);
+            text-align: center;
         }
 
         .faixa-endereco strong {
-            font-size: 1.1rem;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            font-weight: 900;
         }
 
         .faixa-endereco .info-row {
-            font-size: 0.82rem;
-            color: rgba(255, 255, 255, 0.75);
-            line-height: 1.6;
-        }
-
-        .faixa-endereco .cnpj {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.4);
-            margin-top: 4px;
+            font-size: 1rem;
+            font-weight: 700;
         }
 
         /* ===== RODAPÉ DISCRETO ===== */
         .rodape-sistema {
-            background: #111;
-            color: rgba(255, 255, 255, 0.3);
-            font-size: 0.58rem;
-            padding: 7px 28px;
+            background: var(--vermelho-escuro);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.7rem;
+            padding: 10px 28px;
             display: flex;
             justify-content: space-between;
-            letter-spacing: 0.5px;
         }
     </style>
 </head>
@@ -346,9 +398,9 @@
         </div>
         <div class="header-info">
             <div>
-                <div class="header-badge">🔥 OFERTAS ESPECIAIS</div>
-                <div class="header-sub">Preços que você não pode perder!</div>
-                <div class="header-data">{{ \Carbon\Carbon::now()->isoFormat('D [de] MMMM [de] Y') }}</div>
+                <div class="header-badge">OFERTAS</div>
+                <div class="header-sub">DA SEMANA</div>
+                <div class="header-data">VÁLIDO: {{ \Carbon\Carbon::now()->isoFormat('D [de] MMMM [de] Y') }}</div>
             </div>
         </div>
     </div>
@@ -362,8 +414,8 @@
             $linhasCopy['headline'] = trim($h[1] ?? '');
             $linhasCopy['subtitulo'] = trim($s[1] ?? '');
         }
-        $headline = $linhasCopy['headline'] ?? 'Ofertas Imperdíveis da Semana!';
-        $subtitulo = $linhasCopy['subtitulo'] ?? 'Corra, são por tempo limitado!';
+        $headline = $linhasCopy['headline'] ?? 'Economia de verdade é aqui!';
+        $subtitulo = $linhasCopy['subtitulo'] ?? 'Confira as promoções que preparamos para você.';
     @endphp
 
     <div class="faixa-copy">
@@ -382,7 +434,7 @@
                         <img src="{{ $prod['imagem_url'] }}" alt="{{ $prod['nome'] }}"
                             style="max-height:160px;max-width:100%;object-fit:contain;">
                     @else
-                        <span>🛒</span>
+                        <img src="https://placehold.co/150x150/e0e0e0/999999?text=Oferta" style="opacity:0.3">
                     @endif
                 </div>
                 <div class="tag-oferta">OFERTA</div>
@@ -398,8 +450,8 @@
     <div class="faixa-endereco" style="margin-top:auto;">
         <strong>{{ $loja['nome'] ?? '' }}</strong>
         <div class="info-row">
-            📍 {{ $loja['endereco'] ?? '' }} — {{ $loja['cidade'] ?? '' }}&nbsp;&nbsp;|&nbsp;&nbsp;📞
-            {{ $loja['telefone'] ?? '' }}
+            📍 {{ $loja['endereco'] ?? '' }} — {{ $loja['cidade'] ?? '' }}<br>
+            📞 {{ $loja['telefone'] ?? '' }}
         </div>
         <div class="cnpj">@if(!empty($loja['cnpj'])) CNPJ: {{ $loja['cnpj'] }} @endif</div>
     </div>
