@@ -321,28 +321,23 @@
             border: 3px solid var(--amarelo-escuro);
             color: var(--vermelho-vivo);
             font-weight: 900;
-            font-size: 2rem;
+            font-size: 1.8rem;
+            /* Reduzido um pouco para caber melhor */
             text-align: center;
-            padding: 6px 4px;
+            padding: 8px 2px;
             border-radius: 12px;
             margin: 0 auto;
-            width: 95%;
+            width: 98%;
             line-height: 1;
             box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
             letter-spacing: -1px;
-            /* Garante que o R$ não quebre de linha por falta de espaço */
             display: flex;
             align-items: center;
             justify-content: center;
             white-space: nowrap;
         }
 
-        /* Pequeno ajuste para o 'R$' ficar menor se possível via CSS puro (truque) */
-        .card-preco-por::first-letter {
-            font-size: 0.6em;
-            vertical-align: super;
-            margin-right: 2px;
-        }
+        /* Removido o first-letter que causava quebra de linha errática no WeasyPrint */
 
         .card-destaque .card-preco-por {
             background: var(--amarelo-ouro);
@@ -404,7 +399,7 @@
                 <div class="header-badge">OFERTAS</div>
                 <div class="header-sub">DA SEMANA</div>
                 @php \Carbon\Carbon::setLocale('pt_BR'); @endphp
-                <div class="header-data">VÁLIDO: {{ \Carbon\Carbon::now()->isoFormat('D \d\e MMMM \d\e Y') }}</div>
+                <div class="header-data">VÁLIDO: {{ \Carbon\Carbon::now()->translatedFormat('d \d\e F \d\e Y') }}</div>
             </div>
         </div>
     </div>
