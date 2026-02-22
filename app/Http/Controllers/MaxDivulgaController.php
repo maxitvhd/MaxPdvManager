@@ -11,33 +11,11 @@ use App\Models\LojaVendaItem;
 use App\Models\MaxDivulgaCampaign;
 use App\Models\MaxDivulgaTheme;
 
+use App\Traits\ResolvesLoja;
+
 class MaxDivulgaController extends Controller
 {
-    /** Detecta a loja do usuário logado.
-     * Admin pode ver todas ou a loja passada por parâmetro.
-     */
-    private function resolverLoja(?int $lojaId = null): ?\App\Models\Loja
-    {
-        $user = auth()->user();
-
-        // Admin / Super-Admin: usa qualquer loja
-        if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
-            if ($lojaId) {
-                return Loja::find($lojaId);
-            }
-            // Se não especificou, retorna a primeira disponível
-            return Loja::first();
-        }
-
-        // Lojista normal: tenta pela sessão e depois pela FK user_id
-        $lojaCodigo = session('loja_codigo');
-        if ($lojaCodigo) {
-            $loja = Loja::where('codigo', $lojaCodigo)->first();
-            if ($loja)
-                return $loja;
-        }
-        return Loja::where('user_id', $user->id)->first();
-    }
+    use ResolvesLoja;
 
     public function index()
     {

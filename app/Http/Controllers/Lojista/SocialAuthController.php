@@ -7,9 +7,11 @@ use App\Models\SocialAccount;
 use App\Models\MaxDivulgaConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use App\Traits\ResolvesLoja;
 
 class SocialAuthController extends Controller
 {
+    use ResolvesLoja;
     public function redirectToProvider($provider)
     {
         $config = MaxDivulgaConfig::first();
@@ -73,9 +75,10 @@ class SocialAuthController extends Controller
             $pages = $pagesResponse->json()['data'] ?? [];
 
             // 4. Salvar ou Atualizar Conta Social
+            $loja = $this->resolverLoja();
             SocialAccount::updateOrCreate(
                 [
-                    'loja_id' => auth()->user()->loja_id,
+                    'loja_id' => $loja->id ?? null,
                     'provider' => 'facebook',
                 ],
                 [
@@ -102,9 +105,10 @@ class SocialAuthController extends Controller
             'chat_name' => 'required|string',
         ]);
 
+        $loja = $this->resolverLoja();
         SocialAccount::updateOrCreate(
             [
-                'loja_id' => auth()->user()->loja_id,
+                'loja_id' => $loja->id ?? null,
                 'provider' => 'telegram',
                 'provider_id' => $request->chat_id,
             ],
