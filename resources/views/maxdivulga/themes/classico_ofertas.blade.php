@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Folheto de Ofertas Vibrante Premium</title>
+    <title>Folheto de Ofertas Vibrante Premium - Final</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700;900&display=swap"
         rel="stylesheet">
     <style>
@@ -17,13 +17,12 @@
         :root {
             --vermelho-vivo: #E60012;
             --vermelho-escuro: #A3000D;
-            /* Vermelho mais escuro para sombra */
+            /* Usado para sombras do texto */
             --amarelo-ouro: #FFD700;
             --amarelo-escuro: #FFC107;
             --branco: #ffffff;
             --cinza-texto: #333333;
             --borda-card: #FFD700;
-            /* Borda amarela sólida para destaque */
         }
 
         body {
@@ -35,85 +34,86 @@
             display: flex;
             flex-direction: column;
             color: var(--cinza-texto);
-            /* Removido padding do body para header/footer full-width */
         }
 
-        /* Container para a área branca central */
+        /* Container da área branca central (efeito moldura) */
         .main-content-wrapper {
             flex: 1;
             background: var(--branco);
             margin: 0 25px;
-            /* Cria a moldura vermelha nas laterais */
+            /* Cria a borda vermelha lateral */
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3) inset;
-            /* Sombra interna para profundidade */
-            border-radius: 20px 20px 0 0;
-            /* Arredondar topo da área branca */
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.35) inset;
+            /* Sombra interna mais forte */
+            border-radius: 25px 25px 0 0;
         }
 
-        /* ===== HEADER IMPACTANTE MELHORADO ===== */
+        /* ===== HEADER COM EFEITOS VISUAIS ===== */
         .header {
-            /* Gradiente sutil para dar volume ao vermelho */
-            background: linear-gradient(to bottom, var(--vermelho-vivo), #c90010);
+            /* Gradiente mais rico e textura sutil */
+            background: linear-gradient(to bottom, var(--vermelho-vivo), #d30011),
+                radial-gradient(circle at 50% 0%, rgba(255, 215, 0, 0.1) 0%, transparent 60%);
             color: var(--amarelo-ouro);
             display: flex;
             align-items: center;
-            min-height: 280px;
-            /* Aumentado a altura */
-            padding: 30px 40px;
-            border-bottom: 6px solid var(--amarelo-ouro);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            /* Gap ajustado para os elementos grandes */
+            gap: 30px;
+            min-height: 300px;
+            /* Altura aumentada para impacto */
+            padding: 35px 45px;
+            border-bottom: 8px solid var(--amarelo-ouro);
+            /* Borda inferior mais grossa */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            /* Sombra externa forte */
             position: relative;
             z-index: 10;
         }
 
         .header-logo {
-            flex: 1;
-            padding-right: 30px;
+            flex: 1 1 auto;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            /* Removida a borda tracejada para limpar o visual */
         }
 
-        /* Aumentando o tamanho da logo */
         .header-logo img {
-            max-height: 180px;
+            max-height: 200px;
+            /* Logo maior */
             max-width: 100%;
             object-fit: contain;
-            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+            /* Sombra para destacar a logo do fundo vermelho */
+            filter: drop-shadow(4px 4px 6px rgba(0, 0, 0, 0.4));
         }
 
         .header-logo .nome-loja {
-            /* Estilo de "selo" para o nome caso não tenha logo */
             background: var(--vermelho-escuro);
-            padding: 15px 30px;
+            padding: 15px 35px;
             border-radius: 50px;
-            font-size: 1.8rem;
+            font-size: 2rem;
             font-weight: 900;
             text-align: center;
             text-transform: uppercase;
             color: var(--branco);
             display: inline-block;
-            border: 3px solid var(--amarelo-ouro);
-            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);
+            border: 4px solid var(--amarelo-ouro);
+            box-shadow: 6px 6px 15px rgba(0, 0, 0, 0.4);
         }
 
         .header-logo .tagline {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             color: var(--amarelo-ouro);
-            margin-top: 15px;
+            margin-top: 18px;
             text-transform: uppercase;
             font-weight: 700;
             letter-spacing: 2px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
 
         .header-info {
-            flex: 2;
+            flex: 2 1 auto;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -121,26 +121,26 @@
             padding-left: 20px;
         }
 
-        /* Títulos Gigantes e com Efeito 3D */
+        /* TEXTOS GIGANTES COM EFEITO 3D */
         .header-badge {
             display: inline-block;
             color: var(--branco);
             font-weight: 900;
-            font-size: 5.5rem;
-            /* Muito maior */
+            font-size: 6rem;
+            /* Muito grande */
             line-height: 0.9;
             text-transform: uppercase;
-            /* Sombra em camadas para efeito 3D forte */
+            /* Sombra em camadas para efeito 3D profundo */
             text-shadow:
                 3px 3px 0px var(--vermelho-escuro),
                 6px 6px 0px rgba(0, 0, 0, 0.3),
-                8px 8px 10px rgba(0, 0, 0, 0.4);
+                10px 10px 15px rgba(0, 0, 0, 0.4);
             margin-bottom: 5px;
         }
 
         .header-sub {
-            font-size: 3rem;
-            /* Muito maior */
+            font-size: 3.5rem;
+            /* Grande */
             font-weight: 900;
             color: var(--amarelo-ouro);
             text-transform: uppercase;
@@ -148,37 +148,34 @@
             /* Sombra em camadas para efeito 3D */
             text-shadow:
                 3px 3px 0px var(--vermelho-escuro),
-                5px 5px 5px rgba(0, 0, 0, 0.4);
-            margin-bottom: 15px;
+                5px 5px 8px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
         }
 
         .header-data {
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             color: var(--branco);
             font-weight: 700;
             background: rgba(0, 0, 0, 0.3);
-            /* Fundo semi-transparente */
-            padding: 8px 25px;
+            padding: 10px 30px;
             border-radius: 50px;
-            border: 2px solid var(--amarelo-ouro);
-            box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.3);
+            border: 3px solid var(--amarelo-ouro);
+            box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.4);
         }
 
         /* ===== FAIXA COPY ===== */
         .faixa-copy {
-            background: var(--amarelo-ouro);
-            /* Degradê sutil no amarelo */
-            background: linear-gradient(to bottom, var(--amarelo-ouro), #ffca00);
+            background: linear-gradient(to bottom, var(--amarelo-ouro), #ffc200);
             color: var(--vermelho-vivo);
             padding: 25px 36px;
             text-align: center;
-            border-bottom: 3px solid var(--amarelo-escuro);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+            border-bottom: 4px solid var(--amarelo-escuro);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
             z-index: 2;
         }
 
         .faixa-copy .headline {
-            font-size: 2.2rem;
+            font-size: 2.4rem;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: -0.5px;
@@ -187,25 +184,24 @@
         }
 
         .faixa-copy .subtitulo {
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             font-weight: 800;
             color: var(--vermelho-escuro);
             margin-top: 8px;
         }
 
-        /* ===== GRID PRODUTOS ===== */
+        /* ===== GRID PRODUTOS (Estes são os estilos que fazem funcionar) ===== */
         .grid-produtos {
             display: grid;
             gap: 20px;
-            padding: 25px 30px;
+            padding: 25px 35px;
             background: var(--branco);
             flex: 1;
             min-height: 0;
             align-content: start;
-            /* Itens começam do topo */
         }
 
-        /* Ajustes de Grid */
+        /* Regras de colunas dinâmicas */
         .grid-produtos.qty-1 {
             grid-template-columns: 1fr;
             padding: 50px 200px;
@@ -214,17 +210,18 @@
         .grid-produtos.qty-2 {
             grid-template-columns: repeat(2, 1fr);
             padding: 50px;
-            gap: 40px;
+            gap: 50px;
         }
 
         .grid-produtos.qty-3 {
             grid-template-columns: repeat(3, 1fr);
-            gap: 30px;
+            gap: 35px;
         }
 
         .grid-produtos.qty-4 {
             grid-template-columns: repeat(2, 1fr);
-            gap: 30px;
+            gap: 35px;
+            padding: 30px 100px;
         }
 
         .grid-produtos.qty-5,
@@ -247,26 +244,25 @@
 
         .grid-produtos.qty-many {
             grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            padding: 15px;
+            gap: 12px;
+            padding: 20px;
         }
 
 
-        /* ===== CARD MELHORADO ===== */
+        /* ===== CARD DE PRODUTO ===== */
         .card {
             background: var(--branco);
-            /* Borda SÓLIDA amarela para destaque (estilo exemplo 1) */
-            border: 3px solid var(--borda-card);
-            border-radius: 15px;
+            /* Borda sólida amarela grossa para destaque */
+            border: 4px solid var(--borda-card);
+            border-radius: 18px;
             overflow: visible;
             position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 15px;
-            /* Sombra para destacar o card do fundo branco */
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-            transition: transform 0.3s;
+            /* Sombra para destacar do fundo branco */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             height: 100%;
         }
 
@@ -277,8 +273,7 @@
             align-items: center;
             justify-content: center;
             flex-grow: 1;
-            /* Ocupa espaço disponível */
-            min-height: 120px;
+            min-height: 130px;
             padding: 10px;
             margin-bottom: 10px;
         }
@@ -290,37 +285,35 @@
             height: auto;
             object-fit: contain;
             /* Sombra suave na imagem do produto */
-            filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.1));
+            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));
         }
 
-        /* Tag de Oferta mais vibrante */
         .tag-oferta {
             position: absolute;
-            top: -12px;
-            right: -12px;
+            top: -15px;
+            right: -15px;
             background: linear-gradient(45deg, var(--vermelho-vivo), var(--vermelho-escuro));
             color: var(--branco);
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             font-weight: 900;
-            padding: 8px 20px;
+            padding: 10px 22px;
             text-transform: uppercase;
             transform: rotate(15deg);
-            box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.4);
+            box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
             z-index: 2;
-            border-radius: 4px;
+            border-radius: 6px;
             border: 2px solid var(--branco);
         }
 
         .card-nome {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             font-weight: 800;
             color: var(--cinza-texto);
             text-align: center;
-            line-height: 1.3;
-            margin-bottom: 8px;
+            line-height: 1.2;
+            margin-bottom: 10px;
             text-transform: uppercase;
             flex-shrink: 0;
-            /* Não encolher */
         }
 
         /* Ajuste de fonte para muitos produtos */
@@ -328,12 +321,11 @@
         .qty-11 .card-nome,
         .qty-12 .card-nome,
         .qty-many .card-nome {
-            font-size: 0.9rem;
+            font-size: 1rem;
         }
 
-
         .card-preco-de {
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #888;
             text-decoration: line-through;
             margin-bottom: 5px;
@@ -341,24 +333,20 @@
             flex-shrink: 0;
         }
 
-        /* Box de Preço Mais Impactante */
+        /* Box de Preço Impactante */
         .card-preco-por {
-            /* Degradê no box de preço */
             background: linear-gradient(to bottom, var(--amarelo-ouro), #ffc107);
-            border: 3px solid var(--vermelho-vivo);
-            /* Borda vermelha no preço */
+            border: 4px solid var(--vermelho-vivo);
             color: var(--vermelho-vivo);
             font-weight: 1000;
-            /* Extra bold */
-            font-size: 2.4rem;
-            /* Maior */
+            font-size: 2.6rem;
             text-align: center;
-            padding: 5px 15px;
-            border-radius: 12px;
+            padding: 8px 15px;
+            border-radius: 14px;
             width: 100%;
             line-height: 1;
-            /* Sombra dura para efeito pop */
-            box-shadow: 0 5px 0 #c7a000, 0 8px 10px rgba(0, 0, 0, 0.2);
+            /* Sombra dura "pop" */
+            box-shadow: 0 6px 0 #c7a000, 0 10px 15px rgba(0, 0, 0, 0.25);
             letter-spacing: -1.5px;
             display: flex;
             align-items: center;
@@ -372,34 +360,34 @@
         .faixa-endereco {
             background: var(--vermelho-vivo);
             color: var(--branco);
-            padding: 30px 40px;
+            padding: 35px 45px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             margin-top: auto;
-            border-top: 6px solid var(--amarelo-ouro);
+            border-top: 8px solid var(--amarelo-ouro);
             text-align: center;
-            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.25);
             z-index: 10;
         }
 
         .faixa-endereco strong {
-            font-size: 1.8rem;
+            font-size: 2rem;
             text-transform: uppercase;
             font-weight: 900;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
         }
 
         .faixa-endereco .info-row {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: 700;
         }
 
         .rodape-sistema {
             background: var(--vermelho-escuro);
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.8rem;
-            padding: 12px 30px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            padding: 15px 35px;
             display: flex;
             justify-content: space-between;
             text-transform: uppercase;
@@ -426,7 +414,8 @@
                 <div class="header-sub">DA SEMANA</div>
                 @php \Carbon\Carbon::setLocale('pt_BR'); @endphp
                 <div class="header-data">VÁLIDO ATÉ:
-                    {{ \Carbon\Carbon::now()->addDays(7)->translatedFormat('d \d\e F') }}</div>
+                    {{ \Carbon\Carbon::now()->addDays(7)->translatedFormat('d \d\e F') }}
+                </div>
             </div>
         </div>
     </div>
