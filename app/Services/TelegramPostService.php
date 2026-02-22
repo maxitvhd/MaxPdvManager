@@ -13,7 +13,12 @@ class TelegramPostService
     public function postToChat($chatId, $botToken, $imagePath, $message)
     {
         try {
+            $chatId = trim($chatId);
             $url = "https://api.telegram.org/bot{$botToken}/sendPhoto";
+
+            if (env('LOG_MAXDIVULGA', true)) {
+                Log::info("[TELEGRAM-POST] Enviando para Chat: {$chatId} | Bot: " . substr($botToken, 0, 6) . "...");
+            }
 
             $response = Http::attach(
                 'photo',
