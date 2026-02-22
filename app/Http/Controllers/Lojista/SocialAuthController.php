@@ -216,7 +216,7 @@ class SocialAuthController extends Controller
 
                 if (file_exists($audioFile)) {
                     $hasAudio = true;
-                    $service->postAudioToChat($request->target_id, $account->token, $audioFile, $message);
+                    $service->postAudioToChat($request->target_id, $account->token, $audioFile, '');
                 }
             }
 
