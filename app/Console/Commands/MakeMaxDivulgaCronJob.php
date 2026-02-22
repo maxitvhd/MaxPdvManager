@@ -259,6 +259,19 @@ class MakeMaxDivulgaCronJob extends Command
                 'status' => 'active',
             ]);
 
+            // 7. Envio Automático para Redes Sociais (SocialPublishService)
+            try {
+                if (!empty($novaCampanha->channels)) {
+                    if (env('LOG_MAXDIVULGA', true)) {
+                        \Illuminate\Support\Facades\Log::info("[MAXDIVULGA-CRON] Iniciando disparo automático para canais: " . implode(', ', $novaCampanha->channels));
+                    }
+                    $socialService = new \App\Services\SocialPublishService();
+                    $socialService->publishToAll($novaCampanha);
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("[MAXDIVULGA-CRON] Erro no disparo automático: " . $e->getMessage());
+            }
+
             // Atualiza o Template Pai informando a última vez que rodou o cron
             $campaign->update(['last_run_at' => now(), 'status' => 'active']);
 
