@@ -117,9 +117,14 @@
                                         <div class="modal-body">
                                             <div class="alert alert-info text-white text-xs">
                                                 <strong>Como conectar:</strong><br>
-                                                1. Adicione o nosso bot no seu grupo ou canal.<br>
-                                                2. Obtenha o <strong>Chat ID</strong> do seu grupo (pode usar bots como @userinfobot ou @GetIDsBot).<br>
-                                                3. Insira o ID e o nome abaixo.
+                                                1. Crie seu bot no <a href="https://t.me/BotFather" target="_blank" class="text-white font-weight-bold" style="text-decoration: underline;">@BotFather</a>.<br>
+                                                2. Adicione o bot no seu grupo ou canal.<br>
+                                                3. Obtenha o <strong>Chat ID</strong> do seu grupo (pode usar bots como @userinfobot ou @GetIDsBot).<br>
+                                                4. Insira o Token do Bot e o Chat ID abaixo.
+                                            </div>
+                                            <div class="form-group mb-3">
+                                                <label for="bot_token">Token do Bot (API Key)</label>
+                                                <input type="text" name="bot_token" id="bot_token" class="form-control" placeholder="Ex: 123456:ABC-DEF..." required>
                                             </div>
                                             <div class="form-group mb-3">
                                                 <label for="chat_name">Nome para Identificação (ex: Grupo de Ofertas)</label>

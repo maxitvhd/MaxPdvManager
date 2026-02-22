@@ -117,18 +117,6 @@
                                         class="form-control" value="{{ $config->google_client_secret ?? '' }}">
                                 </div>
                             </div>
-
-                            <div class="col-md-12 mt-3">
-                                <h6>Integração Telegram (Bot de Envio)</h6>
-                                <p class="text-xs text-muted">Crie um bot no <a href="https://t.me/BotFather"
-                                        target="_blank">@BotFather</a> e cole o Token aqui.</p>
-                                <div class="form-group mb-3">
-                                    <label for="telegram_bot_token">Telegram Bot Token (API Key)</label>
-                                    <input type="text" name="telegram_bot_token" id="telegram_bot_token"
-                                        class="form-control" value="{{ $config->telegram_bot_token ?? '' }}"
-                                        placeholder="Ex: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
-                                </div>
-                            </div>
                         </div>
                         <button type="submit" class="btn bg-gradient-dark btn-sm mt-3">Salvar Configurações</button>
                     </form>

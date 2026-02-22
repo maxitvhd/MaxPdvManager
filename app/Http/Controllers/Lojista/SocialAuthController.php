@@ -103,6 +103,7 @@ class SocialAuthController extends Controller
         $request->validate([
             'chat_id' => 'required|string',
             'chat_name' => 'required|string',
+            'bot_token' => 'required|string',
         ]);
 
         $loja = $this->resolverLoja();
@@ -113,7 +114,7 @@ class SocialAuthController extends Controller
                 'provider_id' => $request->chat_id,
             ],
             [
-                'token' => 'bot_token_used_globally', // Poderia ser customizado por loja se necessário
+                'token' => $request->bot_token,
                 'meta_data' => [
                     'name' => $request->chat_name,
                     'type' => str_starts_with($request->chat_id, '-') ? 'group/channel' : 'user',
@@ -160,14 +161,9 @@ class SocialAuthController extends Controller
         }
 
         if ($request->provider === 'telegram') {
-            $config = MaxDivulgaConfig::first();
-            if (!$config || !$config->telegram_bot_token) {
-                return back()->with('error', 'Bot Token do Telegram não configurado no Admin.');
-            }
-
             $service = new \App\Services\TelegramPostService();
-            // Para o Telegram, o target_id é o Chat ID
-            $result = $service->postToChat($request->target_id, $config->telegram_bot_token, $imagePath, $message);
+            // No caso do Telegram, o token está salvo individualmente na SocialAccount
+            $result = $service->postToChat($request->target_id, $account->token, $imagePath, $message);
 
             if (isset($result['ok']) && $result['ok']) {
                 return back()->with('success', 'Publicado com sucesso no Telegram!');
