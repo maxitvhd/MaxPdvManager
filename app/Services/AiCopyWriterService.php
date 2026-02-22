@@ -18,38 +18,12 @@ class AiCopyWriterService
     }
 
     /**
-     * Detecta o tema da campanha com base nos nomes dos produtos.
+     * Antiga detecção dura de temas. No novo formato, vamos delegar isso à própria IA 
+     * no prompt, garantindo precisão baseada em contexto sem regex falho.
      */
     public function detectarTema(array $products): string
     {
-        $nomes = strtolower(implode(' ', array_column($products, 'nome')));
-
-        $temas = [
-            'acougue_frios' => ['carne', 'bife', 'suíno', 'suino', 'peixe', 'linguiça', 'linguica', 'salsicha', 'mortadela', 'presunto', 'coxão', 'patinho', 'músculo', 'costela', 'frango', 'coxa', 'sobrecoxa', 'bacon'],
-            'hortifruti' => ['fruta', 'verdura', 'legume', 'tomate', 'batata', 'cebola', 'alface', 'cenoura', 'beterraba', 'banana', 'maçã', 'maca', 'laranja', 'limão', 'limao', 'uva', 'manga', 'abacate', 'mamão', 'mamao', 'melancia', 'melão'],
-            'cafe_da_manha' => ['café', 'cafe', 'pão', 'pao', 'bolo', 'manteiga', 'queijo', 'leite', 'requeijão', 'requeijao', 'achocolatado', 'sucrilhos', 'granola', 'iogurte', 'tapioca', 'nescafe', 'capuccino', 'biscoito', 'bolacha'],
-            'churrasco' => ['picanha', 'alcatra', 'contrafile', 'contrafilé', 'carvão', 'carvao', 'churrasqueira', 'espetinho', 'maminha', 'file', 'filé'],
-            'almoco' => ['arroz', 'feijão', 'feijao', 'macarrão', 'macarrao', 'farofa', 'molho', 'azeite', 'mandioca', 'macaxeira', 'inhame', 'caldo', 'óleo', 'oleo'],
-            'bebidas' => ['cerveja', 'refrigerante', 'suco', 'água', 'agua', 'vinho', 'vodka', 'whisky', 'dose', 'energético', 'energetico', 'isotônico', 'isotonco', 'kombucha'],
-            'limpeza' => ['detergente', 'sabão', 'sabao', 'desinfetante', 'amaciante', 'alvejante', 'esponja', 'vassoura', 'balde', 'rodo', 'pano', 'água sanitária'],
-            'padaria' => ['broa', 'baguete', 'ciabatta', 'croissant', 'bisnaguinha', 'forma', 'integral', 'brioche', 'salgado', 'coxinha', 'empada'],
-        ];
-
-        $pontuacao = [];
-        foreach ($temas as $tema => $palavras) {
-            $pontuacao[$tema] = 0;
-            foreach ($palavras as $palavra) {
-                if (str_contains($nomes, $palavra)) {
-                    $pontuacao[$tema]++;
-                }
-            }
-        }
-
-        arsort($pontuacao);
-        $melhor = array_key_first($pontuacao);
-
-        // Só usa tema detectado se tiver pelo menos 2 matches
-        return ($pontuacao[$melhor] >= 2) ? $melhor : 'catalogo_geral';
+        return 'auto';
     }
 
     /**
@@ -111,12 +85,12 @@ class AiCopyWriterService
     public function generateCopy(array $products, string $persona): string
     {
         $listaContexto = collect($products)->take(10)->map(
-            fn($p) =>
-            "  • {$p['nome']}: R$ {$p['preco_novo']} (era R$ {$p['preco_original']})"
+            function ($p) {
+                return $p['preco_novo'] !== $p['preco_original']
+                    ? "  • {$p['nome']}: R$ {$p['preco_novo']} (era R$ {$p['preco_original']})"
+                    : "  • {$p['nome']}: R$ {$p['preco_novo']}";
+            }
         )->join("\n");
-
-        $tema = $this->detectarTema($products);
-        $contextoTema = $this->textoTema($tema);
 
         $personaResolvida = $this->getResolvedPersona($persona);
         $personaInstrucao = $this->instrucaoPersona($personaResolvida);
@@ -124,18 +98,19 @@ class AiCopyWriterService
         $prompt = <<<PROMPT
 Você é um copywriter expert em marketing de varejo brasileiro com a seguinte PERSONA (Tom de Voz):
 [ {$personaInstrucao} ]
-REGRA #1: É OBRIGATÓRIO que você encarne essa persona em cada palavra. O seu tom de voz é a prioridade absoluta.
+REGRA #1: É OBRIGATÓRIO encarnar essa persona. O seu tom de voz é a absoluta prioridade!
 
 MISSÃO: Criar UMA HEADLINE poderosa e UM SUBTÍTULO curto para exibir no TOPO de um encarte/catálogo de ofertas.
 
 CONTEXTO DA CAMPANHA:
-- Tema detectado da lista: {$contextoTema}
-- Produtos em destaque (apenas para contexto, NÃO cite os nomes deles):
+- ATENÇÃO LLM: Analise cuidadosamente a lista de produtos abaixo. O ramo de atuação da loja ou o segmento/nicho central da oferta DEVE ser DEDUZIDO e COMPREENDIDO exclusivamente a partir dessa listagem (ex: se só tem Queijo, Leite e Cafés, o tema da campanha é Café da Manhã/Padaria. Se há Perfumes e Cremes, o nicho é Farmácia/Perfumaria ou Presentes. Se há Papel Sulfite e Lápis, é Papelaria etc). Molde o texto pautado nesse norte de segmento identificado para se adequar a qualquer ramo empresarial dos nossos lojistas.
+
+LISTA DE PRODUTOS DA OFERTA (Deduza o nicho olhando diretamente para eles):
 {$listaContexto}
 
 REGRAS ESTritas:
 ✅ Headline: impactante, máximo 8 palavras, MAIÚSCULAS onde for estratégico
-✅ Subtítulo: complemente a headline, máximo 12 palavras
+✅ Subtítulo: complemente a headline reforçando a oportunidade baseada na categoria identificada, máximo 12 palavras
 ❌ NÃO mencione os nomes dos produtos (pois eles já ocupam a imagem do encarte)
 ❌ NÃO use hashtags, asteriscos ou formatação markdown (sem ** ** na headline)
 
@@ -147,15 +122,7 @@ PROMPT;
         $resultado = $this->chamarIA($prompt, 150);
 
         if (!$resultado) {
-            $fallbacks = [
-                'cafe_da_manha' => "HEADLINE: O Café da Manhã Mais Gostoso da Cidade!\nSUBTITULO: Tudo fresquinho para começar seu dia com energia.",
-                'churrasco' => "HEADLINE: CHURRASCO INESQUECÍVEL Te Espera!\nSUBTITULO: As melhores carnes, preços que cabem no bolso.",
-                'bebidas' => "HEADLINE: Geladeira CHEIA Por Menos!\nSUBTITULO: Bebidas geladas com desconto imperdível.",
-                'acougue_frios' => "HEADLINE: O Melhor do Açougue Especial Para Você!\nSUBTITULO: Carnes nobres e cortes frescos com ofertas imbatíveis.",
-                'hortifruti' => "HEADLINE: Da Roça Direto Para Sua Mesa!\nSUBTITULO: Qualidade, sabor e saúde no nosso Hortifruti fresquinho.",
-                'default' => "HEADLINE: Ofertas Que Você Não Pode Deixar Passar!\nSUBTITULO: Preços válidos enquanto durar o estoque.",
-            ];
-            return $fallbacks[$tema] ?? $fallbacks['default'];
+            return "HEADLINE: Ofertas Que Você Não Pode Deixar Passar!\nSUBTITULO: Preços especiais e produtos fresquinhos válidos enquanto durar o estoque.";
         }
 
         return $resultado;
@@ -167,13 +134,12 @@ PROMPT;
      */
     public function generateCopySocial(array $products, string $persona, array $dadosLoja): string
     {
-        $tema = $this->detectarTema($products);
-        $contextoTema = $this->textoTema($tema);
-        $emojiTema = $this->emojiTema($tema);
-
         $listaPrecos = collect($products)->take(8)->map(
-            fn($p) =>
-            "{$emojiTema} {$p['nome']} — ✅ R$ {$p['preco_novo']} ~~de R$ {$p['preco_original']}~~"
+            function ($p) {
+                return $p['preco_novo'] !== $p['preco_original']
+                    ? "{$p['nome']} — ✅ R$ {$p['preco_novo']} ~~de R$ {$p['preco_original']}~~"
+                    : "{$p['nome']} — ✅ R$ {$p['preco_novo']}";
+            }
         )->join("\n");
 
         $lojaNome = $dadosLoja['nome'] ?? 'Nossa Loja';
@@ -192,7 +158,8 @@ REGRA #1: É OBRIGATÓRIO que você encarne essa persona em cada palavra do seu 
 
 MISSÃO: Escrever o TEXTO LEGENDA (ACOMPANHAMENTO DA IMAGEM), perfeito para WhatsApp Business, Instagram Stories e Feed.
 
-TEMA DA CAMPANHA DE OFERTAS: {$contextoTema}
+ANALISE O SEGMENTO DA LOJA: 
+Abaixo envio a lista de produtos. Você DEVE deduzir qual o ramo de atuação (Padaria, Lanchonete, Mercado, Farmárcia, Casa de Materiais, Informática, etc) e escrever a copy perfeitamente coerente a esse negócio, usando EMOJIS adequados a essa percepção:
 
 ESTRUTURA OBRIGATÓRIA (siga exatamente este esqueleto):
 1. 🔥 ABERTURA — 1 linha poderosa com emojis e o gatilho da sua persona (Ex: urgência, empatia, luxo, etc).
@@ -234,6 +201,73 @@ PROMPT;
     }
 
     /**
+     * Copy LOCUÇÃO — roteiro de rádio/som para a API de TTS ler em voz alta.
+     * Números e símbolos por extenso, sem emojis, sem CNPJ.
+     */
+    public function generateCopyLocucao(array $products, string $persona, array $dadosLoja): string
+    {
+        $listaPrecos = collect($products)->take(8)->map(
+            function ($p) {
+                return $p['preco_novo'] !== $p['preco_original']
+                    ? "Produto: {$p['nome']} (De {$p['preco_original']} reais POR APENAS {$p['preco_novo']} reais)."
+                    : "Produto: {$p['nome']} por {$p['preco_novo']} reais.";
+            }
+        )->join("\n");
+
+        $lojaNome = $dadosLoja['nome'] ?? 'Nossa Loja';
+
+        $personaResolvida = $this->getResolvedPersona($persona);
+        $personaInstrucao = $this->instrucaoPersona($personaResolvida);
+
+        $prompt = <<<PROMPT
+Você é um LOCUTOR ou ARTISTA DE VAREJO profissional, com a seguinte PERSONA (Tom de Voz):
+[ {$personaInstrucao} ]
+REGRA #1: É OBRIGATÓRIO encarnar essa persona em cada palavra. O texto DEVE SOAR NATURAL QUANDO LIDO EM VOZ ALTA por um sintatizador neural humano.
+
+MISSÃO: Escrever o ROTEIRO DA GRAVAÇÃO DE ÁUDIO que será narrado pelas caixas de som da rua/shoppings.
+
+CONTEXTO DA CAMPANHA:
+- Analise inteligentemente a lista de oferta. Perceba sozinho em qual ramo de negócio o cliente pertence, e inicie/ancore o roteiro de locução compatível a essa vibração (ex: se é pastelaria, fale coisas sobre cheiro agradável, fome rápida etc).
+- LOJA DA VEZ: {$lojaNome}
+
+PRODUTOS EM OFERTA E PREÇOS ORAIS (leia e incorpore com maestria oral):
+{$listaPrecos}
+
+REGRAS VITAIS DE PRONÚNCIA:
+❌ PROIBIDO usar NÚMEROS NUMÉRICOS (ex: 300, 5,96).
+✅ OBRIGATÓRIO ESCREVER TODO E QUALQUER NÚMERO OU VALOR POR EXTENSO (ex: "trezentas gramas", "cinco reais e noventa e seis").
+❌ PROIBIDO usar símbolos especiais (como R$, kg, %, *, #).
+❌ PROIBIDO Emojis.
+❌ PROIBIDO usar vocabulário chique, poético ou culto ("encantador"). 
+✅ USE linguagem comercial comercial/popular e com gatilhos de rua. Ex: "Tá imperdível", "Corre pra aproveitar"!
+✅ Mantenha um texto dinâmico (pausas com vírgulas e pontos).
+
+Escreva apenas o roteiro narrativo final em parágrafo único, sem aspas, sem anotações secundárias de palco ou sonoplastia.
+PROMPT;
+
+        $resultado = $this->chamarIA($prompt, 600);
+
+        if (!$resultado) {
+            return "Atenção clientes de {$lojaNome}! Chegaram as ofertas do momento. Venham economizar de verdade e aproveitar nossos preços baixos. Corram antes que acabe!";
+        }
+
+        // Dupla garantia de limpeza para o TTS não bugar:
+        $resultado = strip_tags($resultado);
+        $resultado = preg_replace('/[\x{1F600}-\x{1F64F}]/u', '', $resultado);
+        $resultado = preg_replace('/[\x{1F300}-\x{1F5FF}]/u', '', $resultado);
+        $resultado = preg_replace('/[\x{1F680}-\x{1F6FF}]/u', '', $resultado);
+        $resultado = preg_replace('/[\x{1F700}-\x{1F77F}]/u', '', $resultado);
+        $resultado = preg_replace('/[\x{1F780}-\x{1F7FF}]/u', '', $resultado);
+        $resultado = preg_replace('/[\x{1F800}-\x{1F8FF}]/u', '', $resultado);
+        $resultado = preg_replace('/[\x{1F900}-\x{1F9FF}]/u', '', $resultado);
+        $resultado = preg_replace('/[\x{1FA00}-\x{1FA6F}]/u', '', $resultado);
+        $resultado = preg_replace('/[\x{2600}-\x{26FF}]/u', '', $resultado);
+        $resultado = preg_replace('/[\x{2700}-\x{27BF}]/u', '', $resultado);
+
+        return trim($resultado);
+    }
+
+    /**
      * Retorna a instrução de persona para o prompt.
      */
     private function instrucaoPersona(string $persona): string
@@ -241,45 +275,9 @@ PROMPT;
         return match ($persona) {
             'urgencia' => 'Urgência extrema e escassez. Tom imperativo, acelerado, quase gritando. Crie medo imediato de perder a oportunidade.',
             'premium' => 'Sofisticação e exclusividade. Tom elegante, confiante e aspiracional. Faça o cliente sentir que merece o melhor.',
-            'mercado' => 'Locutor de varejão popular. Tom animado, próximo, quase falado em voz alta. Use expressões do cotidiano.',
-            'emocional' => 'Gatilho emocional profundo. Conecte os produtos com família, lar, economia do mês, momentos especiais e realização.',
-            default => 'Tom profissional, caloroso e persuasivo, voltado para o varejo brasileiro.',
-        };
-    }
-
-    /**
-     * Descrição textual do tema detectado para enriquecer os prompts.
-     */
-    private function textoTema(string $tema): string
-    {
-        return match ($tema) {
-            'cafe_da_manha' => 'Café da Manhã — produtos para um começo de dia especial e gostoso',
-            'churrasco' => 'Churrasco / Almoço em Família — carnes, temperos e tudo para o churrasquinho',
-            'acougue_frios' => 'Açougue e Frios — as melhores carnes, aves e cortes nobres para o dia a dia',
-            'almoco' => 'Almoço do Dia a Dia — itens essenciais da mesa brasileira',
-            'bebidas' => 'Bebidas — refrigerantes, cervejas e sucos para refrescar',
-            'hortifruti' => 'Hortifruti — saúde, frutas, legumes e verduras fresquinhos que acabaram de chegar',
-            'limpeza' => 'Limpeza e Higiene — produtos para deixar o lar brilhando',
-            'padaria' => 'Padaria — pães, bolos e delícias artesanais',
-            default => 'Catálogo Geral — grande variedade e ofertas pesadas para a família inteira',
-        };
-    }
-
-    /**
-     * Emoji representativo do tema.
-     */
-    private function emojiTema(string $tema): string
-    {
-        return match ($tema) {
-            'cafe_da_manha' => '☕',
-            'churrasco' => '🔥',
-            'acougue_frios' => '🥩',
-            'almoco' => '🍽️',
-            'bebidas' => '🥤',
-            'hortifruti' => '🥦',
-            'limpeza' => '✨',
-            'padaria' => '🍞',
-            default => '🛒',
+            'mercado' => 'Locutor de varejão popular/calçadão. Tom animado, próximo, quase cantado/falado em voz alta. Use gírias locais e aproximação rápida.',
+            'emocional' => 'Gatilho emocional profundo. Conecte os produtos com a dor/sentimento ou desejo familiar que motivou aquela compra.',
+            default => 'Tom profissional, caloroso e persuasivo, voltado para negócios locais.',
         };
     }
 }

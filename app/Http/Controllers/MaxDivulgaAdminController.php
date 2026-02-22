@@ -23,6 +23,9 @@ class MaxDivulgaAdminController extends Controller
             'tts_api_key' => 'nullable|string',
             'tts_model' => 'nullable|string',
             'tts_voice' => 'nullable|string',
+            'tts_default_speed' => 'nullable|numeric',
+            'tts_default_noise_scale' => 'nullable|numeric',
+            'tts_default_noise_w' => 'nullable|numeric',
         ]);
 
         $config = \App\Models\MaxDivulgaConfig::first();

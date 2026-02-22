@@ -215,6 +215,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{campaign}/show', [MaxDivulgaController::class, 'show'])->name('lojista.maxdivulga.show');
         Route::get('/{campaign}/edit', [MaxDivulgaController::class, 'edit'])->name('lojista.maxdivulga.edit');
         Route::put('/{campaign}', [MaxDivulgaController::class, 'update'])->name('lojista.maxdivulga.update');
+        Route::put('/{campaign}/schedule', [MaxDivulgaController::class, 'updateSchedule'])->name('lojista.maxdivulga.updateSchedule');
         Route::post('/{campaign}/toggle-active', [MaxDivulgaController::class, 'toggleActive'])->name('lojista.maxdivulga.toggle_active');
         Route::delete('/{campaign}', [MaxDivulgaController::class, 'destroy'])->name('lojista.maxdivulga.destroy');
         Route::get('/{campaign}/download', [MaxDivulgaController::class, 'download'])->name('lojista.maxdivulga.download');

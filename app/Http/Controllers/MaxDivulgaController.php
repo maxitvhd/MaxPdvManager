@@ -44,29 +44,49 @@ class MaxDivulgaController extends Controller
         $user = auth()->user();
 
         if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
-            // Admin vê TODAS as campanhas
-            $campaigns = MaxDivulgaCampaign::orderBy('created_at', 'desc')->get();
+            // Admin vê TODAS as campanhas originais (ignora as filhas do cron na listagem)
+            $campaigns = MaxDivulgaCampaign::whereNull('parent_id')
+                ->orderBy('created_at', 'desc')->get();
         } else {
             $loja = $this->resolverLoja();
             $lojaId = $loja ? $loja->id : null;
 
-            // Exibe campanhas desta loja OU campanhas sem loja (criadas antes da migração)
-            $campaigns = MaxDivulgaCampaign::where(function ($q) use ($lojaId) {
-                $q->where('loja_id', $lojaId)
-                    ->orWhereNull('loja_id');  // compatibilidade retroativa
-            })
+            // Exibe campanhas originais desta loja (sem ser as geradas repetidas do cronJob)
+            $campaigns = MaxDivulgaCampaign::whereNull('parent_id')
+                ->where(function ($q) use ($lojaId) {
+                    $q->where('loja_id', $lojaId)
+                        ->orWhereNull('loja_id');  // compatibilidade retroativa
+                })
                 ->orderBy('created_at', 'desc')
                 ->get();
         }
 
-        return view('lojista.maxdivulga.index', compact('campaigns'));
+        // Lê os mp3 da pasta de fundos musicais para editar no Modal
+        $bgAudios = collect(\Illuminate\Support\Facades\Storage::disk('public')->files('audio/fundo'))->map(function ($file) {
+            return basename($file);
+        })->toArray();
+
+        return view('lojista.maxdivulga.index', compact('campaigns', 'bgAudios'));
+
     }
 
     public function create()
     {
         $themes = MaxDivulgaTheme::where('is_active', true)->get();
         $loja = $this->resolverLoja();
-        return view('lojista.maxdivulga.create', compact('themes', 'loja'));
+
+        $fundos = [];
+        $dir = storage_path('app/public/audio/fundo');
+        if (is_dir($dir)) {
+            $files = array_diff(scandir($dir), ['.', '..']);
+            foreach ($files as $file) {
+                if (strtolower(pathinfo($file, PATHINFO_EXTENSION)) === 'mp3') {
+                    $fundos[] = $file;
+                }
+            }
+        }
+
+        return view('lojista.maxdivulga.create', compact('themes', 'loja', 'fundos'));
     }
 
     public function store(Request $request)
@@ -77,41 +97,87 @@ class MaxDivulgaController extends Controller
             return back()->withErrors(['loja' => 'Nenhuma loja encontrada para gerar campanha.']);
         }
 
+        $timesJson = $request->input('scheduled_times_json', '{}');
+        $times = json_decode($timesJson, true);
+        if (!is_array($times) || (count($times) > 0 && isset($times[0]))) {
+            $times = []; // Reseta se for inválido ou se vier num formato legado acidental (Array Simples)
+        }
+        $days = array_keys($times);
+
+        $tenantId = auth()->id() ?? null;
+        $qty = max(1, intval($request->input('product_quantity', 10)));
+
         $campaign = MaxDivulgaCampaign::create([
-            'tenant_id' => auth()->id() ?? null,
+            'tenant_id' => $tenantId,
             'loja_id' => $loja->id,
             'name' => $request->name ?? 'Campanha ' . now()->format('d/m/Y'),
             'type' => $request->type,
-            'channels' => $request->channels,
-            'schedule_type' => $request->schedule_type ?? 'unique',
-            'product_selection_rule' => $request->product_selection_rule,
-            'discount_rules' => $request->discount_rules,
-            'theme_id' => $request->theme_id,
+            'format' => $request->input('format'),
+            'channels' => $request->input('channels', []),
+            'product_selection_rule' => [
+                'type' => $request->input('product_selection_rule.type', 'best_sellers'),
+                'limit' => $qty,
+                'category' => $request->input('product_selection_rule.category', null),
+                'discount_percentage' => floatval($request->input('discount_rules.percentage', 0))
+            ],
             'persona' => $request->persona,
-            'format' => $request->format,
-            'voice' => $request->voice,
-            'audio_speed' => $request->audio_speed,
             'status' => 'active',
             'is_scheduled' => $request->boolean('is_scheduled', false),
-            'scheduled_days' => $request->input('scheduled_days', []),
-            'scheduled_times' => $request->input('scheduled_times', []),
+            'scheduled_days' => $days,
+            'scheduled_times' => $times,
             'is_active' => true,
+            'bg_audio' => $request->bg_audio,
+            'bg_volume' => $request->bg_volume ?? 0.20,
+            'theme_id' => $request->theme_id, // Kept this as it's used later for theme detection logic
+            'voice' => $request->voice,
+            'audio_speed' => $request->audio_speed,
+            'noise_scale' => $request->noise_scale,
+            'noise_w' => $request->noise_w,
         ]);
 
-        Log::info("[MAXDIVULGA-01] Campanha #{$campaign->id} '{$campaign->name}' criada para loja: {$loja->nome} ({$loja->codigo})");
+        if (env('LOG_MAXDIVULGA', true))
+            Log::info("[MAXDIVULGA-01] Campanha #{$campaign->id} '{$campaign->name}' criada para loja: {$loja->nome} ({$loja->codigo})");
 
         $selectedIds = $request->input('selected_products', []);
         $ruleType = $request->input('product_selection_rule.type');
         $qty = max(1, intval($request->input('product_quantity', 10)));
 
+        // Se for modo manual, salva os IDs dos produtos selecionados e os descontos individuais dentro da própria regra salva em DB
+        if ($ruleType === 'manual' && count($selectedIds) > 0) {
+            $descontoGlobalPct = floatval($request->input('discount_rules.percentage', 0));
+            $descontosIndividuais = $request->input('discount_products', []);
+            $syncData = [];
+            foreach ($selectedIds as $pid) {
+                $discount = isset($descontosIndividuais[$pid]) ? floatval($descontosIndividuais[$pid]) : $descontoGlobalPct;
+                $syncData[$pid] = ['discount_percentage' => $discount];
+            }
+
+            $currentRule = $campaign->product_selection_rule ?: [];
+            $currentRule['selected_ids'] = $selectedIds;
+            $currentRule['individual_discounts'] = $syncData;
+            $campaign->product_selection_rule = $currentRule;
+            $campaign->save();
+        }
+
+        // Se a campanha for agendada, não aciona a rotina pesada com IA, render Playwright nem Voice API. Apenas sai.
+        if ($campaign->is_scheduled) {
+            $campaign->update(['status' => 'pending']);
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-01] Campanha #{$campaign->id} Agendada criada. Será renderizada na hora exata pelo Cron Job.");
+            return redirect()->route('lojista.maxdivulga.index')
+                ->with('success', '✅ Campanha agendada com sucesso! A IA gerará o catálogo, a locução e os textos no horário programado.');
+        }
+
         $produtos = collect();
 
         if ($ruleType === 'manual' && count($selectedIds) > 0) {
-            Log::info("[MAXDIVULGA-02] Modo MANUAL. Qtde selecionados: " . count($selectedIds));
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-02] Modo MANUAL. Qtde selecionados: " . count($selectedIds));
             $produtos = Produto::whereIn('id', $selectedIds)->limit($qty)->get();
 
         } elseif ($ruleType === 'best_sellers') {
-            Log::info("[MAXDIVULGA-02] Modo MAIS VENDIDOS (por produto_nome, limit={$qty}).");
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-02] Modo MAIS VENDIDOS (por produto_nome, limit={$qty}).");
             $topNomes = LojaVendaItem::join('loja_vendas', 'loja_vendas_itens.loja_venda_id', '=', 'loja_vendas.id')
                 ->where('loja_vendas.loja_id', $loja->id)
                 ->select('loja_vendas_itens.produto_nome', DB::raw('SUM(loja_vendas_itens.quantidade) as total_vendido'))
@@ -129,7 +195,8 @@ class MaxDivulgaController extends Controller
 
         } elseif ($ruleType === 'category') {
             $cat = $request->input('product_selection_rule.value', '');
-            Log::info("[MAXDIVULGA-02] Modo CATEGORIA: {$cat}, limit={$qty}");
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-02] Modo CATEGORIA: {$cat}, limit={$qty}");
             $query = Produto::where('loja_id', $loja->id)->where('categoria', 'like', "%{$cat}%");
             if (count($selectedIds) > 0) {
                 $query->whereIn('id', $selectedIds);
@@ -137,7 +204,8 @@ class MaxDivulgaController extends Controller
             $produtos = $query->limit($qty)->get();
         }
 
-        Log::info("[MAXDIVULGA-03] Total de produtos para o catálogo: " . $produtos->count());
+        if (env('LOG_MAXDIVULGA', true))
+            Log::info("[MAXDIVULGA-03] Total de produtos para o catálogo: " . $produtos->count());
 
         $descontoGlobalPct = floatval($request->input('discount_rules.percentage', 0));
         $descontosIndividuais = $request->input('discount_products', []); // Array com o formato [product_id => discount_percentage]
@@ -197,16 +265,23 @@ class MaxDivulgaController extends Controller
             'logo_url' => $logoUrl,
         ];
 
-        Log::info("[MAXDIVULGA-04] Acionando IA para gerar 2 versões de copy...");
+        if (env('LOG_MAXDIVULGA', true))
+            Log::info("[MAXDIVULGA-04] Acionando IA para gerar versões de copy e locução...");
         $aiService = new \App\Services\AiCopyWriterService();
 
         // Detecta o tema com base nos produtos (antes da copy, para usar no folder e no prompt)
         $temaCampanha = $aiService->detectarTema($produtosParaCatalogo);
         $dadosLoja['tema_campanha'] = $temaCampanha;
-        Log::info("[MAXDIVULGA-04A] Tema detectado: {$temaCampanha}");
+        if (env('LOG_MAXDIVULGA', true))
+            Log::info("[MAXDIVULGA-04A] Tema detectado: {$temaCampanha}");
 
         $copyPrincipal = $aiService->generateCopy($produtosParaCatalogo, $campaign->persona);
         $copyAcompanhamento = $aiService->generateCopySocial($produtosParaCatalogo, $campaign->persona, $dadosLoja);
+
+        $copyLocucao = null;
+        if (in_array($campaign->format, ['audio', 'full'])) {
+            $copyLocucao = $aiService->generateCopyLocucao($produtosParaCatalogo, $campaign->persona, $dadosLoja);
+        }
 
         // Lógica para rotear automaticamente o Renderizador para o template adequado (1 vs Múltiplos)
         $themeId = $campaign->theme_id;
@@ -227,18 +302,48 @@ class MaxDivulgaController extends Controller
             'theme_id' => $themeId,
             'copy' => $copyPrincipal,
             'copy_acompanhamento' => $copyAcompanhamento,
+            'copy_locucao' => $copyLocucao,
         ]);
 
-        if (in_array($campaign->format, ['image', 'pdf', 'audio'])) {
-            Log::info("[MAXDIVULGA-06] Iniciando Renderização (CatalogRendererService)");
+        if (in_array($campaign->format, ['image', 'pdf', 'audio', 'full'])) {
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-06] Iniciando Renderização (CatalogRendererService)");
             $renderService = new \App\Services\CatalogRendererService();
-            // Passa também os dados da loja
-            $filePath = $renderService->render($campaign, $produtosParaCatalogo, $dadosLoja);
-            if ($filePath) {
-                $campaign->update(['file_path' => $filePath]);
-                Log::info("[MAXDIVULGA-09] Sucesso! Arquivo: {$filePath}");
+            $formatOriginal = $campaign->format;
+
+            if ($formatOriginal === 'full') {
+                // 1) Renderiza a Imagem (PNG)
+                $campaign->format = 'image';
+                $filePath = $renderService->render($campaign, $produtosParaCatalogo, $dadosLoja);
+
+                // 2) Renderiza o Áudio (MP3)
+                $campaign->format = 'audio';
+                $audioPath = $renderService->render($campaign, $produtosParaCatalogo, $dadosLoja);
+
+                // 3) Retorna ao normal e salva tudo de uma vez para não sobrescrever o DB format com audio
+                $campaign->format = 'full';
+                $campaign->update([
+                    'file_path' => $filePath ?: $campaign->file_path,
+                    'audio_file_path' => $audioPath,
+                    // Garante que o formato permaneceu original
+                    'format' => 'full'
+                ]);
+
+                if (env('LOG_MAXDIVULGA', true))
+                    Log::info("[MAXDIVULGA-09] Sucesso FULL! Imagem: {$filePath} | Audio: {$audioPath}");
             } else {
-                Log::error("[MAXDIVULGA-09] FALHA na renderização! Verifique os logs do CatalogRendererService.");
+                $filePath = $renderService->render($campaign, $produtosParaCatalogo, $dadosLoja);
+                if ($filePath) {
+                    if ($formatOriginal === 'audio') {
+                        $campaign->update(['audio_file_path' => $filePath]);
+                    } else {
+                        $campaign->update(['file_path' => $filePath]);
+                    }
+                    if (env('LOG_MAXDIVULGA', true))
+                        Log::info("[MAXDIVULGA-09] Sucesso! Arquivo: {$filePath}");
+                } else {
+                    Log::error("[MAXDIVULGA-09] FALHA na renderização! Verifique os logs do CatalogRendererService.");
+                }
             }
         }
 
@@ -275,11 +380,49 @@ class MaxDivulgaController extends Controller
 
     public function destroy(MaxDivulgaCampaign $campaign)
     {
-        if ($campaign->file_path && file_exists(storage_path('app/public/' . str_replace('storage/', '', $campaign->file_path)))) {
-            @unlink(storage_path('app/public/' . str_replace('storage/', '', $campaign->file_path)));
+        $loja = \App\Models\Loja::find($campaign->loja_id);
+
+        if ($loja) {
+            // Se for uma Matriz (Pai) ou Campanha Avulsa, exclui a pasta limpa que contém tudo
+            if (is_null($campaign->parent_id)) {
+                $pasta_campanha = storage_path("app/public/lojas/{$loja->codigo}/campanhas/campanha_{$campaign->id}");
+                if (\Illuminate\Support\Facades\File::exists($pasta_campanha)) {
+                    \Illuminate\Support\Facades\File::deleteDirectory($pasta_campanha);
+                }
+            }
+
+            // Fallback para limpar arquivos individuais (Mídia da filha, ou campanhas antigas do diretório 'catalogo_geral_x')
+            if ($campaign->file_path) {
+                $caminho_arte = storage_path('app/public/' . str_replace('storage/', '', $campaign->file_path));
+                if (file_exists($caminho_arte)) {
+                    @unlink($caminho_arte);
+                }
+            }
+
+            if ($campaign->audio_file_path) {
+                $caminho_audio = storage_path('app/public/' . str_replace('storage/', '', $campaign->audio_file_path));
+                if (file_exists($caminho_audio)) {
+                    @unlink($caminho_audio);
+                }
+            }
+
+            // Tenta achar restos de gravação HTML atrelados a id na pasta genérica antiga
+            $pasta_base = storage_path("app/public/lojas/{$loja->codigo}/campanhas");
+            $html_potencial = "{$pasta_base}/*_{$campaign->id}.html";
+            foreach (glob($html_potencial) as $file) {
+                @unlink($file);
+            }
         }
+
+        // A exclusão do Pai irá limpar o BD dos Filhos em Cascata (Foreign Key OnDelete Cascade)
         $campaign->delete();
-        return redirect()->route('lojista.maxdivulga.index')->with('success', 'Campanha removida!');
+
+        // Se excluiu a partir de uma listagem de filhas de uma matriz, retorna pra matriz. Senão, vai pra index.
+        if (!is_null($campaign->parent_id)) {
+            return redirect()->route('lojista.maxdivulga.show', $campaign->parent_id)->with('success', 'Disparo removido com sucesso!');
+        }
+
+        return redirect()->route('lojista.maxdivulga.index')->with('success', 'Programação e todos os arquivos removidos!');
     }
 
     public function download(MaxDivulgaCampaign $campaign)
@@ -350,5 +493,50 @@ class MaxDivulgaController extends Controller
                 ->limit(10)
                 ->get()
         );
+    }
+
+    public function updateSchedule(Request $request, $id)
+    {
+        $tenantId = auth()->id();
+        $camp = MaxDivulgaCampaign::where('id', $id)->where('tenant_id', $tenantId)->firstOrFail();
+
+        $timesJson = $request->input('scheduled_times_json', '{}');
+        $times = json_decode($timesJson, true);
+
+        // Garante coerência pra evitar erro de casting do DB se der erro de decodificação
+        if (!is_array($times)) {
+            $times = [];
+        }
+
+        // Se por ventura o input vier como array simples (vinda de um cache antigo do form), zera pra migrar limpo
+        if (count($times) > 0 && isset($times[0])) {
+            $times = [];
+        }
+
+        // O Days é preenchido de forma limpa extraindo as chaves do objeto json enviado pelo FrontEnd.
+        $days = array_keys($times);
+
+        $camp->scheduled_days = $days;
+        $camp->scheduled_times = $times;
+
+        // Novas Configs de Piloto de Mídia (Baseado nas Tabs de Edição Plena)
+        if ($request->has('format'))
+            $camp->format = $request->input('format');
+        if ($request->has('voice'))
+            $camp->voice = $request->input('voice');
+        if ($request->has('bg_audio'))
+            $camp->bg_audio = $request->input('bg_audio') !== 'none' ? $request->input('bg_audio') : null;
+        if ($request->has('bg_volume'))
+            $camp->bg_volume = floatval($request->input('bg_volume', 0.20));
+        if ($request->has('audio_speed'))
+            $camp->audio_speed = floatval($request->input('audio_speed', 1.0));
+        if ($request->has('noise_scale'))
+            $camp->noise_scale = floatval($request->input('noise_scale', 0.667));
+        if ($request->has('noise_w'))
+            $camp->noise_w = floatval($request->input('noise_w', 0.8));
+
+        $camp->save();
+
+        return redirect()->back()->with('success', 'Configurações do Piloto Automático atualizadas com sucesso!');
     }
 }

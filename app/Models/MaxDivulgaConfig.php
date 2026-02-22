@@ -19,6 +19,9 @@ class MaxDivulgaConfig extends Model
         'tts_host',
         'tts_api_key',
         'tts_model',
-        'tts_voice'
+        'tts_voice',
+        'tts_default_speed',
+        'tts_default_noise_scale',
+        'tts_default_noise_w'
     ];
 }

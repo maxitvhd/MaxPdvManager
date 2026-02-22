@@ -12,6 +12,7 @@ class MaxDivulgaCampaign extends Model
     protected $table = 'max_divulga_campaigns';
 
     protected $fillable = [
+        'parent_id',
         'tenant_id',
         'loja_id',
         'name',
@@ -28,13 +29,19 @@ class MaxDivulgaCampaign extends Model
         'next_run_at',
         'copy',
         'copy_acompanhamento',
+        'copy_locucao',
         'file_path',
         'is_scheduled',
         'scheduled_days',
         'scheduled_times',
         'is_active',
         'voice',
-        'audio_speed'
+        'audio_speed',
+        'noise_scale',
+        'noise_w',
+        'audio_file_path',
+        'bg_audio',
+        'bg_volume'
     ];
 
     protected $casts = [
@@ -48,6 +55,16 @@ class MaxDivulgaCampaign extends Model
         'last_run_at' => 'datetime',
         'next_run_at' => 'datetime',
     ];
+
+    public function parent()
+    {
+        return $this->belongsTo(MaxDivulgaCampaign::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(MaxDivulgaCampaign::class, 'parent_id');
+    }
 
     public function theme()
     {

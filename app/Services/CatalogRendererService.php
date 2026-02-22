@@ -20,7 +20,8 @@ class CatalogRendererService
     public function render(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja = [])
     {
         try {
-            Log::info("[MAXDIVULGA-07] Iniciando renderização Playwright. Formato: " . $campaign->format);
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-07] Iniciando renderização Playwright. Formato: " . $campaign->format);
             switch ($campaign->format) {
                 case 'image':
                     return $this->gerarImagem($campaign, $produtos, $dadosLoja);
@@ -42,8 +43,10 @@ class CatalogRendererService
     {
         $codigoLoja = $dadosLoja['codigo'] ?? 'sem-codigo';
         $tema = $dadosLoja['tema_campanha'] ?? 'catalogo_geral';
-        $data = now()->format('dmY');
-        $nomePasta = Str::slug("{$tema}_{$data}", '_');
+
+        // Pasta exclusiva: Usa o ID do "Pai" (Programação) para agrupar, ou o próprio ID se for avulsa.
+        $idPasta = $campaign->parent_id ?? $campaign->id;
+        $nomePasta = "campanha_{$idPasta}";
 
         $pasta = "lojas/{$codigoLoja}/campanhas/{$nomePasta}";
         $caminhoCompleto = storage_path("app/public/{$pasta}");
@@ -85,7 +88,8 @@ class CatalogRendererService
 
     private function gerarImagem(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
     {
-        Log::info("[MAXDIVULGA-07A] Preparando HTML para imagem...");
+        if (env('LOG_MAXDIVULGA', true))
+            Log::info("[MAXDIVULGA-07A] Preparando HTML para imagem...");
         $html = $this->getHtml($campaign, $produtos, $dadosLoja);
         $pasta = $this->construirPastaSaida($campaign, $dadosLoja);
 
@@ -99,7 +103,8 @@ class CatalogRendererService
 
 
         try {
-            Log::info("[MAXDIVULGA-08] Invocando Python (WeasyPrint+PyMuPDF) HTML→PNG...");
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-08] Invocando Python (WeasyPrint+PyMuPDF) HTML→PNG...");
 
             $pythonBin = $this->encontrarBinario(['/usr/bin/python3', '/usr/bin/python', '/usr/local/bin/python3', 'python3', 'python']);
             if (!$pythonBin)
@@ -111,16 +116,19 @@ class CatalogRendererService
 
             $cmd = "cd " . escapeshellarg(base_path()) . " && {$pythonBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPng) . " image 2>&1";
 
-            Log::info("[MAXDIVULGA-08-CMD] Executando: {$cmd}");
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-08-CMD] Executando: {$cmd}");
             $saida = shell_exec($cmd);
-            Log::info("[MAXDIVULGA-08-OUTPUT] {$saida}");
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-08-OUTPUT] {$saida}");
 
             if (!file_exists($caminhoPng)) {
                 throw new \Exception("Arquivo final não foi gerado. Saida: {$saida}");
             }
 
             @chmod($caminhoPng, 0664);
-            Log::info("[MAXDIVULGA-08B] PNG gerado com sucesso pelo Python!");
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-08B] PNG gerado com sucesso pelo Python!");
             return "storage/{$pasta}/{$arquivoPng}";
 
         } catch (\Exception $e) {
@@ -131,7 +139,8 @@ class CatalogRendererService
 
     private function gerarPdf(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
     {
-        Log::info("[MAXDIVULGA-07B] Preparando HTML para PDF...");
+        if (env('LOG_MAXDIVULGA', true))
+            Log::info("[MAXDIVULGA-07B] Preparando HTML para PDF...");
         $html = $this->getHtml($campaign, $produtos, $dadosLoja);
         $pasta = $this->construirPastaSaida($campaign, $dadosLoja);
 
@@ -144,7 +153,8 @@ class CatalogRendererService
         $caminhoPdf = storage_path("app/public/{$pasta}/{$arquivoPdf}");
 
         try {
-            Log::info("[MAXDIVULGA-08-PDF] Invocando Python (WeasyPrint) HTML→PDF...");
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-08-PDF] Invocando Python (WeasyPrint) HTML→PDF...");
             $pythonBin = $this->encontrarBinario(['/usr/bin/python3', '/usr/bin/python', '/usr/local/bin/python3', 'python3', 'python']);
             if (!$pythonBin)
                 throw new \Exception("Binário Python ausente");
@@ -153,13 +163,15 @@ class CatalogRendererService
             $cmd = "cd " . escapeshellarg(base_path()) . " && {$pythonBin} " . escapeshellarg($script) . " " . escapeshellarg($caminhoHtml) . " " . escapeshellarg($caminhoPdf) . " pdf 2>&1";
 
             $saida = shell_exec($cmd);
-            Log::info("[MAXDIVULGA-08-OUTPUT] {$saida}");
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-08-OUTPUT] {$saida}");
             if (!file_exists($caminhoPdf)) {
                 throw new \Exception("Falha na geração: {$saida}");
             }
 
             @chmod($caminhoPdf, 0664);
-            Log::info("[MAXDIVULGA-08B-PDF] PDF gerado com sucesso pelo Python!");
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-08B-PDF] PDF gerado com sucesso pelo Python!");
             return "storage/{$pasta}/{$arquivoPdf}";
 
         } catch (\Exception $e) {
@@ -170,9 +182,12 @@ class CatalogRendererService
 
     private function gerarAudio(MaxDivulgaCampaign $campaign, $produtos, array $dadosLoja): string
     {
-        Log::info("[MAXDIVULGA-TTS] Iniciando geração de áudio via AIconect API...");
+        if (env('LOG_MAXDIVULGA', true))
+            Log::info("[MAXDIVULGA-TTS] Iniciando geração de áudio via AIconect API...");
 
-        $textoBase = $campaign->copy ?? 'Olá! Confira as nossas novidades imperdíveis.';
+        // Prioriza a copy de locução que contém narração limpa sem símbolos. Fallback para social ou principal.
+        $textoBase = $campaign->copy_locucao ?: ($campaign->copy_acompanhamento ?: ($campaign->copy ?? 'Olá! Confira as nossas novidades imperdíveis.'));
+
         // Limpar emojis e caracteres extras para ajudar a API de voz
         $textoLimpo = strip_tags($textoBase);
         $textoLimpo = preg_replace('/[\x{1F600}-\x{1F64F}]/u', '', $textoLimpo); // Emoticons
@@ -195,24 +210,76 @@ class CatalogRendererService
         $arquivoMp3 = 'locucao_' . Str::random(6) . '.mp3';
         $caminhoMp3 = storage_path("app/public/{$pasta}/{$arquivoMp3}");
 
-        $voice = $campaign->voice ?? 'pt-BR-FabioNeural';
-        $speed = $campaign->audio_speed ?? 1.25;
+        $voice = $campaign->voice ?? $this->config->tts_voice ?? 'pt-BR-FabioNeural';
+        $speed = $campaign->audio_speed ?? $this->config->tts_default_speed ?? 1.25;
+        $noiseScale = $campaign->noise_scale ?? $this->config->tts_default_noise_scale ?? 0.750;
+        $noiseW = $campaign->noise_w ?? $this->config->tts_default_noise_w ?? 0.850;
+
+        $host = trim($this->config->tts_host ?? 'http://192.168.1.13:5000/tts');
+        // Sanitizar a URL garantindo que tenha rota (tts ou tts_mix)
+        if (!Str::endsWith($host, 'tts') && !Str::endsWith($host, 'tts/') && !Str::endsWith($host, 'tts_mix')) {
+            $host = rtrim($host, '/') . '/tts';
+        }
+        $key = $this->config->tts_api_key ?? 'A9fK3M7Q2Z8LxPR';
+
+        $hasFundo = !empty($campaign->bg_audio);
+        $bgPath = $hasFundo ? storage_path("app/public/audio/fundo/{$campaign->bg_audio}") : '';
+        if ($hasFundo && !file_exists($bgPath)) {
+            Log::warning("[MAXDIVULGA-TTS] Arquivo de fundo não encontrado: {$bgPath}. Gerando sem fundo.");
+            $hasFundo = false;
+        }
 
         try {
-            $response = \Illuminate\Support\Facades\Http::timeout(60)->get('http://192.168.1.13:5000/tts', [
-                'q' => $textoLimpo,
-                'voice' => $voice,
-                'speed' => $speed,
-                'key' => 'A9fK3M7Q2Z8LxPR',
-                'format' => 'mp3',
-                'play' => 0
-            ]);
+            if ($hasFundo) {
+                // Geração Mixada (POST Multipart)
+                // Se a URL original tiver "/tts", a trocamos logicamente por "/tts_mix"
+                $hostMix = str_replace('/tts', '/tts_mix', $host);
+                $urlFinal = $hostMix . '?key=' . urlencode($key);
+
+                if (env('LOG_MAXDIVULGA', true))
+                    Log::info("[MAXDIVULGA-TTS] Requisitando MIX (Com fundo): " . $urlFinal . " | Arquivo: " . $campaign->bg_audio);
+
+                $response = \Illuminate\Support\Facades\Http::timeout(180)
+                    ->attach('bg_audio', fopen($bgPath, 'r'), $campaign->bg_audio)
+                    ->post($urlFinal, [
+                        'voice' => $voice,
+                        'speed' => $speed,
+                        'noise_scale' => $noiseScale,
+                        'noise_w' => $noiseW,
+                        'bg_volume' => $campaign->bg_volume ?? 0.20,
+                        'text' => $textoLimpo, // a rota de mix costuma ler 'text' 
+                    ]);
+            } else {
+                // Geração Seca (GET Parametrizado)
+                $params = [
+                    'q' => $textoLimpo,
+                    'voice' => $voice,
+                    'speed' => $speed,
+                    'noise_scale' => $noiseScale,
+                    'noise_w' => $noiseW,
+                    'key' => $key,
+                    'format' => 'mp3',
+                    'play' => 0
+                ];
+                $fullUrl = $host . '?' . http_build_query($params);
+
+                if (env('LOG_MAXDIVULGA', true))
+                    Log::info("[MAXDIVULGA-TTS] Requisitando GET (Voz limpa): " . $fullUrl);
+
+                $response = \Illuminate\Support\Facades\Http::timeout(120)->get($host, $params);
+            }
+
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-TTS-RESP] Status: " . $response->status() . " | Content-Type: " . $response->header('Content-Type'));
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-TTS-RESP] Body (primeiros 50 chars): " . substr($response->body(), 0, 50));
 
             if ($response->successful()) {
                 file_put_contents($caminhoMp3, $response->body());
                 @chmod($caminhoMp3, 0664);
 
-                Log::info("[MAXDIVULGA-TTS-OK] Áudio salvo em: {$caminhoMp3}");
+                if (env('LOG_MAXDIVULGA', true))
+                    Log::info("[MAXDIVULGA-TTS-OK] Áudio salvo em: {$caminhoMp3}");
                 return "storage/{$pasta}/{$arquivoMp3}";
             } else {
                 throw new \Exception("A API Voice retornou status " . $response->status());

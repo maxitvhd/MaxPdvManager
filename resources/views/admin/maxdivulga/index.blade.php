@@ -58,9 +58,28 @@
                                         value="{{ $config->tts_api_key ?? '' }}">
                                 </div>
                                 <div class="form-group mb-3">
-                                    <label for="tts_model">Modelo/Voz TTS</label>
+                                    <label for="tts_model">Modelo/Voz TTS (Padrão)</label>
                                     <input type="text" name="tts_model" id="tts_model" class="form-control"
-                                        value="{{ $config->tts_model ?? '' }}">
+                                        value="{{ $config->tts_model ?? 'pt-BR-FabioNeural' }}">
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="tts_default_speed">Velocidade Padrão (Speed)</label>
+                                    <input type="number" step="0.05" name="tts_default_speed" id="tts_default_speed"
+                                        class="form-control" value="{{ $config->tts_default_speed ?? '1.25' }}">
+                                </div>
+                                <div class="row">
+                                    <div class="col-6 form-group mb-3">
+                                        <label for="tts_default_noise_scale">Emoção (Noise Scale)</label>
+                                        <input type="number" step="0.001" name="tts_default_noise_scale"
+                                            id="tts_default_noise_scale" class="form-control"
+                                            value="{{ $config->tts_default_noise_scale ?? '0.750' }}">
+                                    </div>
+                                    <div class="col-6 form-group mb-3">
+                                        <label for="tts_default_noise_w">Dicção (Noise W)</label>
+                                        <input type="number" step="0.001" name="tts_default_noise_w"
+                                            id="tts_default_noise_w" class="form-control"
+                                            value="{{ $config->tts_default_noise_w ?? '0.850' }}">
+                                    </div>
                                 </div>
                             </div>
                         </div>

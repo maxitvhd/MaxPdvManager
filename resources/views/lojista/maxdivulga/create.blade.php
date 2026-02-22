@@ -80,49 +80,68 @@
                                 <div x-show="scheduleType === 'scheduled'" class="mb-4 p-3 border rounded"
                                     style="background:rgba(16,185,129,0.05); border-color:rgba(16,185,129,0.2)!important;"
                                     x-transition>
-                                    <h6 class="font-weight-bold text-success mb-3"><i class="fas fa-robot me-1"></i> Piloto
+                                    <h6 class="font-weight-bold text-success mb-2"><i class="fas fa-robot me-1"></i> Piloto
                                         Automático de Promoções</h6>
 
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label text-sm font-weight-bold">Dias de Disparo</label>
-                                            <div class="d-flex flex-wrap gap-2">
-                                                <template
-                                                    x-for="(dayName, dayNum) in {1:'Seg', 2:'Ter', 3:'Qua', 4:'Qui', 5:'Sex', 6:'Sáb', 0:'Dom'}"
-                                                    :key="dayNum">
-                                                    <label class="btn btn-sm mb-0 px-2 py-1"
-                                                        :class="scheduledDays.includes(dayNum.toString()) ? 'btn-success' : 'btn-outline-secondary'">
-                                                        <input type="checkbox" name="scheduled_days[]" :value="dayNum"
-                                                            class="d-none" x-model="scheduledDays"
-                                                            :disabled="scheduleType !== 'scheduled'">
-                                                        <span x-text="dayName"></span>
-                                                    </label>
-                                                </template>
-                                            </div>
+                                    <p class="text-xs text-muted mb-3">Escolha de forma independente os dias e horários para
+                                        disparar sua campanha!</p>
+
+                                    <div class="row align-items-end mb-3">
+                                        <div class="col-md-5 mb-2 mb-md-0">
+                                            <label class="form-label text-sm font-weight-bold mb-1">Dia da Semana</label>
+                                            <select class="form-control form-control-sm" x-model="newDay">
+                                                <option value="segunda">Segunda-Feira</option>
+                                                <option value="terca">Terça-Feira</option>
+                                                <option value="quarta">Quarta-Feira</option>
+                                                <option value="quinta">Quinta-Feira</option>
+                                                <option value="sexta">Sexta-Feira</option>
+                                                <option value="sabado">Sábado</option>
+                                                <option value="domingo">Domingo</option>
+                                            </select>
                                         </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label text-sm font-weight-bold">Horários</label>
-                                            <div class="d-flex gap-2">
-                                                <input type="time" class="form-control form-control-sm" x-model="newTime">
-                                                <button type="button" class="btn btn-sm btn-dark mb-0"
-                                                    @click="addTime()">Add</button>
-                                            </div>
-                                            <div class="mt-2 d-flex flex-wrap gap-2">
-                                                <template x-for="time in scheduledTimes" :key="time">
-                                                    <span class="badge bg-secondary d-flex align-items-center gap-1">
-                                                        <span x-text="time"></span>
-                                                        <input type="hidden" name="scheduled_times[]" :value="time"
-                                                            :disabled="scheduleType !== 'scheduled'">
-                                                        <i class="fas fa-times cursor-pointer ms-1" style="cursor:pointer;"
-                                                            @click="removeTime(time)"></i>
-                                                    </span>
-                                                </template>
-                                                <template x-if="scheduledTimes.length === 0">
-                                                    <small class="text-muted">Nenhum horário adicionado.</small>
-                                                </template>
-                                            </div>
+                                        <div class="col-md-5 mb-2 mb-md-0">
+                                            <label class="form-label text-sm font-weight-bold mb-1">Horário (Ex:
+                                                09:00)</label>
+                                            <input type="time" class="form-control form-control-sm" x-model="newTime">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-sm btn-dark mb-0 w-100 p-0"
+                                                style="height: 32px;" @click="addTime()">Add</button>
                                         </div>
                                     </div>
+
+                                    <!-- Campo oculto submetido ao controller MaxDivulgaController@store -->
+                                    <input type="hidden" name="scheduled_times_json"
+                                        :value="JSON.stringify(scheduledTimesDict)"
+                                        :disabled="scheduleType !== 'scheduled'">
+
+                                    <div class="mt-3">
+                                        <template x-if="Object.keys(scheduledTimesDict).length === 0">
+                                            <small
+                                                class="text-muted d-block p-2 border border-dashed rounded text-center">Nenhuma
+                                                regra de disparo configurada.</small>
+                                        </template>
+
+                                        <template x-for="dia in Object.keys(scheduledTimesDict)" :key="dia">
+                                            <div class="mb-2">
+                                                <span class="text-xs font-weight-bolder text-primary d-block mb-1"
+                                                    x-text="capitalize(dia)"></span>
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    <template x-for="time in scheduledTimesDict[dia]" :key="time">
+                                                        <span
+                                                            class="badge bg-white border text-dark d-flex align-items-center gap-1 border-radius-sm py-1 px-2"
+                                                            style="font-size:0.75rem;">
+                                                            <i class="far fa-clock text-secondary"></i>
+                                                            <span x-text="time"></span>
+                                                            <i class="fas fa-times cursor-pointer ms-1 text-danger"
+                                                                style="cursor:pointer;" @click="removeTime(dia, time)"></i>
+                                                        </span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+
                                     <input type="hidden" name="is_scheduled" value="1"
                                         :disabled="scheduleType !== 'scheduled'">
                                 </div>
@@ -374,19 +393,21 @@
                                 </div>
 
                                 {{-- COMPILADO FINAL DOS PRODUTOS SELECIONADOS + DESCONTOS --}}
-                                <h6 class="mt-4 border-top pt-3 text-primary">🛒 Produtos Selecionados e Descontos (<span
-                                        x-text="selectedProducts.length"></span> / <span x-text="productQty"></span>)</h6>
+                                <h6 class="mt-4 border-top pt-3 text-primary" x-show="productRule === 'manual'">🛒 Produtos
+                                    Selecionados e Descontos (<span x-text="selectedProducts.length"></span> / <span
+                                        x-text="productQty"></span>)</h6>
 
-                                <div class="d-flex gap-2 align-items-center mb-3 p-2 bg-light rounded"
-                                    x-show="selectedProducts.length > 0">
-                                    <span class="text-sm font-weight-bold">Desconto em Massa:</span>
+                                <div class="d-flex gap-2 align-items-center mb-3 p-3 bg-light rounded border">
+                                    <span class="text-sm font-weight-bold"><i class="fas fa-tags text-warning me-1"></i>
+                                        Desconto Global (Opcional):</span>
                                     <div class="input-group input-group-sm mb-0" style="width:120px;">
-                                        <input type="number" class="form-control" placeholder="Ex: 10"
-                                            x-model="globalDiscount">
+                                        <input type="number" name="discount_rules[percentage]" class="form-control"
+                                            placeholder="Ex: 10" x-model="globalDiscount">
                                         <span class="input-group-text">%</span>
                                     </div>
                                     <button type="button" class="btn btn-sm btn-dark mb-0"
-                                        @click="applyGlobalDiscount()">Aplicar a Todos</button>
+                                        x-show="productRule === 'manual' && selectedProducts.length > 0"
+                                        @click="applyGlobalDiscount()">Aplicar Só na Tabela Abaixo</button>
                                 </div>
 
                                 <div class="border rounded" style="max-height:350px;overflow-y:auto;">
@@ -507,11 +528,12 @@
                                         <option value="image">🖼️ Imagem PNG (Ideal para Stories e Feed)</option>
                                         <option value="pdf">📄 Catálogo PDF (Ideal para WhatsApp Business)</option>
                                         <option value="audio">🔊 Áudio Locução (Para Rádio, Loja ou Carro de Som)</option>
+                                        <option value="full">🚀 Completo (Imagem, Copy e Áudio original)</option>
                                         <option value="text">📝 Apenas o Texto da IA (Para copiar e colar)</option>
                                     </select>
                                 </div>
 
-                                <div class="row mb-4" x-show="formatFinal === 'audio'" x-transition>
+                                <div class="row mb-4" x-show="['audio', 'full'].includes(formatFinal)" x-transition>
                                     <div class="col-md-6 form-group">
                                         <label class="form-label font-weight-bold">Voz do Locutor</label>
                                         <select name="voice" class="form-control form-control-lg" x-model="voice"
@@ -533,8 +555,59 @@
                                         </select>
                                     </div>
                                 </div>
+                                <div class="row mb-4" x-show="['audio', 'full'].includes(formatFinal)" x-transition>
+                                    <div class="col-md-6 form-group">
+                                        <label class="form-label font-weight-bold">Emoção (Noise Scale)</label>
+                                        <input type="range" class="form-range" min="0" max="1" step="0.001"
+                                            name="noise_scale" x-model="noiseScale">
+                                        <div class="d-flex justify-content-between text-xs text-muted">
+                                            <span>Sóbria</span><span x-text="noiseScale"></span><span>Expressiva</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 form-group">
+                                        <label class="form-label font-weight-bold">Dicção (Noise W)</label>
+                                        <input type="range" class="form-range" min="0" max="1" step="0.001" name="noise_w"
+                                            x-model="noiseW">
+                                        <div class="d-flex justify-content-between text-xs text-muted">
+                                            <span>Rápida</span><span x-text="noiseW"></span><span>Clara/Articulada</span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                                <div class="form-group mb-3" x-show="formatFinal === 'image' || formatFinal === 'pdf'">
+                                <div class="row mb-4" x-show="['audio', 'full'].includes(formatFinal)" x-transition>
+                                    <div class="col-md-8 form-group">
+                                        <label class="form-label font-weight-bold">Fundo Musical (Opcional)</label>
+                                        <div class="d-flex gap-2">
+                                            <select name="bg_audio" class="form-control" style="border-radius:8px;"
+                                                x-model="bgAudio" @change="playMusicPreview()">
+                                                <option value="">🚫 Nenhum (Somente Voz)</option>
+                                                @foreach($fundos ?? [] as $fundo)
+                                                    <option value="{{ $fundo }}">🎵
+                                                        {{ Str::title(str_replace(['.mp3', '_'], ['', ' '], $fundo)) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <button type="button" class="btn btn-outline-primary mb-0"
+                                                style="border-radius:8px; padding: 0.5rem 1rem;"
+                                                @click="playMusicPreview(true)" x-show="bgAudio !== ''">
+                                                <i class="fas fa-play" id="btnPlayIcon"></i>
+                                            </button>
+                                        </div>
+                                        <audio id="bgAudioPlayer" style="display:none;" controls
+                                            onended="document.getElementById('btnPlayIcon').className='fas fa-play'"></audio>
+                                    </div>
+                                    <div class="col-md-4 form-group" x-show="bgAudio !== ''" x-transition>
+                                        <label class="form-label font-weight-bold">Volume do Fundo</label>
+                                        <input type="range" class="form-range" min="0" max="1" step="0.05" name="bg_volume"
+                                            x-model="bgVolume" @input="updateVolume()">
+                                        <div class="d-flex justify-content-between text-xs text-muted">
+                                            <span>Mudo</span><span
+                                                x-text="Math.round(bgVolume * 100) + '%'"></span><span>Alto</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-3" x-show="['image', 'pdf', 'full'].includes(formatFinal)">
                                     <label class="form-label font-weight-bold">Tema Gráfico</label>
                                     <p class="text-xs text-muted mb-2">Layout visual da sua arte. A IA preencherá com os
                                         produtos e copy.</p>
@@ -623,8 +696,8 @@
             Alpine.data('wizardData', () => ({
                 step: 1,
                 scheduleType: 'unique',
-                scheduledDays: [],
-                scheduledTimes: [],
+                scheduledTimesDict: {}, // Ex: { "segunda": ["09:00", "15:00"], "sabado": ["10:30"] }
+                newDay: 'segunda',
                 newTime: '09:00',
                 productQty: 10,
                 productRule: 'best_sellers',
@@ -633,6 +706,10 @@
                 formatFinal: 'image',
                 voice: 'pt-BR-FabioNeural',
                 audioSpeed: '1.25',
+                noiseScale: '0.750',
+                noiseW: '0.850',
+                bgAudio: '',
+                bgVolume: '0.2',
                 searchQuery: '',
                 searchResults: [],
                 selectedProducts: [],
@@ -642,14 +719,58 @@
 
                 init() { },
 
-                addTime() {
-                    if (this.newTime && !this.scheduledTimes.includes(this.newTime)) {
-                        this.scheduledTimes.push(this.newTime);
+                capitalize(str) {
+                    const dict = {
+                        'segunda': 'Segunda-Feira', 'terca': 'Terça-Feira', 'quarta': 'Quarta-Feira',
+                        'quinta': 'Quinta-Feira', 'sexta': 'Sexta-Feira', 'sabado': 'Sábado', 'domingo': 'Domingo'
+                    };
+                    return dict[str] || str;
+                },
+
+                playMusicPreview(toggle = false) {
+                    let player = document.getElementById('bgAudioPlayer');
+                    let icon = document.getElementById('btnPlayIcon');
+                    if (this.bgAudio !== '') {
+                        player.src = '/storage/audio/fundo/' + this.bgAudio;
+                        player.volume = this.bgVolume;
+
+                        if (toggle && !player.paused) {
+                            player.pause();
+                            if (icon) icon.className = 'fas fa-play';
+                        } else {
+                            player.play().catch(e => console.log('Ouvir áudio requer interação.'));
+                            if (icon) icon.className = 'fas fa-pause';
+                        }
+                    } else {
+                        player.pause();
+                        if (icon) icon.className = 'fas fa-play';
                     }
                 },
 
-                removeTime(time) {
-                    this.scheduledTimes = this.scheduledTimes.filter(t => t !== time);
+                updateVolume() {
+                    let player = document.getElementById('bgAudioPlayer');
+                    if (player) player.volume = this.bgVolume;
+                },
+
+                addTime() {
+                    if (this.newTime && this.newDay) {
+                        if (!this.scheduledTimesDict[this.newDay]) {
+                            this.scheduledTimesDict[this.newDay] = [];
+                        }
+                        if (!this.scheduledTimesDict[this.newDay].includes(this.newTime)) {
+                            this.scheduledTimesDict[this.newDay].push(this.newTime);
+                            this.scheduledTimesDict[this.newDay].sort();
+                        }
+                    }
+                },
+
+                removeTime(dia, time) {
+                    if (this.scheduledTimesDict[dia]) {
+                        this.scheduledTimesDict[dia] = this.scheduledTimesDict[dia].filter(t => t !== time);
+                        if (this.scheduledTimesDict[dia].length === 0) {
+                            delete this.scheduledTimesDict[dia];
+                        }
+                    }
                 },
 
                 nextStep() {

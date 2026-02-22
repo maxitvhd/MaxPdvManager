@@ -18,21 +18,57 @@ class MakeMaxDivulgaCronJob extends Command
     {
         $now = now();
         $horaAtual = $now->format('H:i');
-        $diaAtual = (string) $now->dayOfWeek; // 0 = Domingo, 1 = Segunda...
 
-        $campanhas = \App\Models\MaxDivulgaCampaign::with('products')
-            ->where('is_scheduled', true)
+        // Mapeamento de numérico do Carbon pro string armazenado no BD pelo Alpine
+        $mapDias = [
+            0 => 'domingo',
+            1 => 'segunda',
+            2 => 'terca',
+            3 => 'quarta',
+            4 => 'quinta',
+            5 => 'sexta',
+            6 => 'sabado'
+        ];
+        $diaAtualStr = $mapDias[$now->dayOfWeek];
+
+        $campanhas = \App\Models\MaxDivulgaCampaign::where('is_scheduled', true)
             ->where('is_active', true)
             ->get();
 
         $disparos = 0;
 
         foreach ($campanhas as $campaign) {
-            $days = $campaign->scheduled_days ?: [];
-            $times = $campaign->scheduled_times ?: [];
+            $timesObj = $campaign->scheduled_times ?: []; // Este agora é o Array Associativo {"sabado":["09:00"]}
 
-            // Verifica se a campanha deve rodar nesta hora exata
-            if (in_array($diaAtual, $days) && in_array($horaAtual, $times)) {
+            // Corrige DB legado caso is_array = false / ou index list simples
+            if (!is_array($timesObj))
+                continue;
+
+            $shouldRun = false;
+
+            if (array_key_exists($diaAtualStr, $timesObj)) {
+                $lastRun = $campaign->last_run_at;
+                $horariosHoje = $timesObj[$diaAtualStr];
+
+                foreach ($horariosHoje as $time) {
+                    if ($horaAtual === $time) {
+                        $shouldRun = true;
+                        break;
+                    }
+
+                    // Lógica de Catch-up: tolerância para se o cron falhou no minuto exato
+                    $timeCarbon = \Carbon\Carbon::createFromFormat('H:i', $time);
+                    if ($now->greaterThan($timeCarbon)) {
+                        if (!$lastRun || $lastRun->lessThan($timeCarbon)) {
+                            \Illuminate\Support\Facades\Log::info("[MAXDIVULGA-CRON] Catch-up ativado para campanha #{$campaign->id} (Agendada: {$time}, Atual: {$horaAtual})");
+                            $shouldRun = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if ($shouldRun) {
                 $this->info("Executando campanha #{$campaign->id} - {$campaign->name}");
                 $this->processCampaign($campaign);
                 $disparos++;
@@ -58,6 +94,8 @@ class MakeMaxDivulgaCronJob extends Command
             $produtos = collect();
 
             if ($ruleType === 'best_sellers') {
+                if (env('LOG_MAXDIVULGA', true))
+                    \Illuminate\Support\Facades\Log::info("[MAXDIVULGA-CRON] Modo MAIS VENDIDOS: {$qty} itens.");
                 $topNomes = \App\Models\LojaVendaItem::join('loja_vendas', 'loja_vendas_itens.loja_venda_id', '=', 'loja_vendas.id')
                     ->where('loja_vendas.loja_id', $loja->id)
                     ->select('loja_vendas_itens.produto_nome', \Illuminate\Support\Facades\DB::raw('SUM(loja_vendas_itens.quantidade) as total_vendido'))
@@ -65,13 +103,21 @@ class MakeMaxDivulgaCronJob extends Command
                     ->orderByDesc('total_vendido')
                     ->limit(50)
                     ->get()->pluck('produto_nome');
+
                 $produtos = \App\Models\Produto::where('loja_id', $loja->id)->whereIn('nome', $topNomes)->limit($qty)->get();
+
+            } elseif ($ruleType === 'manual') {
+                if (env('LOG_MAXDIVULGA', true))
+                    \Illuminate\Support\Facades\Log::info("[MAXDIVULGA-CRON] Modo MANUAL de produtos selecionados.");
+
+                $ids = $rule['selected_ids'] ?? [];
+                if (count($ids) > 0) {
+                    $produtos = \App\Models\Produto::whereIn('id', $ids)->get();
+                }
+
             } elseif ($ruleType === 'category') {
                 $cat = $rule['value'] ?? '';
                 $produtos = \App\Models\Produto::where('loja_id', $loja->id)->where('categoria', 'like', "%{$cat}%")->limit($qty)->get();
-            } else {
-                // manual: usa a relação pivot atual
-                $produtos = $campaign->products;
             }
 
             if ($produtos->isEmpty()) {
@@ -83,11 +129,17 @@ class MakeMaxDivulgaCronJob extends Command
             $produtosParaCatalogo = [];
 
             foreach ($produtos as $prod) {
-                // Se o produto veio da Pivot, ele pode ter discount_percentage próprio. Se não, usa fallback.
-                $descontoPct = $prod->pivot ? floatval($prod->pivot->discount_percentage) : $descontoGlobalPct;
-
                 $precoOriginal = floatval($prod->preco);
-                $precoNovo = $descontoPct > 0 ? $precoOriginal - ($precoOriginal * ($descontoPct / 100)) : $precoOriginal;
+                $descontoPct = $descontoGlobalPct;
+
+                // Se a seleção foi manual e gravada na configuração json, sobrepõe com a config individual de cada ID
+                if ($ruleType === 'manual' && isset($rule['individual_discounts'][$prod->id])) {
+                    $descontoPct = floatval($rule['individual_discounts'][$prod->id]['discount_percentage'] ?? 0);
+                }
+
+                $precoNovo = $descontoPct > 0
+                    ? $precoOriginal - ($precoOriginal * ($descontoPct / 100))
+                    : $precoOriginal;
 
                 // Fallback imagem
                 $codigoBarra = trim($prod->codigo_barra ?? '');
@@ -152,29 +204,69 @@ class MakeMaxDivulgaCronJob extends Command
 
             $copyPrincipal = $aiService->generateCopy($produtosParaCatalogo, $personaExecucao);
             $copyAcompanhamento = $aiService->generateCopySocial($produtosParaCatalogo, $personaExecucao, $dadosLoja);
+            $copyLocucao = null;
+            if (in_array($campaign->format, ['audio', 'full'])) {
+                $copyLocucao = $aiService->generateCopyLocucao($produtosParaCatalogo, $personaExecucao, $dadosLoja);
+            }
 
-            // Temporariamente altera o tema no memory-model para o renderer puxar o sorteado
-            $campaign->theme = $temaEscogido;
-            $campaign->copy = $copyPrincipal;
+            // Criação da Campanha Filha (instância da programação)
+            $novaCampanha = $campaign->replicate();
+            $novaCampanha->parent_id = $campaign->id;
+            $novaCampanha->theme_id = $temaEscogido->id;
+            $novaCampanha->copy = $copyPrincipal;
+            $novaCampanha->copy_acompanhamento = $copyAcompanhamento;
+            $novaCampanha->copy_locucao = $copyLocucao;
+            $novaCampanha->is_scheduled = false; // A filha não é uma programação
+            $novaCampanha->status = 'processing';
+            $novaCampanha->file_path = null;
+            $novaCampanha->audio_file_path = null;
+            $novaCampanha->save(); // Salva para ter um ID para o CatalogRendererService
 
-            // 6. Renderizar Imagem
+            // 6. Renderizar Imagens e Áudio (compatibilidade formato Full/Audio)
             $renderService = new \App\Services\CatalogRendererService();
-            $filePath = $renderService->render($campaign, $produtosParaCatalogo, $dadosLoja);
+            $formatOriginal = $campaign->format;
+            $filePath = null;
+            $audioPath = null;
 
-            if (!$filePath)
+            if ($formatOriginal === 'full') {
+                $novaCampanha->format = 'image';
+                $filePath = $renderService->render($novaCampanha, $produtosParaCatalogo, $dadosLoja);
+                $novaCampanha->format = 'audio';
+                $audioPath = $renderService->render($novaCampanha, $produtosParaCatalogo, $dadosLoja);
+                $novaCampanha->format = 'full';
+            } else {
+                $pathGerado = $renderService->render($novaCampanha, $produtosParaCatalogo, $dadosLoja);
+                if ($formatOriginal === 'audio') {
+                    $audioPath = $pathGerado;
+                } else {
+                    $filePath = $pathGerado;
+                }
+            }
+
+            if (!$filePath && $formatOriginal !== 'audio')
                 throw new \Exception("Falha na renderização da imagem.");
 
+            // Atualiza e Finaliza a Campanha Filha Gerada
+            $novaCampanha->update([
+                'file_path' => $filePath,
+                'audio_file_path' => $audioPath,
+                'status' => 'active',
+            ]);
+
+            // Atualiza o Template Pai informando a última vez que rodou o cron
+            $campaign->update(['last_run_at' => now(), 'status' => 'active']);
+
             // 7. Enviar WhatsApp (Simulado/Fila)
-            // Como a integração GZappy não consta neste ambiente, registramos o disparo
             $phoneLoja = preg_replace('/\D/', '', $dadosLoja['telefone']);
             if ($phoneLoja) {
-                \Illuminate\Support\Facades\Log::info("[MAXDIVULGA-CRON] Mensagem ENVIADA PARA FILA ({$phoneLoja}): " . substr($copyAcompanhamento, 0, 50) . "...");
+                if (env('LOG_MAXDIVULGA', true))
+                    \Illuminate\Support\Facades\Log::info("[MAXDIVULGA-CRON] Mensagem ENVIADA PARA FILA ({$phoneLoja}): " . substr($copyAcompanhamento, 0, 50) . "...");
                 $this->info("Mensagem simulada enviada para o logista no numero {$phoneLoja}");
             }
 
-            // 8. Logar Sucesso
+            // 8. Logar Sucesso atrelando à campanha filha gerada
             \Illuminate\Support\Facades\DB::table('max_divulga_campaign_logs')->insert([
-                'campaign_id' => $campaign->id,
+                'campaign_id' => $novaCampanha->id,
                 'status' => 'success',
                 'file_path_generated' => $filePath,
                 'message' => 'Disparo concluído com sucesso (Tema sorteado: ' . ($temaEscogido->name ?? '') . ')',
@@ -182,18 +274,19 @@ class MakeMaxDivulgaCronJob extends Command
                 'updated_at' => now(),
             ]);
 
-            $campaign->update(['last_run_at' => now()]);
-
-        } catch (\Exception $e) {
-            $this->error("Erro na campanha {$campaign->id}: " . $e->getMessage());
+        } catch (\Throwable $e) {
+            $this->error("Erro na programação {$campaign->id}: " . $e->getMessage());
 
             \Illuminate\Support\Facades\DB::table('max_divulga_campaign_logs')->insert([
-                'campaign_id' => $campaign->id,
+                'campaign_id' => isset($novaCampanha) ? $novaCampanha->id : $campaign->id,
                 'status' => 'failed',
                 'message' => substr($e->getMessage(), 0, 500),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            // Marca a template como rodada de qualquer forma pra não ficar em loop
+            $campaign->update(['last_run_at' => now()]);
         }
     }
 }
