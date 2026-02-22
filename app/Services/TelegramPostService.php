@@ -20,13 +20,15 @@ class TelegramPostService
                 Log::info("[TELEGRAM-POST] Enviando para Chat: {$chatId} | Bot: " . substr($botToken, 0, 6) . "...");
             }
 
+            $caption = mb_strlen($message) > 1024 ? mb_substr($message, 0, 1021) . '...' : $message;
+
             $response = Http::attach(
                 'photo',
                 file_get_contents($imagePath),
                 basename($imagePath)
             )->post($url, [
                         'chat_id' => $chatId,
-                        'caption' => $message,
+                        'caption' => $caption,
                         'parse_mode' => 'HTML'
                     ]);
 
