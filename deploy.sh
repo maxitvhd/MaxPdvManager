@@ -25,8 +25,10 @@ ssh -t $SSH_USER@$SSH_HOST << 'ENDSSH'
 
     git config --global credential.helper store
 
+    SUDO_PASS="Kellytamo@10"
+
     echo "🔓 Liberando permissões para o git atualizar os arquivos..."
-    chmod -R 777 storage/ bootstrap/cache/ 2>/dev/null || true
+    echo "$SUDO_PASS" | sudo -S chmod -R 777 storage/ bootstrap/cache/ 2>/dev/null || true
 
     echo "📥 Forçando sincronização com a versão do GitHub..."
     git fetch --all
@@ -40,9 +42,9 @@ ssh -t $SSH_USER@$SSH_HOST << 'ENDSSH'
     php artisan storage:link 2>/dev/null || true
 
     echo "🔒 Restaurando permissões corretas para o servidor web..."
-    chmod -R 775 storage/ bootstrap/cache/
-    chown -R www-data:www-data storage/ bootstrap/cache/ 2>/dev/null || \
-    chown -R maximooficial:maximooficial storage/ bootstrap/cache/ 2>/dev/null || true
+    echo "$SUDO_PASS" | sudo -S chmod -R 775 storage/ bootstrap/cache/
+    echo "$SUDO_PASS" | sudo -S chown -R www-data:www-data storage/ bootstrap/cache/ 2>/dev/null || \
+    echo "$SUDO_PASS" | sudo -S chown -R maximooficial:maximooficial storage/ bootstrap/cache/ 2>/dev/null || true
 
     echo "🧹 Limpando Caches..."
     php artisan optimize:clear
