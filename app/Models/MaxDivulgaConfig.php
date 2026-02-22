@@ -22,6 +22,10 @@ class MaxDivulgaConfig extends Model
         'tts_voice',
         'tts_default_speed',
         'tts_default_noise_scale',
-        'tts_default_noise_w'
+        'tts_default_noise_w',
+        'facebook_client_id',
+        'facebook_client_secret',
+        'google_client_id',
+        'google_client_secret'
     ];
 }

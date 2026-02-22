@@ -26,6 +26,10 @@ class MaxDivulgaAdminController extends Controller
             'tts_default_speed' => 'nullable|numeric',
             'tts_default_noise_scale' => 'nullable|numeric',
             'tts_default_noise_w' => 'nullable|numeric',
+            'facebook_client_id' => 'nullable|string',
+            'facebook_client_secret' => 'nullable|string',
+            'google_client_id' => 'nullable|string',
+            'google_client_secret' => 'nullable|string',
         ]);
 
         $config = \App\Models\MaxDivulgaConfig::first();

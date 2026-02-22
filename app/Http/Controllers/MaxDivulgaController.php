@@ -353,7 +353,10 @@ class MaxDivulgaController extends Controller
 
     public function show(MaxDivulgaCampaign $campaign)
     {
-        return view('lojista.maxdivulga.show', compact('campaign'));
+        $lojaId = auth()->user()->loja_id;
+        $socialAccounts = \App\Models\SocialAccount::where('loja_id', $lojaId)->get();
+
+        return view('lojista.maxdivulga.show', compact('campaign', 'socialAccounts'));
     }
 
     public function edit(MaxDivulgaCampaign $campaign)
@@ -538,5 +541,16 @@ class MaxDivulgaController extends Controller
         $camp->save();
 
         return redirect()->back()->with('success', 'Configurações do Piloto Automático atualizadas com sucesso!');
+    }
+
+    /**
+     * Listagem de canais sociais do lojista
+     */
+    public function canaisIndex()
+    {
+        $lojaId = auth()->user()->loja_id;
+        $socialAccounts = \App\Models\SocialAccount::where('loja_id', $lojaId)->get();
+
+        return view('lojista.maxdivulga.canais.index', compact('socialAccounts'));
     }
 }

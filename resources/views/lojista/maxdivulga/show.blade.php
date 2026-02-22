@@ -375,6 +375,68 @@
                         </div>
                     </div>
 
+                    {{-- Compartilhamento Social --}}
+                    <div class="col-12 mt-4">
+                        <div class="card border-0 shadow-sm" style="border-radius:16px;">
+                            <div class="card-header pb-2 px-4 bg-transparent border-bottom">
+                                <h6 class="mb-0 text-dark font-weight-bolder">
+                                    <i class="fas fa-share-alt text-primary fs-5 me-2 align-middle"></i>
+                                    Enviar para Redes Sociais
+                                </h6>
+                            </div>
+                            <div class="card-body p-4">
+                                @if(count($socialAccounts) > 0)
+                                    <form action="{{ route('lojista.maxdivulga.canais.publish', $campaign->id) }}" method="POST">
+                                        @csrf
+                                        <div class="row align-items-end g-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label text-xs font-weight-bold">Selecione o Canal (Facebook)</label>
+                                                <select name="target_info" class="form-select form-select-sm" required onchange="updateTargetType(this)">
+                                                    <option value="" disabled selected>Escolha onde postar...</option>
+                                                    @foreach($socialAccounts as $account)
+                                                        <optgroup label="Facebook: {{ $account->meta_data['name'] ?? 'Conta' }}">
+                                                            @if(!empty($account->meta_data['pages']))
+                                                                @foreach($account->meta_data['pages'] as $page)
+                                                                    <option value="facebook|page|{{ $page['id'] }}">{{ $page['name'] }} (Página)</option>
+                                                                @endforeach
+                                                            @endif
+                                                            @if(!empty($account->meta_data['groups']))
+                                                                @foreach($account->meta_data['groups'] as $group)
+                                                                    <option value="facebook|group|{{ $group['id'] }}">{{ $group['name'] }} (Grupo)</option>
+                                                                @endforeach
+                                                            @endif
+                                                        </optgroup>
+                                                    @endforeach
+                                                </select>
+                                                <input type="hidden" name="provider" id="social_provider">
+                                                <input type="hidden" name="target_type" id="social_target_type">
+                                                <input type="hidden" name="target_id" id="social_target_id">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <button type="submit" class="btn btn-primary btn-sm mb-0 w-100 shadow-sm">
+                                                    <i class="fas fa-paper-plane me-1"></i> Publicar Agora
+                                                </button>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <p class="text-xs text-muted mb-0">
+                                                    <i class="fas fa-info-circle me-1"></i> 
+                                                    A arte e a <strong>Copy Social</strong> serão enviadas.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </form>
+                                @else
+                                    <div class="text-center py-3">
+                                        <p class="text-sm text-muted mb-3">Você ainda não conectou nenhuma rede social.</p>
+                                        <a href="{{ route('lojista.maxdivulga.canais.index') }}" class="btn btn-outline-primary btn-sm mb-0">
+                                            <i class="fas fa-plus me-1"></i> Conectar Redes Sociais
+                                        </a>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -424,6 +486,15 @@
                     btnEle.classList.remove('border-success');
                 }, 2000);
             });
+        }
+
+        function updateTargetType(select) {
+            const val = select.value.split('|');
+            if (val.length === 3) {
+                document.getElementById('social_provider').value = val[0];
+                document.getElementById('social_target_type').value = val[1];
+                document.getElementById('social_target_id').value = val[2];
+            }
         }
     </script>
 @endsection

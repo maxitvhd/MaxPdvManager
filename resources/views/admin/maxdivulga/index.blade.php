@@ -83,6 +83,41 @@
                                 </div>
                             </div>
                         </div>
+
+                        <hr class="horizontal dark my-4">
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Integração Social Facebook (Páginas e Grupos)</h6>
+                                <p class="text-xs text-muted">Obtenha estas chaves no console do <a
+                                        href="https://developers.facebook.com" target="_blank">Facebook Developers</a></p>
+                                <div class="form-group mb-3">
+                                    <label for="facebook_client_id">Facebook App ID (Client ID)</label>
+                                    <input type="text" name="facebook_client_id" id="facebook_client_id"
+                                        class="form-control" value="{{ $config->facebook_client_id ?? '' }}">
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="facebook_client_secret">Facebook App Secret (Client Secret)</label>
+                                    <input type="password" name="facebook_client_secret" id="facebook_client_secret"
+                                        class="form-control" value="{{ $config->facebook_client_secret ?? '' }}">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <h6>Integração Social Google (YouTube/Google My Business)</h6>
+                                <p class="text-xs text-muted">Configuração para futuras automações.</p>
+                                <div class="form-group mb-3">
+                                    <label for="google_client_id">Google Client ID</label>
+                                    <input type="text" name="google_client_id" id="google_client_id" class="form-control"
+                                        value="{{ $config->google_client_id ?? '' }}">
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label for="google_client_secret">Google Client Secret</label>
+                                    <input type="password" name="google_client_secret" id="google_client_secret"
+                                        class="form-control" value="{{ $config->google_client_secret ?? '' }}">
+                                </div>
+                            </div>
+                        </div>
                         <button type="submit" class="btn bg-gradient-dark btn-sm mt-3">Salvar Configurações</button>
                     </form>
                 </div>
