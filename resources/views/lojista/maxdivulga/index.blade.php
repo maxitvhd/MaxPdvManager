@@ -29,7 +29,7 @@
                                         Catálogo PDF</span>
                                     <span class="badge text-white"
                                         style="background:rgba(255,255,255,0.15); font-size:0.7rem; padding: 6px 12px; border-radius:20px;">✅
-                                        Copy WhatsApp/Instagram</span>
+                                        Copy WhatsApp/Instagram/Telegram</span>
                                     <span class="badge text-white"
                                         style="background:rgba(255,255,255,0.15); font-size:0.7rem; padding: 6px 12px; border-radius:20px;">✅
                                         Gatilhos de Vendas</span>

@@ -149,25 +149,32 @@
                                 <div class="mb-3">
                                     <label class="form-label font-weight-bold">Canais de Divulgação</label>
                                     <div class="row px-2">
-                                        <div class="col-4">
+                                        <div class="col-6 col-md-3">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" name="channels[]"
                                                     value="whatsapp" id="c_wpp" checked>
                                                 <label class="form-check-label" for="c_wpp">💬 WhatsApp</label>
                                             </div>
                                         </div>
-                                        <div class="col-4">
+                                        <div class="col-6 col-md-3">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" name="channels[]"
                                                     value="instagram" id="c_ig">
                                                 <label class="form-check-label" for="c_ig">📸 Instagram</label>
                                             </div>
                                         </div>
-                                        <div class="col-4">
+                                        <div class="col-6 col-md-3">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" name="channels[]"
                                                     value="facebook" id="c_fb">
                                                 <label class="form-check-label" for="c_fb">👍 Facebook</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="channels[]"
+                                                    value="telegram" id="c_tg">
+                                                <label class="form-check-label" for="c_tg">✈️ Telegram</label>
                                             </div>
                                         </div>
                                     </div>
