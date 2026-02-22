@@ -28,13 +28,14 @@
         body {
             font-family: 'Roboto Condensed', Arial, sans-serif;
             background: var(--vermelho-vivo);
-            /* Fundo geral vermelho */
             width: 1080px;
+            /* Usar height max-content e min-height garante que ele flua, caso haja +9 items */
             min-height: 1920px;
+            height: max-content;
             display: flex;
             flex-direction: column;
+            color: var(--cinza-texto);
             padding: 20px;
-            /* Margem vermelha externa */
         }
 
         /* Container principal para simular a folha de papel */
@@ -317,21 +318,23 @@
         /* Box de Preço Amarelo */
         .card-preco-por {
             background: var(--amarelo-ouro);
-            /* Borda sólida amarela */
             border: 3px solid var(--amarelo-escuro);
             color: var(--vermelho-vivo);
             font-weight: 900;
-            font-size: 2.2rem;
-            /* Preço bem grande */
+            font-size: 2rem;
             text-align: center;
-            padding: 8px 5px;
+            padding: 6px 4px;
             border-radius: 12px;
             margin: 0 auto;
             width: 95%;
             line-height: 1;
             box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
-            /* Sombra dura embaixo */
             letter-spacing: -1px;
+            /* Garante que o R$ não quebre de linha por falta de espaço */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
         }
 
         /* Pequeno ajuste para o 'R$' ficar menor se possível via CSS puro (truque) */
@@ -400,7 +403,8 @@
             <div>
                 <div class="header-badge">OFERTAS</div>
                 <div class="header-sub">DA SEMANA</div>
-                <div class="header-data">VÁLIDO: {{ \Carbon\Carbon::now()->isoFormat('D [de] MMMM [de] Y') }}</div>
+                @php \Carbon\Carbon::setLocale('pt_BR'); @endphp
+                <div class="header-data">VÁLIDO: {{ \Carbon\Carbon::now()->isoFormat('D \d\e MMMM \d\e Y') }}</div>
             </div>
         </div>
     </div>
