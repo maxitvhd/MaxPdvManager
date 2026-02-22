@@ -393,20 +393,36 @@
                                                 <label class="form-label text-xs font-weight-bold">Selecione o Canal (Facebook)</label>
                                                 <select name="target_info" class="form-select form-select-sm" required onchange="updateTargetType(this)">
                                                     <option value="" disabled selected>Escolha onde postar...</option>
-                                                    @foreach($socialAccounts as $account)
-                                                        <optgroup label="Facebook: {{ $account->meta_data['name'] ?? 'Conta' }}">
-                                                            @if(!empty($account->meta_data['pages']))
-                                                                @foreach($account->meta_data['pages'] as $page)
-                                                                    <option value="facebook|page|{{ $page['id'] }}">{{ $page['name'] }} (Página)</option>
-                                                                @endforeach
-                                                            @endif
-                                                            @if(!empty($account->meta_data['groups']))
-                                                                @foreach($account->meta_data['groups'] as $group)
-                                                                    <option value="facebook|group|{{ $group['id'] }}">{{ $group['name'] }} (Grupo)</option>
-                                                                @endforeach
-                                                            @endif
+                                                    
+                                                    @php
+                                                        $fbAccounts = $socialAccounts->where('provider', 'facebook');
+                                                        $tgAccounts = $socialAccounts->where('provider', 'telegram');
+                                                    @endphp
+
+                                                    @if($fbAccounts->count() > 0)
+                                                        @foreach($fbAccounts as $account)
+                                                            <optgroup label="Facebook: {{ $account->meta_data['name'] ?? 'Conta' }}">
+                                                                @if(!empty($account->meta_data['pages']))
+                                                                    @foreach($account->meta_data['pages'] as $page)
+                                                                        <option value="facebook|page|{{ $page['id'] }}">{{ $page['name'] }} (Página)</option>
+                                                                    @endforeach
+                                                                @endif
+                                                                @if(!empty($account->meta_data['groups']))
+                                                                    @foreach($account->meta_data['groups'] as $group)
+                                                                        <option value="facebook|group|{{ $group['id'] }}">{{ $group['name'] }} (Grupo)</option>
+                                                                    @endforeach
+                                                                @endif
+                                                            </optgroup>
+                                                        @endforeach
+                                                    @endif
+
+                                                    @if($tgAccounts->count() > 0)
+                                                        <optgroup label="Telegram">
+                                                            @foreach($tgAccounts as $account)
+                                                                <option value="telegram|group|{{ $account->provider_id }}">{{ $account->meta_data['name'] ?? 'Chat' }}</option>
+                                                            @endforeach
                                                         </optgroup>
-                                                    @endforeach
+                                                    @endif
                                                 </select>
                                                 <input type="hidden" name="provider" id="social_provider">
                                                 <input type="hidden" name="target_type" id="social_target_type">

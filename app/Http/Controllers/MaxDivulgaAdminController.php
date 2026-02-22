@@ -30,6 +30,7 @@ class MaxDivulgaAdminController extends Controller
             'facebook_client_secret' => 'nullable|string',
             'google_client_id' => 'nullable|string',
             'google_client_secret' => 'nullable|string',
+            'telegram_bot_token' => 'nullable|string',
         ]);
 
         $config = \App\Models\MaxDivulgaConfig::first();

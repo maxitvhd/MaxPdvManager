@@ -226,6 +226,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [MaxDivulgaController::class, 'canaisIndex'])->name('lojista.maxdivulga.canais.index');
             Route::get('/auth/{provider}', [\App\Http\Controllers\Lojista\SocialAuthController::class, 'redirectToProvider'])->name('lojista.maxdivulga.canais.auth');
             Route::get('/callback/{provider}', [\App\Http\Controllers\Lojista\SocialAuthController::class, 'handleProviderCallback'])->name('facebook.callback');
+            Route::post('/telegram', [\App\Http\Controllers\Lojista\SocialAuthController::class, 'connectTelegram'])->name('lojista.maxdivulga.canais.telegram');
             Route::delete('/{provider}', [\App\Http\Controllers\Lojista\SocialAuthController::class, 'disconnect'])->name('lojista.maxdivulga.canais.disconnect');
             Route::post('/publish/{campaign}', [\App\Http\Controllers\Lojista\SocialAuthController::class, 'publish'])->name('lojista.maxdivulga.canais.publish');
         });

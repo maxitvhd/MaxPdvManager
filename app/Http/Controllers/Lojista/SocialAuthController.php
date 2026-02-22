@@ -95,6 +95,31 @@ class SocialAuthController extends Controller
         return redirect()->route('lojista.maxdivulga.canais.index')->with('error', 'Provedor inválido.');
     }
 
+    public function connectTelegram(Request $request)
+    {
+        $request->validate([
+            'chat_id' => 'required|string',
+            'chat_name' => 'required|string',
+        ]);
+
+        SocialAccount::updateOrCreate(
+            [
+                'loja_id' => auth()->user()->loja_id,
+                'provider' => 'telegram',
+                'provider_id' => $request->chat_id,
+            ],
+            [
+                'token' => 'bot_token_used_globally', // Poderia ser customizado por loja se necessário
+                'meta_data' => [
+                    'name' => $request->chat_name,
+                    'type' => str_starts_with($request->chat_id, '-') ? 'group/channel' : 'user',
+                ],
+            ]
+        );
+
+        return redirect()->route('lojista.maxdivulga.canais.index')->with('success', 'Canal Telegram registrado!');
+    }
+
     public function publish(Request $request, $campaignId)
     {
         $request->validate([
@@ -128,6 +153,23 @@ class SocialAuthController extends Controller
             }
 
             return back()->with('error', 'Erro ao publicar: ' . ($result['error'] ?? 'Erro desconhecido.'));
+        }
+
+        if ($request->provider === 'telegram') {
+            $config = MaxDivulgaConfig::first();
+            if (!$config || !$config->telegram_bot_token) {
+                return back()->with('error', 'Bot Token do Telegram não configurado no Admin.');
+            }
+
+            $service = new \App\Services\TelegramPostService();
+            // Para o Telegram, o target_id é o Chat ID
+            $result = $service->postToChat($request->target_id, $config->telegram_bot_token, $imagePath, $message);
+
+            if (isset($result['ok']) && $result['ok']) {
+                return back()->with('success', 'Publicado com sucesso no Telegram!');
+            }
+
+            return back()->with('error', 'Erro ao publicar no Telegram: ' . ($result['description'] ?? 'Erro desconhecido.'));
         }
 
         return back()->with('error', 'Provedor não suportado.');

@@ -65,14 +65,76 @@
                             </div>
                         </div>
 
-                        <!-- Placeholder for Instagram -->
+                        <!-- Telegram Card -->
                         <div class="col-md-4">
-                            <div class="card border border-info shadow-none opacity-6">
+                            <div class="card border border-info shadow-none">
                                 <div class="card-body text-center">
-                                    <i class="fab fa-instagram text-info mb-3" style="font-size: 3rem;"></i>
-                                    <h6 class="mb-1">Instagram Business</h6>
-                                    <p class="text-xs text-muted">Postagem de Feed e Stories.</p>
-                                    <button class="btn btn-secondary btn-sm w-100" disabled>Em breve</button>
+                                    <i class="fab fa-telegram text-info mb-3" style="font-size: 3rem;"></i>
+                                    <h6 class="mb-1">Telegram Channels/Groups</h6>
+
+                                    <p class="text-xs text-muted mb-3">Envie ofertas para seus clientes no Telegram.</p>
+
+                                    @php
+                                        $telegramAccounts = $socialAccounts->where('provider', 'telegram');
+                                    @endphp
+
+                                    @if($telegramAccounts->count() > 0)
+                                        <div class="text-start mb-3">
+                                            <p class="text-xs font-weight-bold mb-1">Canais Conectados:</p>
+                                            @foreach($telegramAccounts as $acc)
+                                                <div class="d-flex justify-content-between align-items-center mb-1 p-1 bg-light border-radius-sm">
+                                                    <span class="text-xs">{{ $acc->meta_data['name'] ?? $acc->provider_id }}</span>
+                                                    <form action="{{ route('lojista.maxdivulga.canais.disconnect', 'telegram') }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <input type="hidden" name="provider_id" value="{{ $acc->provider_id }}">
+                                                        <button type="submit" class="btn btn-link text-danger p-0 m-0" title="Remover"><i class="fa fa-trash"></i></button>
+                                                    </form>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    <button class="btn bg-gradient-info btn-sm w-100" data-bs-toggle="modal" data-bs-target="#connectTelegramModal">
+                                        {{ $telegramAccounts->count() > 0 ? 'Adicionar Outro' : 'Conectar Telegram' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Conectar Telegram -->
+                        <div class="modal fade" id="connectTelegramModal" tabindex="-1" role="dialog" aria-labelledby="connectTelegramModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="connectTelegramModalLabel">Conectar Grupo/Canal Telegram</h5>
+                                        <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <form action="{{ route('lojista.maxdivulga.canais.telegram') }}" method="POST">
+                                        @csrf
+                                        <div class="modal-body">
+                                            <div class="alert alert-info text-white text-xs">
+                                                <strong>Como conectar:</strong><br>
+                                                1. Adicione o nosso bot no seu grupo ou canal.<br>
+                                                2. Obtenha o <strong>Chat ID</strong> do seu grupo (pode usar bots como @userinfobot ou @GetIDsBot).<br>
+                                                3. Insira o ID e o nome abaixo.
+                                            </div>
+                                            <div class="form-group mb-3">
+                                                <label for="chat_name">Nome para Identificação (ex: Grupo de Ofertas)</label>
+                                                <input type="text" name="chat_name" id="chat_name" class="form-control" placeholder="Meu Grupo" required>
+                                            </div>
+                                            <div class="form-group mb-3">
+                                                <label for="chat_id">Chat ID do Telegram</label>
+                                                <input type="text" name="chat_id" id="chat_id" class="form-control" placeholder="Ex: -100123456789" required>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-link text-dark ml-auto" data-bs-dismiss="modal">Fechar</button>
+                                            <button type="submit" class="btn bg-gradient-info">Salvar Canal</button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>

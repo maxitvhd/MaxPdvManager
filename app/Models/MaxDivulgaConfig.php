@@ -26,6 +26,7 @@ class MaxDivulgaConfig extends Model
         'facebook_client_id',
         'facebook_client_secret',
         'google_client_id',
-        'google_client_secret'
+        'google_client_secret',
+        'telegram_bot_token'
     ];
 }
