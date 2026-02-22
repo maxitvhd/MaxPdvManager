@@ -135,9 +135,15 @@ class SocialAuthController extends Controller
 
         $campaign = \App\Models\MaxDivulgaCampaign::findOrFail($campaignId);
         $loja = $this->resolverLoja();
-        $account = SocialAccount::where('loja_id', $loja->id ?? null)
-            ->where('provider', $request->provider)
-            ->firstOrFail();
+        $query = SocialAccount::where('loja_id', $loja->id ?? null)
+            ->where('provider', $request->provider);
+
+        // No Telegram, cada chatId tem seu próprio Token de Bot vinculado.
+        if ($request->provider === 'telegram') {
+            $query->where('provider_id', $request->target_id);
+        }
+
+        $account = $query->firstOrFail();
 
         $service = new \App\Services\FacebookPostService();
         // Remove 'storage/' prefix if exists to avoid duplication with storage_path('app/public/')
