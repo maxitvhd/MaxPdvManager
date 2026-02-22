@@ -193,8 +193,20 @@ class SocialAuthController extends Controller
             // No caso do Telegram, o token está salvo individualmente na SocialAccount
             $result = $service->postToChat($request->target_id, $account->token, $imagePath, $message);
 
+            $hasAudio = false;
+            if (isset($result['ok']) && $result['ok'] && !empty($campaign->audio_file_path)) {
+                $cleanAudioPath = str_replace('storage/', '', $campaign->audio_file_path);
+                $audioFile = storage_path('app/public/' . $cleanAudioPath);
+
+                if (file_exists($audioFile)) {
+                    $hasAudio = true;
+                    $service->postAudioToChat($request->target_id, $account->token, $audioFile, $message);
+                }
+            }
+
             if (isset($result['ok']) && $result['ok']) {
-                return back()->with('success', 'Publicado com sucesso no Telegram!');
+                $msg = $hasAudio ? 'Publicado com sucesso (Imagem + Áudio) no Telegram!' : 'Publicado com sucesso no Telegram!';
+                return back()->with('success', $msg);
             }
 
             $errorMsg = $result['description'] ?? 'Erro desconhecido.';
