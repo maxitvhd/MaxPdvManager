@@ -126,30 +126,34 @@
             display: inline-block;
             color: var(--branco);
             font-weight: 900;
-            font-size: 6rem;
-            /* Muito grande */
-            line-height: 0.9;
+            font-size: 6.5rem;
+            /* Um pouco maior e mais pesado */
+            line-height: 0.85;
             text-transform: uppercase;
-            /* Sombra em camadas para efeito 3D profundo */
+            /* Sombra em camadas para efeito 3D profundo e visível */
             text-shadow:
-                3px 3px 0px var(--vermelho-escuro),
-                6px 6px 0px rgba(0, 0, 0, 0.3),
-                10px 10px 15px rgba(0, 0, 0, 0.4);
+                2px 2px 0px var(--vermelho-escuro),
+                4px 4px 0px var(--vermelho-escuro),
+                6px 6px 0px rgba(0, 0, 0, 0.4),
+                8px 8px 12px rgba(0, 0, 0, 0.5);
             margin-bottom: 5px;
+            filter: drop-shadow(4px 4px 8px rgba(0, 0, 0, 0.3));
         }
 
         .header-sub {
-            font-size: 3.5rem;
-            /* Grande */
+            font-size: 3.8rem;
+            /* Maior */
             font-weight: 900;
             color: var(--amarelo-ouro);
             text-transform: uppercase;
             line-height: 1;
             /* Sombra em camadas para efeito 3D */
             text-shadow:
-                3px 3px 0px var(--vermelho-escuro),
-                5px 5px 8px rgba(0, 0, 0, 0.5);
+                2px 2px 0px var(--vermelho-escuro),
+                4px 4px 0px var(--vermelho-escuro),
+                6px 6px 10px rgba(0, 0, 0, 0.5);
             margin-bottom: 20px;
+            filter: drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.3));
         }
 
         .header-data {
@@ -244,7 +248,8 @@
 
         .grid-produtos.qty-many {
             grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
+            grid-template-rows: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
             padding: 20px;
         }
 
@@ -260,10 +265,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 15px;
+            padding: 12px;
             /* Sombra para destacar do fundo branco */
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             height: 100%;
+            min-height: 280px;
         }
 
         .card-topo {
@@ -321,7 +327,8 @@
         .qty-11 .card-nome,
         .qty-12 .card-nome,
         .qty-many .card-nome {
-            font-size: 1rem;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
         }
 
         .card-preco-de {
@@ -339,14 +346,14 @@
             border: 4px solid var(--vermelho-vivo);
             color: var(--vermelho-vivo);
             font-weight: 1000;
-            font-size: 2.6rem;
+            font-size: 2.5rem;
             text-align: center;
-            padding: 8px 15px;
+            padding: 5px 10px;
             border-radius: 14px;
             width: 100%;
             line-height: 1;
             /* Sombra dura "pop" */
-            box-shadow: 0 6px 0 #c7a000, 0 10px 15px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 5px 0 #c7a000, 0 8px 12px rgba(0, 0, 0, 0.25);
             letter-spacing: -1.5px;
             display: flex;
             align-items: center;
@@ -354,6 +361,16 @@
             white-space: nowrap;
             flex-shrink: 0;
             text-shadow: 2px 2px 0px var(--branco);
+        }
+
+        .qty-many .card-preco-por {
+            font-size: 1.8rem;
+            padding: 4px 8px;
+        }
+
+        .qty-many .card-preco-de {
+            font-size: 0.9rem;
+            margin-bottom: 2px;
         }
 
         /* ===== FAIXA ENDEREÇO ===== */

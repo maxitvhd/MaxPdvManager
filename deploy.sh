@@ -21,8 +21,16 @@ ssh $SSH_USER@$SSH_HOST << 'ENDSSH'
     cd /home/maxpdv/public_html
 
     echo "📥 Puxando do GitHub..."
+    
+    # Ajustar permissões para permitir que o git sobrescreva arquivos criados pelo www-data
+   # printf "Kellytamo@10\n" | su root -c "chown -R maximooficial:maximooficial /home/maxpdv/public_html && chmod -R 775 /home/maxpdv/public_html"
+
     git fetch --all
+    git reset --all origin/main # Usar reset para garantir sincronia total
     git pull origin main
+
+    # Restaurar permissões para o www-data poder escrever nos logs/cache
+    printf "Kellytamo@10\n" | su root -c "chown -R www-data:www-data /home/maxpdv/public_html/storage /home/maxpdv/public_html/bootstrap/cache && chmod -R 775 /home/maxpdv/public_html/storage /home/maxpdv/public_html/bootstrap/cache"
 
     echo "🧹 Limpando caches do Laravel..."
     php artisan optimize:clear
