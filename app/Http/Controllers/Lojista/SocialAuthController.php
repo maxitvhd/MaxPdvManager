@@ -140,8 +140,10 @@ class SocialAuthController extends Controller
             ->firstOrFail();
 
         $service = new \App\Services\FacebookPostService();
-        $imagePath = storage_path('app/public/' . $campaign->file_path);
-        $message = $campaign->copy_social ?? $campaign->copy_acompanhamento;
+        // Remove 'storage/' prefix if exists to avoid duplication with storage_path('app/public/')
+        $cleanPath = str_replace('storage/', '', $campaign->file_path);
+        $imagePath = storage_path('app/public/' . $cleanPath);
+        $message = $campaign->copy_acompanhamento;
 
         if ($request->provider === 'facebook') {
             if ($request->target_type === 'page') {

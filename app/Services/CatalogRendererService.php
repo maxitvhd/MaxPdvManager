@@ -44,8 +44,8 @@ class CatalogRendererService
         $codigoLoja = $dadosLoja['codigo'] ?? 'sem-codigo';
         $tema = $dadosLoja['tema_campanha'] ?? 'catalogo_geral';
 
-        // Pasta exclusiva: Usa o ID do "Pai" (Programação) para agrupar, ou o próprio ID se for avulsa.
-        $idPasta = $campaign->parent_id ?? $campaign->id;
+        // Pasta exclusiva: Cada campanha (mesmo disparos automáticos) terá sua própria pasta.
+        $idPasta = $campaign->id;
         $nomePasta = "campanha_{$idPasta}";
 
         $pasta = "lojas/{$codigoLoja}/campanhas/{$nomePasta}";
