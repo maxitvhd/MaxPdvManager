@@ -23,7 +23,8 @@
             font-family: 'Inter', sans-serif;
             background: var(--marfim);
             width: 1080px;
-            min-height: 1920px;
+            height: 1920px;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
         }

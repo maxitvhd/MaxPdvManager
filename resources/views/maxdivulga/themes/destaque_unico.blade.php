@@ -24,11 +24,10 @@
             font-family: 'Lato', Arial, sans-serif;
             background: var(--dark);
             width: 1080px;
-            min-height: 1920px;
+            height: 1920px;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
         }
 
         /* ===== HEADER ===== */

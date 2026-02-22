@@ -27,8 +27,9 @@
             font-family: 'Barlow', Arial, sans-serif;
             background: var(--cinza-fundo);
             width: 1080px;
-            /* Largura fixa mantida para geração de PDF/Imagem */
-            min-height: 1920px;
+            /* Altura fixa 1920px */
+            height: 1920px;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             color: var(--dark);

@@ -24,7 +24,9 @@
             font-family: 'Nunito', Arial, sans-serif;
             background: var(--dark);
             width: 1080px;
-            min-height: 1920px;
+            /* Altura fixa 1920px — o render_weasyprint.py garante este tamanho final */
+            height: 1920px;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
@@ -178,10 +180,24 @@
 
         .grid-produtos.qty-7,
         .grid-produtos.qty-8,
-        .grid-produtos.qty-9,
-        .grid-produtos.qty-10,
-        .grid-produtos.qty-many {
+        .grid-produtos.qty-9 {
             grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 10px 30px;
+        }
+
+        .grid-produtos.qty-10,
+        .grid-produtos.qty-11,
+        .grid-produtos.qty-12 {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 8px 20px;
+        }
+
+        .grid-produtos.qty-many {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            padding: 6px 16px;
         }
 
         .card {
@@ -359,7 +375,7 @@
 
     <div class="label-feirao">🏷️ &nbsp; PRODUTOS DO FEIRÃO &nbsp; 🏷️</div>
 
-    @php $qtyClass = count($produtos) <= 9 ? 'qty-' . count($produtos) : 'qty-many'; @endphp
+    @php $qtyClass = count($produtos) <= 12 ? 'qty-' . count($produtos) : 'qty-many'; @endphp
     <div class="grid-produtos {{ $qtyClass }}">
         @forelse($produtos as $i => $prod)
             <div class="card {{ $i === 0 ? 'card-principal' : '' }}">

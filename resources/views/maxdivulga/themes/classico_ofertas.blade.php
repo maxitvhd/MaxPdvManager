@@ -29,25 +29,26 @@
             font-family: 'Roboto Condensed', Arial, sans-serif;
             background: var(--vermelho-vivo);
             width: 1080px;
-            /* Usar height max-content e min-height garante que ele flua, caso haja +9 items */
-            min-height: 1920px;
-            height: max-content;
+            /* Altura fixa 1920px — todo conteúdo deve se encaixar exatamente aqui */
+            height: 1920px;
+            overflow: hidden;
+            /* Garante que nada ultrapasse */
             display: flex;
             flex-direction: column;
             color: var(--cinza-texto);
             padding: 20px;
+            /* Borda vermelha lateral */
         }
 
-        /* Container principal para simular a folha de papel */
-        body>div,
-        body>header,
-        body>footer {
+        /* Agrupa todo o conteúdo branco numa caixa unificada que preenche o espaço */
+        .conteudo-principal {
             background: var(--branco);
-        }
-
-        /* Pequeno ajuste para que os elementos filhos preencham o body */
-        body>* {
-            width: 100%;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            /* Ocupa todo espaço disponível entre o padding */
+            min-height: 0;
+            overflow: hidden;
         }
 
 
@@ -168,69 +169,150 @@
             /* Ocultando pois não combina com o estilo vibrante */
         }
 
-        /* ===== GRID PRODUTOS ===== */
+        /* ===== GRID PRODUTOS — totalmente dinâmico para 1080x1920 ===== */
         .grid-produtos {
             display: grid;
-            gap: 25px;
-            padding: 30px 40px;
+            gap: 14px;
+            padding: 14px 20px;
             background: var(--branco);
-            flex-grow: 1;
+            /* Flex grow ocupa o espaço restante entre header/copy/footer */
+            flex: 1;
+            min-height: 0;
+            /* Alinha cards ao topo, não esticando */
+            align-content: start;
         }
 
-        /* Lógica de colunas mantida */
+        /* 1 produto: 1 coluna centralizada — produto destaque grande */
         .grid-produtos.qty-1 {
             grid-template-columns: repeat(1, 1fr);
-            max-width: 600px;
-            margin: 0 auto;
+            align-content: center;
+            padding: 30px 140px;
+            /* Muito espaço nas laterais para produto grande */
         }
 
+        /* 2 produtos: 2 colunas com produto grande */
         .grid-produtos.qty-2 {
             grid-template-columns: repeat(2, 1fr);
+            align-content: center;
+            padding: 30px 40px;
         }
 
+        /* 3 produtos: 3 colunas */
         .grid-produtos.qty-3 {
             grid-template-columns: repeat(3, 1fr);
+            align-content: center;
         }
 
+        /* 4 produtos: 2x2 */
         .grid-produtos.qty-4 {
             grid-template-columns: repeat(2, 1fr);
+            align-content: center;
         }
 
+        /* 5-6 produtos: 3 colunas */
         .grid-produtos.qty-5,
         .grid-produtos.qty-6 {
             grid-template-columns: repeat(3, 1fr);
+            align-content: start;
         }
 
+        /* 7-9 produtos: 3 colunas, 3 linhas */
         .grid-produtos.qty-7,
         .grid-produtos.qty-8,
-        .grid-produtos.qty-9,
-        .grid-produtos.qty-10,
-        .grid-produtos.qty-many {
+        .grid-produtos.qty-9 {
             grid-template-columns: repeat(3, 1fr);
-            /* Mudado para 3 colunas para ficar igual a referencia */
+            gap: 10px;
+            padding: 10px 16px;
+            align-content: start;
         }
 
-        /* ===== CARD ESTILO FOLHETO ===== */
+        /* 10-12 produtos: 4 colunas / 3 linhas */
+        .grid-produtos.qty-10,
+        .grid-produtos.qty-11,
+        .grid-produtos.qty-12 {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 8px 12px;
+            align-content: start;
+        }
+
+        /* 13+ (many): 4 colunas compactas */
+        .grid-produtos.qty-many {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            padding: 6px 10px;
+            align-content: start;
+        }
+
+        /* ===== CARD ===== */
         .card {
             background: var(--branco);
-            /* Borda tracejada cinza como na referência */
-            border: 3px dashed var(--borda-tracejada);
-            border-radius: 15px;
+            border: 2px dashed var(--borda-tracejada);
+            border-radius: 12px;
             overflow: visible;
-            /* Necessário para a tag sair para fora */
             position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px 15px;
+            padding: 14px 10px 12px;
             box-shadow: none;
-            /* Removendo sombra padrão */
         }
 
-        /* Neutralizando o destaque para manter padrão visual */
         .card-destaque {
             background: var(--branco);
         }
+
+        .card-topo {
+            width: 100%;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Alturas adaptáveis por quantidade */
+            flex: 1;
+            min-height: 80px;
+        }
+
+        /* Imagem maior com poucos produtos */
+        .qty-1 .card-topo {
+            min-height: 300px;
+        }
+
+        .qty-2 .card-topo {
+            min-height: 220px;
+        }
+
+        .qty-3 .card-topo {
+            min-height: 180px;
+        }
+
+        .qty-4 .card-topo {
+            min-height: 150px;
+        }
+
+        .qty-5 .card-topo,
+        .qty-6 .card-topo {
+            min-height: 130px;
+        }
+
+        .qty-7 .card-topo,
+        .qty-8 .card-topo,
+        .qty-9 .card-topo {
+            min-height: 100px;
+        }
+
+        .qty-10 .card-topo,
+        .qty-11 .card-topo,
+        .qty-12 .card-topo,
+        .qty-many .card-topo {
+            min-height: 80px;
+        }
+
+        .card-destaque .tag-oferta {
+            background: var(--vermelho-vivo);
+            color: var(--branco);
+        }
+
 
         /* Etiqueta de Oferta Inclinada */
         .tag-oferta {
@@ -250,50 +332,29 @@
             border-radius: 4px;
         }
 
-        .card-destaque .tag-oferta {
-            background: var(--vermelho-vivo);
-            color: var(--branco);
-        }
 
 
-        .card-topo {
-            width: 100%;
-            background: transparent;
-            /* Fundo transparente */
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 180px;
-            /* Altura fixa para alinhar */
-            margin-bottom: 10px;
-        }
-
-        /* Ajuste de imagem */
-        .qty-1 .card-topo,
-        .qty-2 .card-topo,
-        .qty-3 .card-topo {
-            min-height: 200px;
-        }
-
-        .qty-4 .card-topo,
-        .qty-5 .card-topo,
-        .qty-6 .card-topo {
-            min-height: 180px;
-        }
 
         /* Nomes dos produtos */
         .card-nome {
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 700;
             color: var(--cinza-texto);
             text-align: center;
-            padding: 5px 10px;
+            padding: 4px 8px;
             line-height: 1.2;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             text-transform: uppercase;
-            flex-grow: 1;
-            /* Ocupa espaço para alinhar preços */
+        }
+
+        /* Fontes menores em grids compactos */
+        .qty-10 .card-nome,
+        .qty-11 .card-nome,
+        .qty-12 .card-nome,
+        .qty-many .card-nome {
+            font-size: 0.75rem;
+            padding: 2px 4px;
+            margin-bottom: 3px;
         }
 
         .card-destaque .card-nome {
@@ -424,7 +485,7 @@
 
     <div class="label-secao">⭐ PROMOÇÕES SELECIONADAS ⭐</div>
 
-    @php $qtyClass = count($produtos) <= 9 ? 'qty-' . count($produtos) : 'qty-many'; @endphp
+    @php $qtyClass = count($produtos) <= 12 ? 'qty-' . count($produtos) : 'qty-many'; @endphp
     <div class="grid-produtos {{ $qtyClass }}">
         @forelse($produtos as $i => $prod)
             <div class="card {{ $i === 0 ? 'card-destaque' : '' }}">

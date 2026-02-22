@@ -33,9 +33,9 @@
         body {
             font-family: 'Poppins', sans-serif;
             background: var(--verde-claro);
-            /* Fundo geral suave */
             width: 1080px;
-            min-height: 1920px;
+            height: 1920px;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             color: var(--texto-escuro);
@@ -192,10 +192,23 @@
 
         .grid-produtos.qty-7,
         .grid-produtos.qty-8,
-        .grid-produtos.qty-9,
+        .grid-produtos.qty-9 {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+        }
+
         .grid-produtos.qty-10,
+        .grid-produtos.qty-11,
+        .grid-produtos.qty-12 {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 10px 20px;
+        }
+
         .grid-produtos.qty-many {
             grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 8px 16px;
         }
 
         /* Estilo do Card "Fresh" */
@@ -428,7 +441,7 @@
 
     <div class="label-secao">⭐ PROMOÇÕES SELECIONADAS ⭐</div>
 
-    @php $qtyClass = count($produtos) <= 9 ? 'qty-' . count($produtos) : 'qty-many'; @endphp
+    @php $qtyClass = count($produtos) <= 12 ? 'qty-' . count($produtos) : 'qty-many'; @endphp
     <div class="grid-produtos {{ $qtyClass }}">
         @forelse($produtos as $i => $prod)
             <div class="card {{ $i === 0 ? 'card-destaque' : '' }}">
