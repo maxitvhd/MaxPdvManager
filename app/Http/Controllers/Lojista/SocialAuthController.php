@@ -106,23 +106,42 @@ class SocialAuthController extends Controller
             'bot_token' => 'required|string',
         ]);
 
+        $service = new \App\Services\TelegramPostService();
+
+        // 1. Validar se o Bot Token existe
+        $botInfo = $service->getMe($request->bot_token);
+        if (!isset($botInfo['ok']) || !$botInfo['ok']) {
+            return back()->with('error', 'Token do Bot inválido ou expirado. Verifique no @BotFather.');
+        }
+
+        // 2. Validar se o Bot tem acesso ao Chat ID
+        $chatInfo = $service->getChat($request->chat_id, $request->bot_token);
+        if (!isset($chatInfo['ok']) || !$chatInfo['ok']) {
+            $errorMsg = $chatInfo['description'] ?? 'Chat não encontrado.';
+            if ($errorMsg === 'Bad Request: chat not found') {
+                $errorMsg = 'Canal/Grupo não encontrado. Verifique se o Bot é Administrador e se o ID está correto (ex: -100...)';
+            }
+            return back()->with('error', 'Erro no Telegram: ' . $errorMsg);
+        }
+
         $loja = $this->resolverLoja();
         SocialAccount::updateOrCreate(
             [
                 'loja_id' => $loja->id ?? null,
                 'provider' => 'telegram',
-                'provider_id' => $request->chat_id,
+                'provider_id' => trim($request->chat_id),
             ],
             [
                 'token' => $request->bot_token,
                 'meta_data' => [
                     'name' => $request->chat_name,
-                    'type' => str_starts_with($request->chat_id, '-') ? 'group/channel' : 'user',
+                    'type' => $chatInfo['result']['type'] ?? 'unknown',
+                    'username' => $chatInfo['result']['username'] ?? null,
                 ],
             ]
         );
 
-        return redirect()->route('lojista.maxdivulga.canais.index')->with('success', 'Canal Telegram registrado!');
+        return redirect()->route('lojista.maxdivulga.canais.index')->with('success', 'Canal Telegram "' . $request->chat_name . '" conectado com sucesso!');
     }
 
     public function publish(Request $request, $campaignId)

@@ -55,4 +55,19 @@ class TelegramPostService
             return ['ok' => false, 'error' => $e->getMessage()];
         }
     }
+
+    /**
+     * Obtém informações de um chat para validar acesso.
+     */
+    public function getChat($chatId, $botToken)
+    {
+        try {
+            $response = Http::get("https://api.telegram.org/bot{$botToken}/getChat", [
+                'chat_id' => trim($chatId)
+            ]);
+            return $response->json();
+        } catch (\Exception $e) {
+            return ['ok' => false, 'description' => $e->getMessage()];
+        }
+    }
 }
