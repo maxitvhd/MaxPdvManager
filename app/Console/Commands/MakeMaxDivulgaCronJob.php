@@ -270,49 +270,66 @@ class MakeMaxDivulgaCronJob extends Command
                 foreach ($channels as $channelStr) {
                     try {
                         $parts = explode('|', $channelStr);
-                        if (count($parts) < 3)
-                            continue;
-
                         $provider = $parts[0];
-                        $targetType = $parts[1];
-                        $targetId = $parts[2];
+                        $targetType = $parts[1] ?? null;
+                        $targetId = $parts[2] ?? null;
 
-                        $account = \App\Models\SocialAccount::where('loja_id', $campaign->loja_id)
-                            ->where('provider', $provider)
-                            ->when($provider === 'telegram', function ($q) use ($targetId) {
-                                return $q->where('provider_id', $targetId);
-                            })
-                            ->first();
+                        // Se não tiver ID definido (formato legado/wizard simples), busca todas as contas desse provedor para a loja
+                        $query = \App\Models\SocialAccount::where('loja_id', $campaign->loja_id)
+                            ->where('provider', $provider);
 
-                        if (!$account) {
-                            Log::warning("[MAXDIVULGA-CRON] Conta social não encontrada para {$provider} na Loja {$campaign->loja_id}");
+                        if ($targetId) {
+                            $query->where('provider_id', $targetId);
+                        }
+
+                        $accounts = $query->get();
+
+                        if ($accounts->isEmpty()) {
+                            Log::warning("[MAXDIVULGA-CRON] Nenhuma conta social encontrada para {$provider} na Loja {$campaign->loja_id}");
                             continue;
                         }
 
-                        $cleanImagePath = str_replace('storage/', '', $filePath);
-                        $absImagePath = storage_path('app/public/' . $cleanImagePath);
-                        $message = $novaCampanha->copy_acompanhamento ?? $copyAcompanhamento;
+                        foreach ($accounts as $account) {
+                            $cleanImagePath = str_replace('storage/', '', $filePath);
+                            $absImagePath = storage_path('app/public/' . $cleanImagePath);
+                            $message = $novaCampanha->copy_acompanhamento ?? $copyAcompanhamento;
 
-                        if ($provider === 'facebook') {
-                            $fbService = new \App\Services\FacebookPostService();
-                            if ($targetType === 'page') {
-                                $page = collect($account->meta_data['pages'] ?? [])->where('id', $targetId)->first();
-                                $token = $page['access_token'] ?? $account->token;
-                                $fbService->postToPage($targetId, $token, $absImagePath, $message);
-                            } else {
-                                $fbService->postToGroup($targetId, $account->token, $absImagePath, $message);
+                            if ($provider === 'facebook') {
+                                $fbService = new \App\Services\FacebookPostService();
+
+                                // Se veio do Wizard sem targetId, tentamos postar na primeira página/grupo disponível
+                                $finalTargetId = $targetId;
+                                $finalTargetType = $targetType;
+                                $finalToken = $account->token;
+
+                                if (!$finalTargetId && !empty($account->meta_data['pages'])) {
+                                    $page = $account->meta_data['pages'][0];
+                                    $finalTargetId = $page['id'];
+                                    $finalTargetType = 'page';
+                                    $finalToken = $page['access_token'] ?? $account->token;
+                                }
+
+                                if ($finalTargetId) {
+                                    if ($finalTargetType === 'page') {
+                                        $fbService->postToPage($finalTargetId, $finalToken, $absImagePath, $message);
+                                    } else {
+                                        $fbService->postToGroup($finalTargetId, $finalToken, $absImagePath, $message);
+                                    }
+                                }
                             }
-                        }
 
-                        if ($provider === 'telegram') {
-                            $tgService = new \App\Services\TelegramPostService();
-                            // Envia Foto
-                            $tgService->postToChat($targetId, $account->token, $absImagePath, $message);
+                            if ($provider === 'telegram') {
+                                $tgService = new \App\Services\TelegramPostService();
+                                $chatId = $account->provider_id;
 
-                            // Se tiver áudio e for formato 'completo' (implícito se audioPath existir)
-                            if ($audioPath && file_exists(storage_path('app/public/' . str_replace('storage/', '', $audioPath)))) {
-                                $absAudioPath = storage_path('app/public/' . str_replace('storage/', '', $audioPath));
-                                $tgService->postAudioToChat($targetId, $account->token, $absAudioPath, "Escute as ofertas de hoje! 🔊");
+                                // Envia Foto
+                                $tgService->postToChat($chatId, $account->token, $absImagePath, $message);
+
+                                // Se tiver áudio e for formato 'completo' (implícito se audioPath existir)
+                                if ($audioPath && file_exists(storage_path('app/public/' . str_replace('storage/', '', $audioPath)))) {
+                                    $absAudioPath = storage_path('app/public/' . str_replace('storage/', '', $audioPath));
+                                    $tgService->postAudioToChat($chatId, $account->token, $absAudioPath, "Escute as ofertas de hoje! 🔊");
+                                }
                             }
                         }
                     } catch (\Exception $eSocial) {
