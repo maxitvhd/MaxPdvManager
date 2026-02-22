@@ -153,41 +153,59 @@ class SocialAuthController extends Controller
         ]);
 
         $campaign = \App\Models\MaxDivulgaCampaign::findOrFail($campaignId);
+        $loja = $this->resolverLoja();
+        $query = SocialAccount::where('loja_id', $loja->id ?? null)
+            ->where('provider', $request->provider);
 
-        // Se a campanha for uma programação (parent) sem arquivos, busca a última instância gerada (filha) que tenha arquivos
-        if (empty($campaign->file_path) && empty($campaign->audio_file_path)) {
-            $latestChild = \App\Models\MaxDivulgaCampaign::where('parent_id', $campaign->id)
-                ->whereNotNull('file_path')
-                ->latest()
-                ->first();
+        // No Telegram, cada chatId tem seu próprio Token de Bot vinculado.
+        if ($request->provider === 'telegram') {
+            $query->where('provider_id', $request->target_id);
+        }
 
-            if ($latestChild) {
-                if (env('LOG_MAXDIVULGA', true)) {
-                    \Illuminate\Support\Facades\Log::info("[SOCIAL-PUBLISH] Usando mídia da campanha filha #{$latestChild->id} para a mãe #{$campaign->id}");
-                }
-                $campaign = $latestChild;
+        $account = $query->firstOrFail();
+
+        $service = new \App\Services\FacebookPostService();
+        // Remove 'storage/' prefix if exists to avoid duplication with storage_path('app/public/')
+        $cleanPath = str_replace('storage/', '', $campaign->file_path);
+        $imagePath = storage_path('app/public/' . $cleanPath);
+        $message = $campaign->copy_acompanhamento;
+
+        if ($request->provider === 'facebook') {
+            if ($request->target_type === 'page') {
+                // Para página, precisamos do Page Access Token se disponível no meta_data
+                $page = collect($account->meta_data['pages'] ?? [])->where('id', $request->target_id)->first();
+                $token = $page['access_token'] ?? $account->token;
+
+                $result = $service->postToPage($request->target_id, $token, $imagePath, $message);
+            } else {
+                $result = $service->postToGroup($request->target_id, $account->token, $imagePath, $message);
             }
+
+            if (isset($result['id']) || isset($result['post_id'])) {
+                return back()->with('success', 'Publicado com sucesso no Facebook!');
+            }
+
+            return back()->with('error', 'Erro ao publicar: ' . ($result['error'] ?? 'Erro desconhecido.'));
         }
 
-        $service = new \App\Services\SocialPublishService();
-        $results = $service->publishToAll($campaign);
+        if ($request->provider === 'telegram') {
+            $service = new \App\Services\TelegramPostService();
+            // No caso do Telegram, o token está salvo individualmente na SocialAccount
+            $result = $service->postToChat($request->target_id, $account->token, $imagePath, $message);
 
-        $provider = $request->provider;
-        $res = $results[$provider] ?? ['ok' => false, 'error' => 'Falha ao processar provedor.'];
+            if (isset($result['ok']) && $result['ok']) {
+                return back()->with('success', 'Publicado com sucesso no Telegram!');
+            }
 
-        if ($res['ok']) {
-            $msg = ($provider === 'telegram' && isset($res['published_count']))
-                ? "Publicado com sucesso no Telegram!"
-                : "Publicado com sucesso no " . ucfirst($provider) . "!";
-            return back()->with('success', $msg);
+            $errorMsg = $result['description'] ?? 'Erro desconhecido.';
+            if ($errorMsg === 'Bad Request: chat not found') {
+                $errorMsg = 'Canal/Grupo não encontrado. Verifique se o Bot é Administrador no Telegram e se o Canal foi reconectado recentemente.';
+            }
+
+            return back()->with('error', 'Erro ao publicar no Telegram: ' . $errorMsg);
         }
 
-        $errorMsg = $res['description'] ?? $res['error'] ?? 'Erro desconhecido.';
-        if ($errorMsg === 'Bad Request: chat not found') {
-            $errorMsg = 'Canal/Grupo não encontrado. Verifique se o Bot é Administrador no Telegram e se o Canal foi reconectado recentemente.';
-        }
-
-        return back()->with('error', 'Erro ao publicar no ' . ucfirst($provider) . ': ' . $errorMsg);
+        return back()->with('error', 'Provedor não suportado.');
     }
 
     public function disconnect($provider)

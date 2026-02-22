@@ -335,21 +335,6 @@ class MaxDivulgaController extends Controller
         $lojaId = $loja->id ?? null;
         $socialAccounts = \App\Models\SocialAccount::where('loja_id', $lojaId)->get();
 
-        // Se a campanha for uma programação (parent) sem arquivos, busca a última instância gerada (filha) para exibir a mídia
-        if (empty($campaign->file_path) && empty($campaign->audio_file_path)) {
-            $latestChild = MaxDivulgaCampaign::where('parent_id', $campaign->id)
-                ->whereNotNull('file_path')
-                ->latest()
-                ->first();
-
-            if ($latestChild) {
-                // Sobrescreve caminhos para exibição na View
-                $campaign->file_path = $latestChild->file_path;
-                $campaign->audio_file_path = $latestChild->audio_file_path;
-                $campaign->copy_acompanhamento = $latestChild->copy_acompanhamento;
-            }
-        }
-
         return view('lojista.maxdivulga.show', compact('campaign', 'socialAccounts'));
     }
 
