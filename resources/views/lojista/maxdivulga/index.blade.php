@@ -323,7 +323,7 @@
                                                                 <div class="col-md-12 mb-3">
                                                                     <label class="form-label font-weight-bold text-xs">Formato Final do Piloto Automático</label>
                                                                     <select name="format" class="form-control">
-                                                                        <option value="both" {{ $camp->format == 'both' ? 'selected' : '' }}>📸 Arte Gráfica HD + 🔊 Áudio Locução (+ Recomendado)</option>
+                                                                        <option value="full" {{ $camp->format == 'full' ? 'selected' : '' }}>📸 Arte Gráfica HD + 🔊 Áudio Locução (+ Recomendado)</option>
                                                                         <option value="image" {{ $camp->format == 'image' ? 'selected' : '' }}>📸 Apenas Arte Gráfica (Imagem e Texto)</option>
                                                                         <option value="audio" {{ $camp->format == 'audio' ? 'selected' : '' }}>🔊 Apenas Áudio de Rádio/Locução Interna</option>
                                                                         <option value="text" {{ $camp->format == 'text' ? 'selected' : '' }}>💬 Apenas o Texto Promocional Limpo</option>
