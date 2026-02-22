@@ -419,7 +419,7 @@
                                                     @if($tgAccounts->count() > 0)
                                                         <optgroup label="Telegram">
                                                             @foreach($tgAccounts as $account)
-                                                                <option value="telegram|group|{{ $account->provider_id }}">{{ $account->meta_data['name'] ?? 'Chat' }}</option>
+                                                                <option value="telegram|{{ $account->meta_data['type'] ?? 'group' }}|{{ $account->provider_id }}">{{ $account->meta_data['name'] ?? 'Chat' }}</option>
                                                             @endforeach
                                                         </optgroup>
                                                     @endif

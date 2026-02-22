@@ -149,7 +149,7 @@ class SocialAuthController extends Controller
         $request->validate([
             'provider' => 'required|string',
             'target_id' => 'required|string', // ID da página ou grupo
-            'target_type' => 'required|string|in:page,group',
+            'target_type' => 'required|string|in:page,group,supergroup,channel',
         ]);
 
         $campaign = \App\Models\MaxDivulgaCampaign::findOrFail($campaignId);
@@ -197,7 +197,12 @@ class SocialAuthController extends Controller
                 return back()->with('success', 'Publicado com sucesso no Telegram!');
             }
 
-            return back()->with('error', 'Erro ao publicar no Telegram: ' . ($result['description'] ?? 'Erro desconhecido.'));
+            $errorMsg = $result['description'] ?? 'Erro desconhecido.';
+            if ($errorMsg === 'Bad Request: chat not found') {
+                $errorMsg = 'Canal/Grupo não encontrado. Verifique se o Bot é Administrador no Telegram e se o Canal foi reconectado recentemente.';
+            }
+
+            return back()->with('error', 'Erro ao publicar no Telegram: ' . $errorMsg);
         }
 
         return back()->with('error', 'Provedor não suportado.');
