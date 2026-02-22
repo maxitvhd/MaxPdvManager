@@ -153,6 +153,22 @@ class SocialAuthController extends Controller
         ]);
 
         $campaign = \App\Models\MaxDivulgaCampaign::findOrFail($campaignId);
+
+        // Se a campanha for uma programação (parent) sem arquivos, busca a última instância gerada (filha) que tenha arquivos
+        if (empty($campaign->file_path) && empty($campaign->audio_file_path)) {
+            $latestChild = \App\Models\MaxDivulgaCampaign::where('parent_id', $campaign->id)
+                ->whereNotNull('file_path')
+                ->latest()
+                ->first();
+
+            if ($latestChild) {
+                if (env('LOG_MAXDIVULGA', true)) {
+                    \Illuminate\Support\Facades\Log::info("[SOCIAL-PUBLISH] Usando mídia da campanha filha #{$latestChild->id} para a mãe #{$campaign->id}");
+                }
+                $campaign = $latestChild;
+            }
+        }
+
         $loja = $this->resolverLoja();
         $query = SocialAccount::where('loja_id', $loja->id ?? null)
             ->where('provider', $request->provider);
