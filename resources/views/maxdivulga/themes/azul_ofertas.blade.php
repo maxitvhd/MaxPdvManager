@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Folheto de Ofertas Vibrante Premium</title>
+    <title>Folheto de Ofertas Azul Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700;900&display=swap"
         rel="stylesheet">
     <style>
@@ -15,58 +15,75 @@
         }
 
         :root {
-            --vermelho-vivo: #E60012;
-            --vermelho-escuro: #A3000D;
-            /* Vermelho mais escuro para sombra */
+            --azul-vivo: #0057B8;
+            --azul-escuro: #003A7A;
+            --azul-claro: #1A7FE8;
             --amarelo-ouro: #FFD700;
             --amarelo-escuro: #FFC107;
             --branco: #ffffff;
-            --cinza-texto: #333333;
+            --cinza-texto: #1a1a2e;
             --borda-card: #FFD700;
-            /* Borda amarela sólida para destaque */
         }
 
         body {
             font-family: 'Roboto Condensed', Arial, sans-serif;
-            background: var(--vermelho-vivo);
+            background: var(--azul-vivo);
             width: 1080px;
             height: 1920px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             color: var(--cinza-texto);
-            /* Removido padding do body para header/footer full-width */
         }
 
-        /* Container para a área branca central */
+        /* Container área branca central com moldura azul */
         .main-content-wrapper {
             flex: 1;
             background: var(--branco);
             margin: 0 25px;
-            /* Cria a moldura vermelha nas laterais */
             display: flex;
             flex-direction: column;
             overflow: hidden;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.3) inset;
-            /* Sombra interna para profundidade */
             border-radius: 20px 20px 0 0;
-            /* Arredondar topo da área branca */
         }
 
-        /* ===== HEADER IMPACTANTE MELHORADO ===== */
+        /* ===== HEADER AZUL IMPACTANTE ===== */
         .header {
-            /* Gradiente sutil para dar volume ao vermelho */
-            background: linear-gradient(to bottom, var(--vermelho-vivo), #c90010);
+            background: linear-gradient(135deg, var(--azul-escuro) 0%, var(--azul-vivo) 60%, var(--azul-claro) 100%);
             color: var(--amarelo-ouro);
             display: flex;
             align-items: center;
             min-height: 280px;
-            /* Aumentado a altura */
             padding: 30px 40px;
             border-bottom: 6px solid var(--amarelo-ouro);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
             position: relative;
             z-index: 10;
+            overflow: hidden;
+        }
+
+        /* Círculos decorativos de fundo */
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -60px;
+            right: -60px;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: rgba(255, 215, 0, 0.08);
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -80px;
+            left: 30%;
+            width: 350px;
+            height: 350px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.1);
         }
 
         .header-logo {
@@ -76,20 +93,19 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            /* Removida a borda tracejada para limpar o visual */
+            position: relative;
+            z-index: 1;
         }
 
-        /* Aumentando o tamanho da logo */
         .header-logo img {
             max-height: 180px;
             max-width: 100%;
             object-fit: contain;
-            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+            filter: drop-shadow(2px 2px 6px rgba(0, 0, 0, 0.4));
         }
 
         .header-logo .nome-loja {
-            /* Estilo de "selo" para o nome caso não tenha logo */
-            background: var(--vermelho-escuro);
+            background: var(--azul-escuro);
             padding: 15px 30px;
             border-radius: 50px;
             font-size: 1.8rem;
@@ -99,17 +115,17 @@
             color: var(--branco);
             display: inline-block;
             border: 3px solid var(--amarelo-ouro);
-            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);
+            box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.4);
         }
 
         .header-logo .tagline {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             color: var(--amarelo-ouro);
-            margin-top: 15px;
+            margin-top: 14px;
             text-transform: uppercase;
             font-weight: 700;
             letter-spacing: 2px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
         }
 
         .header-info {
@@ -119,57 +135,52 @@
             justify-content: center;
             align-items: flex-start;
             padding-left: 20px;
+            position: relative;
+            z-index: 1;
         }
 
-        /* Títulos Gigantes e com Efeito 3D */
+        /* Efeito 3D nos títulos */
         .header-badge {
             display: inline-block;
             color: var(--branco);
             font-weight: 900;
             font-size: 5.5rem;
-            /* Muito maior */
             line-height: 0.9;
             text-transform: uppercase;
-            /* Sombra em camadas para efeito 3D forte */
             text-shadow:
-                3px 3px 0px var(--vermelho-escuro),
+                3px 3px 0px var(--azul-escuro),
                 6px 6px 0px rgba(0, 0, 0, 0.3),
-                8px 8px 10px rgba(0, 0, 0, 0.4);
+                8px 8px 12px rgba(0, 0, 0, 0.4);
             margin-bottom: 5px;
         }
 
         .header-sub {
             font-size: 3rem;
-            /* Muito maior */
             font-weight: 900;
             color: var(--amarelo-ouro);
             text-transform: uppercase;
             line-height: 1;
-            /* Sombra em camadas para efeito 3D */
             text-shadow:
-                3px 3px 0px var(--vermelho-escuro),
-                5px 5px 5px rgba(0, 0, 0, 0.4);
+                3px 3px 0px var(--azul-escuro),
+                5px 5px 8px rgba(0, 0, 0, 0.4);
             margin-bottom: 15px;
         }
 
         .header-data {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             color: var(--branco);
             font-weight: 700;
             background: rgba(0, 0, 0, 0.3);
-            /* Fundo semi-transparente */
             padding: 8px 25px;
             border-radius: 50px;
             border: 2px solid var(--amarelo-ouro);
             box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.3);
         }
 
-        /* ===== FAIXA COPY ===== */
+        /* ===== FAIXA COPY AZUL ===== */
         .faixa-copy {
-            background: var(--amarelo-ouro);
-            /* Degradê sutil no amarelo */
             background: linear-gradient(to bottom, var(--amarelo-ouro), #ffca00);
-            color: var(--vermelho-vivo);
+            color: var(--azul-escuro);
             padding: 25px 36px;
             text-align: center;
             border-bottom: 3px solid var(--amarelo-escuro);
@@ -189,7 +200,7 @@
         .faixa-copy .subtitulo {
             font-size: 1.3rem;
             font-weight: 800;
-            color: var(--vermelho-escuro);
+            color: var(--azul-escuro);
             margin-top: 8px;
         }
 
@@ -198,11 +209,11 @@
             display: grid;
             gap: 20px;
             padding: 25px 30px;
-            background: var(--branco);
+            background: #F0F4FF;
+            /* Fundo azul muito claro */
             flex: 1;
             min-height: 0;
             align-content: start;
-            /* Itens começam do topo */
         }
 
         /* Ajustes de Grid */
@@ -251,12 +262,11 @@
             padding: 15px;
         }
 
-
-        /* ===== CARD MELHORADO ===== */
+        /* ===== CARD AZUL ===== */
         .card {
             background: var(--branco);
-            /* Borda SÓLIDA amarela para destaque (estilo exemplo 1) */
-            border: 3px solid var(--borda-card);
+            border: 3px solid var(--azul-vivo);
+            /* Borda azul */
             border-radius: 15px;
             overflow: visible;
             position: relative;
@@ -264,9 +274,7 @@
             flex-direction: column;
             align-items: center;
             padding: 15px;
-            /* Sombra para destacar o card do fundo branco */
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-            transition: transform 0.3s;
+            box-shadow: 0 8px 20px rgba(0, 87, 184, 0.15);
             height: 100%;
         }
 
@@ -277,7 +285,6 @@
             align-items: center;
             justify-content: center;
             flex-grow: 1;
-            /* Ocupa espaço disponível */
             min-height: 120px;
             padding: 10px;
             margin-bottom: 10px;
@@ -289,16 +296,15 @@
             width: auto;
             height: auto;
             object-fit: contain;
-            /* Sombra suave na imagem do produto */
             filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.1));
         }
 
-        /* Tag de Oferta mais vibrante */
+        /* Tag OFERTA azul */
         .tag-oferta {
             position: absolute;
             top: -12px;
             right: -12px;
-            background: linear-gradient(45deg, var(--vermelho-vivo), var(--vermelho-escuro));
+            background: linear-gradient(45deg, var(--azul-vivo), var(--azul-escuro));
             color: var(--branco);
             font-size: 0.9rem;
             font-weight: 900;
@@ -320,17 +326,14 @@
             margin-bottom: 8px;
             text-transform: uppercase;
             flex-shrink: 0;
-            /* Não encolher */
         }
 
-        /* Ajuste de fonte para muitos produtos */
         .qty-10 .card-nome,
         .qty-11 .card-nome,
         .qty-12 .card-nome,
         .qty-many .card-nome {
             font-size: 0.9rem;
         }
-
 
         .card-preco-de {
             font-size: 1rem;
@@ -341,42 +344,37 @@
             flex-shrink: 0;
         }
 
-        /* Box de Preço Mais Impactante */
+        /* Box de Preço Azul/Amarelo */
         .card-preco-por {
-            /* Degradê no box de preço */
-            background: linear-gradient(to bottom, var(--amarelo-ouro), #ffc107);
-            border: 3px solid var(--vermelho-vivo);
-            /* Borda vermelha no preço */
-            color: var(--vermelho-vivo);
-            font-weight: 1000;
-            /* Extra bold */
+            background: linear-gradient(to bottom, var(--azul-vivo), var(--azul-escuro));
+            border: 3px solid var(--amarelo-ouro);
+            /* Borda amarela no preço */
+            color: var(--branco);
+            font-weight: 900;
             font-size: 2.4rem;
-            /* Maior */
             text-align: center;
             padding: 5px 15px;
             border-radius: 12px;
             width: 100%;
             line-height: 1;
-            /* Sombra dura para efeito pop */
-            box-shadow: 0 5px 0 #c7a000, 0 8px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 5px 0 var(--azul-escuro), 0 8px 15px rgba(0, 0, 0, 0.25);
             letter-spacing: -1.5px;
             display: flex;
             align-items: center;
             justify-content: center;
             white-space: nowrap;
             flex-shrink: 0;
-            text-shadow: 2px 2px 0px var(--branco);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
         }
 
-        /* ===== FAIXA ENDEREÇO ===== */
+        /* ===== RODAPÉ AZUL ===== */
         .faixa-endereco {
-            background: var(--vermelho-vivo);
+            background: linear-gradient(to right, var(--azul-escuro), var(--azul-vivo), var(--azul-escuro));
             color: var(--branco);
             padding: 30px 40px;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            margin-top: auto;
             border-top: 6px solid var(--amarelo-ouro);
             text-align: center;
             box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.2);
@@ -396,7 +394,7 @@
         }
 
         .rodape-sistema {
-            background: var(--vermelho-escuro);
+            background: var(--azul-escuro);
             color: rgba(255, 255, 255, 0.6);
             font-size: 0.8rem;
             padding: 12px 30px;
@@ -417,13 +415,12 @@
             @else
                 <div class="nome-loja">{{ $loja['nome'] ?? 'Seu Mercado' }}</div>
             @endif
-
-            <div class="tagline">Ofertas Imperdíveis da Semana</div>
+            <div class="tagline">Oferta de tirar o fôlego!</div>
         </div>
         <div class="header-info">
             <div>
-                <div class="header-badge">OFERTAS</div>
-                <div class="header-sub">DA SEMANA</div>
+                <div class="header-badge">OFERTA</div>
+                <div class="header-sub">ESPECIAL</div>
                 @php \Carbon\Carbon::setLocale('pt_BR'); @endphp
                 <div class="header-data">VÁLIDO ATÉ:
                     {{ \Carbon\Carbon::now()->addDays(7)->translatedFormat('d \d\e F') }}</div>
@@ -441,8 +438,8 @@
                 $linhasCopy['headline'] = trim($h[1] ?? '');
                 $linhasCopy['subtitulo'] = trim($s[1] ?? '');
             }
-            $headline = $linhasCopy['headline'] ?? 'Preço baixo de verdade é aqui!';
-            $subtitulo = $linhasCopy['subtitulo'] ?? 'Garanta as melhores ofertas para a sua família.';
+            $headline = $linhasCopy['headline'] ?? 'Economize de verdade nesta semana!';
+            $subtitulo = $linhasCopy['subtitulo'] ?? 'Preços que cabem no seu bolso, qualidade que você merece.';
         @endphp
 
         <div class="faixa-copy">
@@ -458,7 +455,7 @@
                         @if(!empty($prod['imagem_url']))
                             <img src="{{ $prod['imagem_url'] }}" alt="{{ $prod['nome'] }}">
                         @else
-                            <img src="https://placehold.co/200x200/e0e0e0/999999?text=Oferta" style="opacity:0.3">
+                            <img src="https://placehold.co/200x200/e0eeff/4477cc?text=Oferta" style="opacity:0.4">
                         @endif
                     </div>
                     <div class="tag-oferta">OFERTA</div>
@@ -467,12 +464,13 @@
                     <div class="card-preco-por">R$ {{ $prod['preco_novo'] }}</div>
                 </div>
             @empty
-                <div style="grid-column:1/-1;text-align:center;padding:60px;color:#999;font-size:1.5rem;">
+                <div style="grid-column:1/-1;text-align:center;padding:60px;color:#4477cc;font-size:1.5rem;">
                     Nenhum produto selecionado para exibir.
                 </div>
             @endforelse
         </div>
     </div>
+
     <div class="faixa-endereco">
         <strong>{{ $loja['nome'] ?? 'Seu Mercado' }}</strong>
         <div class="info-row">

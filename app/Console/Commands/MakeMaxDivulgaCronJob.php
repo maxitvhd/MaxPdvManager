@@ -164,14 +164,19 @@ class MakeMaxDivulgaCronJob extends Command
                 ];
             }
 
-            // 4. Sorteio de Tema baseado na Qtde (para variar a cada execução do cron)
+            // 4. Selecionar Tema — respeita a escolha do usuário, sorteia apenas se "auto"
             $qtd = count($produtosParaCatalogo);
             $temas = \App\Models\MaxDivulgaTheme::where('is_active', true)->get();
 
             if ($qtd === 1) {
-                $temaEscogido = $temas->where('path', 'maxdivulga.themes.destaque_unico')->first() ?? $campaign->theme;
+                // 1 produto = sempre destaque único (sem escolha)
+                $temaEscogido = $temas->where('path', 'maxdivulga.themes.destaque_unico')->first()
+                    ?? $campaign->theme;
+            } elseif (!empty($campaign->theme_id) && $campaign->theme) {
+                // Usuário escolheu um tema específico: respeitar a escolha
+                $temaEscogido = $campaign->theme;
             } else {
-                // Se múltiplos produtos, sortear entre os que não são destaque único
+                // Sem tema definido (auto): sortear entre os temas multi-produto
                 $temasMulti = $temas->where('path', '!=', 'maxdivulga.themes.destaque_unico');
                 $temaEscogido = $temasMulti->isNotEmpty() ? $temasMulti->random() : $campaign->theme;
             }
