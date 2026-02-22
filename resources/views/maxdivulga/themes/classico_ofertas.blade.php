@@ -169,51 +169,50 @@
             /* Ocultando pois não combina com o estilo vibrante */
         }
 
-        /* ===== GRID PRODUTOS — totalmente dinâmico para 1080x1920 ===== */
+        /* ===== GRID PRODUTOS — preenche toda a altura disponível ===== */
         .grid-produtos {
             display: grid;
             gap: 14px;
             padding: 14px 20px;
             background: var(--branco);
-            /* Flex grow ocupa o espaço restante entre header/copy/footer */
             flex: 1;
+            /* Ocupa todo espaço restante verticalmente */
             min-height: 0;
-            /* Alinha cards ao topo, não esticando */
-            align-content: start;
+            align-content: stretch;
+            /* Linhas se esticam para preencher o espaço */
         }
 
-        /* 1 produto: 1 coluna centralizada — produto destaque grande */
+        /* 1 produto: centralizado, produto grande */
         .grid-produtos.qty-1 {
             grid-template-columns: repeat(1, 1fr);
-            align-content: center;
+            grid-auto-rows: 1fr;
             padding: 30px 140px;
-            /* Muito espaço nas laterais para produto grande */
         }
 
-        /* 2 produtos: 2 colunas com produto grande */
+        /* 2 produtos */
         .grid-produtos.qty-2 {
             grid-template-columns: repeat(2, 1fr);
-            align-content: center;
+            grid-auto-rows: 1fr;
             padding: 30px 40px;
         }
 
-        /* 3 produtos: 3 colunas */
+        /* 3 produtos */
         .grid-produtos.qty-3 {
             grid-template-columns: repeat(3, 1fr);
-            align-content: center;
+            grid-auto-rows: 1fr;
         }
 
         /* 4 produtos: 2x2 */
         .grid-produtos.qty-4 {
             grid-template-columns: repeat(2, 1fr);
-            align-content: center;
+            grid-auto-rows: 1fr;
         }
 
         /* 5-6 produtos: 3 colunas */
         .grid-produtos.qty-5,
         .grid-produtos.qty-6 {
             grid-template-columns: repeat(3, 1fr);
-            align-content: start;
+            grid-auto-rows: 1fr;
         }
 
         /* 7-9 produtos: 3 colunas, 3 linhas */
@@ -221,27 +220,27 @@
         .grid-produtos.qty-8,
         .grid-produtos.qty-9 {
             grid-template-columns: repeat(3, 1fr);
+            grid-auto-rows: 1fr;
             gap: 10px;
             padding: 10px 16px;
-            align-content: start;
         }
 
-        /* 10-12 produtos: 4 colunas / 3 linhas */
+        /* 10-12 produtos: 4 colunas */
         .grid-produtos.qty-10,
         .grid-produtos.qty-11,
         .grid-produtos.qty-12 {
             grid-template-columns: repeat(4, 1fr);
+            grid-auto-rows: 1fr;
             gap: 8px;
             padding: 8px 12px;
-            align-content: start;
         }
 
-        /* 13+ (many): 4 colunas compactas */
+        /* 13+ compacto */
         .grid-produtos.qty-many {
             grid-template-columns: repeat(4, 1fr);
+            grid-auto-rows: 1fr;
             gap: 6px;
             padding: 6px 10px;
-            align-content: start;
         }
 
         /* ===== CARD ===== */
@@ -256,56 +255,32 @@
             align-items: center;
             padding: 14px 10px 12px;
             box-shadow: none;
+            height: 100%; /* Ocupa toda a célula do grid */
         }
 
         .card-destaque {
             background: var(--branco);
         }
 
+        /* card-topo cresce para preencher o espaço restante do card */
         .card-topo {
             width: 100%;
             background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
-            /* Alturas adaptáveis por quantidade */
-            flex: 1;
-            min-height: 80px;
+            flex: 1;        /* Estica verticalmente */
+            min-height: 60px;
+            overflow: hidden;
         }
 
-        /* Imagem maior com poucos produtos */
-        .qty-1 .card-topo {
-            min-height: 300px;
-        }
-
-        .qty-2 .card-topo {
-            min-height: 220px;
-        }
-
-        .qty-3 .card-topo {
-            min-height: 180px;
-        }
-
-        .qty-4 .card-topo {
-            min-height: 150px;
-        }
-
-        .qty-5 .card-topo,
-        .qty-6 .card-topo {
-            min-height: 130px;
-        }
-
-        .qty-7 .card-topo,
-        .qty-8 .card-topo,
-        .qty-9 .card-topo {
-            min-height: 100px;
-        }
-
-        .qty-10 .card-topo,
-        .qty-11 .card-topo,
-        .qty-12 .card-topo,
-        .qty-many .card-topo {
-            min-height: 80px;
+        /* Imagem preenche card-topo sem distorcer */
+        .card-topo img {
+            max-width: 90%;
+            max-height: 100%;
+            width: auto;
+            height: 100%;
+            object-fit: contain;
         }
 
         .card-destaque .tag-oferta {
