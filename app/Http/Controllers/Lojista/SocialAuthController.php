@@ -134,7 +134,8 @@ class SocialAuthController extends Controller
         ]);
 
         $campaign = \App\Models\MaxDivulgaCampaign::findOrFail($campaignId);
-        $account = SocialAccount::where('loja_id', auth()->user()->loja_id)
+        $loja = $this->resolverLoja();
+        $account = SocialAccount::where('loja_id', $loja->id ?? null)
             ->where('provider', $request->provider)
             ->firstOrFail();
 
@@ -177,7 +178,8 @@ class SocialAuthController extends Controller
 
     public function disconnect($provider)
     {
-        SocialAccount::where('loja_id', auth()->user()->loja_id)
+        $loja = $this->resolverLoja();
+        SocialAccount::where('loja_id', $loja->id ?? null)
             ->where('provider', $provider)
             ->delete();
 
