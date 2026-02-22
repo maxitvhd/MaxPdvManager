@@ -331,7 +331,8 @@ class MaxDivulgaController extends Controller
 
     public function show(MaxDivulgaCampaign $campaign)
     {
-        $lojaId = auth()->user()->loja_id;
+        $loja = $this->resolverLoja();
+        $lojaId = $loja->id ?? null;
         $socialAccounts = \App\Models\SocialAccount::where('loja_id', $lojaId)->get();
 
         return view('lojista.maxdivulga.show', compact('campaign', 'socialAccounts'));
@@ -526,7 +527,8 @@ class MaxDivulgaController extends Controller
      */
     public function canaisIndex()
     {
-        $lojaId = auth()->user()->loja_id;
+        $loja = $this->resolverLoja();
+        $lojaId = $loja->id ?? null;
         $socialAccounts = \App\Models\SocialAccount::where('loja_id', $lojaId)->get();
 
         return view('lojista.maxdivulga.canais.index', compact('socialAccounts'));

@@ -39,6 +39,7 @@ ssh $SSH_USER@$SSH_HOST << 'ENDSSH'
     php artisan optimize:clear
     php artisan config:cache
     php artisan view:cache
+    php artisan migrate
 
     echo "✅ Servidor atualizado!"
 ENDSSH
