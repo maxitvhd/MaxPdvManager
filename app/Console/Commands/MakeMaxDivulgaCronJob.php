@@ -222,18 +222,19 @@ class MakeMaxDivulgaCronJob extends Command
             $novaCampanha->audio_file_path = null;
             $novaCampanha->save(); // Salva para ter um ID para o CatalogRendererService
 
-            // 6. Renderizar Imagens e Áudio (compatibilidade formato Full/Audio)
+            // 6. Renderizar Imagens e Áudio (compatibilidade formato Full/Audio/Both)
             $renderService = new \App\Services\CatalogRendererService();
             $formatOriginal = $campaign->format;
             $filePath = null;
             $audioPath = null;
 
-            if ($formatOriginal === 'full') {
+            // 'full' e 'both' geram imagem + áudio simultaneamente
+            if (in_array($formatOriginal, ['full', 'both'])) {
                 $novaCampanha->format = 'image';
                 $filePath = $renderService->render($novaCampanha, $produtosParaCatalogo, $dadosLoja);
                 $novaCampanha->format = 'audio';
                 $audioPath = $renderService->render($novaCampanha, $produtosParaCatalogo, $dadosLoja);
-                $novaCampanha->format = 'full';
+                $novaCampanha->format = $formatOriginal; // restaura o valor original
             } else {
                 $pathGerado = $renderService->render($novaCampanha, $produtosParaCatalogo, $dadosLoja);
                 if ($formatOriginal === 'audio') {
@@ -243,7 +244,7 @@ class MakeMaxDivulgaCronJob extends Command
                 }
             }
 
-            if (!$filePath && $formatOriginal !== 'audio')
+            if (!$filePath && !in_array($formatOriginal, ['audio']))
                 throw new \Exception("Falha na renderização da imagem.");
 
             // Atualiza e Finaliza a Campanha Filha Gerada
