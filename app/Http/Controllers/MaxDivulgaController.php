@@ -829,22 +829,16 @@ class MaxDivulgaController extends Controller
         $campaign = (object) ['id' => 'preview', 'copy' => null];
 
         try {
-            // Renderiza o código Blade em memória usando um arquivo temporário
-            $tmpFile = tempnam(sys_get_temp_dir(), 'blade_') . '.blade.php';
-            file_put_contents($tmpFile, $code);
-
-            // Cria uma view a partir de string usando eval do Blade engine
-            $blade = app('blade.compiler');
-            $compiled = $blade->compileString($code);
-
-            $html = (function () use ($compiled, $produtos, $dadosLoja, $campaign) {
-                extract(['produtos' => $produtos, 'loja' => $dadosLoja, 'campaign' => $campaign, 'copyTexto' => null]);
-                ob_start();
-                eval ('?>' . $compiled);
-                return ob_get_clean();
-            })();
-
-            @unlink($tmpFile);
+            // Renderiza usando Blade::render() (sem eval) para garantir $__env
+            $html = \Blade::render($code, [
+                'produtos' => $produtos,
+                'loja' => $dadosLoja,
+                'dadosLoja' => $dadosLoja,
+                'campaign' => $campaign,
+                'copyTexto' => null,
+                'headline' => '🤖 Headline gerado pela IA',
+                'subtitulo' => '🤖 Subtítulo gerado pela IA',
+            ]);
         } catch (\Throwable $e) {
             return response(
                 '<pre style="font:12px monospace;padding:20px;color:red;white-space:pre-wrap">'
@@ -853,6 +847,7 @@ class MaxDivulgaController extends Controller
         }
 
         return response($html)->header('Content-Type', 'text/html; charset=UTF-8');
+
     }
 
     /**
