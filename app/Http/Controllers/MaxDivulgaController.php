@@ -94,7 +94,7 @@ class MaxDivulgaController extends Controller
             'channels' => $request->input('channels', []),
             'product_selection_rule' => [
                 'type' => $request->input('product_selection_rule.type', 'best_sellers'),
-                'limit' => $qty,
+                'quantity' => $qty,
                 'category' => $request->input('product_selection_rule.category', null),
                 'discount_percentage' => floatval($request->input('discount_rules.percentage', 0))
             ],

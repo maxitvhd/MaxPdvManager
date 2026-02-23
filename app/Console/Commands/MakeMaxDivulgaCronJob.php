@@ -90,7 +90,7 @@ class MakeMaxDivulgaCronJob extends Command
             // 2. Refazer seleção de produtos se for regra dinâmica (best_sellers, etc)
             $rule = $campaign->product_selection_rule ?: [];
             $ruleType = $rule['type'] ?? 'manual';
-            $qty = intval($rule['quantity'] ?? 10);
+            $qty = intval($rule['quantity'] ?? $rule['limit'] ?? 10);
 
             $produtos = collect();
 
