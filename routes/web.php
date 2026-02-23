@@ -221,14 +221,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{campaign}/download', [MaxDivulgaController::class, 'download'])->name('lojista.maxdivulga.download');
         Route::get('/api/produtos', [MaxDivulgaController::class, 'apiProducts'])->name('lojista.maxdivulga.api_products');
 
-        // Theme Studio — Previewer & Editor
+        // Theme Studio (todos os lojistas podem pré-visualizar)
         Route::get('/themes', [MaxDivulgaController::class, 'themeStudio'])->name('lojista.maxdivulga.themes');
         Route::get('/themes/preview', [MaxDivulgaController::class, 'themePreview'])->name('lojista.maxdivulga.theme_preview');
-        Route::post('/themes/render-code', [MaxDivulgaController::class, 'themeRenderCode'])->name('lojista.maxdivulga.theme_render_code');
-        Route::get('/themes/{theme}/editor', [MaxDivulgaController::class, 'themeEditor'])->name('lojista.maxdivulga.theme_editor');
-        Route::post('/themes/{theme}/save', [MaxDivulgaController::class, 'themeEditorSave'])->name('lojista.maxdivulga.theme_editor_save');
-        Route::get('/themes/{theme}/builder', [MaxDivulgaController::class, 'themeBuilder'])->name('lojista.maxdivulga.theme_builder');
-        Route::post('/themes/{theme}/builder-save', [MaxDivulgaController::class, 'themeBuilderSave'])->name('lojista.maxdivulga.theme_builder_save');
+
+        // Editor & Builder — somente admin e super-admin
+        Route::middleware(['role:admin|super-admin'])->group(function () {
+            Route::post('/themes/render-code', [MaxDivulgaController::class, 'themeRenderCode'])->name('lojista.maxdivulga.theme_render_code');
+            Route::get('/themes/{theme}/editor', [MaxDivulgaController::class, 'themeEditor'])->name('lojista.maxdivulga.theme_editor');
+            Route::post('/themes/{theme}/save', [MaxDivulgaController::class, 'themeEditorSave'])->name('lojista.maxdivulga.theme_editor_save');
+            Route::get('/themes/{theme}/builder', [MaxDivulgaController::class, 'themeBuilder'])->name('lojista.maxdivulga.theme_builder');
+            Route::post('/themes/{theme}/builder-save', [MaxDivulgaController::class, 'themeBuilderSave'])->name('lojista.maxdivulga.theme_builder_save');
+        });
 
 
         // Canais Sociais

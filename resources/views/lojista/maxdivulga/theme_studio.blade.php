@@ -34,17 +34,21 @@
                             @endforeach
                         </select>
 
-                        {{-- Link para o editor --}}
-                        <div x-show="selectedTheme" class="mt-2">
-                            <template x-for="theme in themesList" :key="theme.id">
-                                <div x-show="theme.id == selectedTheme">
-                                    <a :href="'/lojista/maxdivulga/themes/' + selectedTheme + '/editor'"
-                                        class="btn btn-xs btn-outline-warning mb-0 w-100" target="_blank">
-                                        <i class="fas fa-code me-1"></i> Editar código do tema
-                                    </a>
-                                </div>
-                            </template>
+                        {{-- Link para o editor (somente admin) --}}
+                        @hasanyrole('admin|super-admin')
+                        <div x-show="selectedTheme" class="mt-2 d-flex flex-column gap-1">
+                            <a :href="'/lojista/maxdivulga/themes/' + selectedTheme + '/editor'"
+                                class="btn btn-xs btn-outline-warning mb-0 w-100" target="_blank">
+                                <i class="fas fa-code me-1"></i> Editar código
+                            </a>
+                            <a :href="'/lojista/maxdivulga/themes/' + selectedTheme + '/builder'"
+                                class="btn btn-xs btn-outline-purple mb-0 w-100" target="_blank"
+                                style="background:rgba(124,58,237,.1);border-color:#7c3aed;color:#7c3aed;">
+                                <i class="fas fa-magic me-1"></i> Builder Visual
+                            </a>
                         </div>
+                        @endhasanyrole
+
                     </div>
                 </div>
 

@@ -928,36 +928,36 @@ PHP;
         $html = preg_replace('/<([^>]+)data-loja="nome"([^>]*)>.*?<\/\1>/s', "<$1data-loja=\"nome\"$2>{{ \$loja['nome'] ?? 'Seu Mercado' }}</$1>", $html);
         $html = str_replace('data-loja="nome"', '', $html);
 
-        // Substituições simples
+        // Substituições: [[PLACEHOLDER]] → Blade (não conflita com {{ }} do Laravel)
         $replacements = [
             // IA copy
-            '{{AI_HEADLINE}}' => "{{ \$headline ?? 'Ofertas da Semana!' }}",
-            '{{AI_SUBTITLE}}' => "{{ \$subtitulo ?? 'Preços imbatíveis para você.' }}",
+            '[[AI_HEADLINE]]' => "{{ \$headline ?? 'Ofertas da Semana!' }}",
+            '[[AI_SUBTITLE]]' => "{{ \$subtitulo ?? 'Preços imbatíveis para você.' }}",
             // Loja
-            '{{LOJA_NOME}}' => "{{ \$loja['nome'] ?? 'Seu Mercado' }}",
-            '{{LOJA_FONE}}' => "{{ \$loja['telefone'] ?? '' }}",
-            '{{LOJA_ENDE}}' => "{{ \$loja['endereco'] ?? '' }}",
-            '{{LOJA_CNPJ}}' => "@if(!empty(\$loja['cnpj'])) CNPJ: {{ \$loja['cnpj'] }} @endif",
-            '{{LOJA_CIDADE}}' => "{{ \$loja['cidade'] ?? '' }}",
-            '{{DATA_VALIDADE}}' => "{{ \\Carbon\\Carbon::now()->addDays(7)->translatedFormat('d \\d\\e F') }}",
-            '{{CAMPAIGN_ID}}' => "{{ \$campaign->id ?? '000' }}",
+            '[[LOJA_NOME]]' => "{{ \$loja['nome'] ?? 'Seu Mercado' }}",
+            '[[LOJA_FONE]]' => "{{ \$loja['telefone'] ?? '' }}",
+            '[[LOJA_ENDE]]' => "{{ \$loja['endereco'] ?? '' }}",
+            '[[LOJA_CNPJ]]' => "@if(!empty(\$loja['cnpj'])) CNPJ: {{ \$loja['cnpj'] }} @endif",
+            '[[LOJA_CIDADE]]' => "{{ \$loja['cidade'] ?? '' }}",
+            '[[DATA_VALIDADE]]' => "{{ \\Carbon\\Carbon::now()->addDays(7)->translatedFormat('d \\d\\e F') }}",
+            '[[CAMPAIGN_ID]]' => "{{ \$campaign->id ?? '000' }}",
             // Loop de produtos
-            '{{PRODUCT_LOOP_START}}' => "@forelse(\$produtos as \$prod)",
-            '{{PRODUCT_LOOP_END}}' => "@empty\n<div style=\"grid-column:1/-1;text-align:center;padding:30px;color:#999\">Nenhum produto.</div>\n@endforelse",
+            '[[PRODUCT_LOOP_START]]' => "@forelse(\$produtos as \$prod)",
+            '[[PRODUCT_LOOP_END]]' => "@empty\n<div style=\"grid-column:1/-1;text-align:center;padding:30px;color:#999\">Nenhum produto.</div>\n@endforelse",
             // Dados do produto
-            '{{PROD_NOME}}' => "{{ \$prod['nome'] }}",
-            '{{PROD_PRECO}}' => "{{ \$prod['preco_novo'] }}",
-            '{{PROD_PRECO_DE}}' => "{{ \$prod['preco_original'] }}",
-            '{{PROD_IMAGEM}}' => "@if(!empty(\$prod['imagem_url']))<img src=\"{{ \$prod['imagem_url'] }}\" alt=\"{{ \$prod['nome'] }}\">@else<img src=\"https://placehold.co/200x200/e0e0e0/999?text=Produto\" style=\"opacity:.3\">@endif",
+            '[[PROD_NOME]]' => "{{ \$prod['nome'] }}",
+            '[[PROD_PRECO]]' => "{{ \$prod['preco_novo'] }}",
+            '[[PROD_PRECO_DE]]' => "{{ \$prod['preco_original'] }}",
+            '[[PROD_IMAGEM]]' => "@if(!empty(\$prod['imagem_url']))<img src=\"{{ \$prod['imagem_url'] }}\" alt=\"{{ \$prod['nome'] }}\">@else<img src=\"https://placehold.co/200x200/e0e0e0/999?text=Produto\" style=\"opacity:.3\">@endif",
             // Grid dinâmico
-            '{{GRID_COLS}}' => "{{ \$cols }}",
-            '{{ROW_H}}' => "{{ \$rowH }}",
-            '{{PAD}}' => "{{ \$pad }}",
-            '{{IMG_MAX_H}}' => "{{ \$imgMaxH }}",
-            '{{NOME_FS}}' => "{{ \$nomeFs }}",
-            '{{PRECO_FS}}' => "{{ \$precoFs }}",
+            '[[GRID_COLS]]' => "{{ \$cols }}",
+            '[[ROW_H]]' => "{{ \$rowH }}",
+            '[[PAD]]' => "{{ \$pad }}",
+            '[[IMG_MAX_H]]' => "{{ \$imgMaxH }}",
+            '[[NOME_FS]]' => "{{ \$nomeFs }}",
+            '[[PRECO_FS]]' => "{{ \$precoFs }}",
             // Logo com fallback
-            '{{LOJA_LOGO}}' => "@if(!empty(\$loja['logo_url']))<img src=\"{{ \$loja['logo_url'] }}\" alt=\"{{ \$loja['nome'] }}\" style=\"max-width:100%;max-height:160px;object-fit:contain\">@else<div class=\"nome-loja\">{{ \$loja['nome'] ?? 'Seu Mercado' }}</div>@endif",
+            '[[LOJA_LOGO]]' => "@if(!empty(\$loja['logo_url']))<img src=\"{{ \$loja['logo_url'] }}\" alt=\"{{ \$loja['nome'] }}\" style=\"max-width:100%;max-height:160px;object-fit:contain\">@else<div class=\"nome-loja\">{{ \$loja['nome'] ?? 'Seu Mercado' }}</div>@endif",
         ];
 
         foreach ($replacements as $placeholder => $blade) {
