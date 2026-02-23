@@ -9,7 +9,8 @@
 
     @php
         $qty = count($produtos);
-        // Define colunas
+
+        // Número de colunas
         if ($qty <= 2) {
             $cols = $qty;
         } elseif ($qty <= 4) {
@@ -22,29 +23,35 @@
 
         $rows = ceil($qty / $cols);
 
-        // Tamanho do header e copy conforme quantidade
-        $headerH = ($qty > 12) ? 180 : ($qty > 8 ? 230 : 280);
-        $copyH = ($qty > 12) ? 70 : ($qty > 6 ? 85 : 105);
-        $footerH = ($qty > 12) ? 130 : 165;
-        $rodapeH = 42;
+        // Alturas fixas de seções (conservadoras para não cortar o logo)
+        $headerH = 260; // px — fixo para todos os casos
+        $copyH = 90;  // px
+        $footerH = 150; // px
+        $rodapeH = 44;  // px
 
-        // Área disponível para o grid
+        // Gap e padding FIXOS — descontados do cálculo
+        $gapPx = 10; // px entre cards
+        $padTop = 14; // padding vertical do grid
+        $padSide = 18; // padding horizontal do grid
+
+        // Altura disponível para as linhas (descontando tudo)
         $gridH = 1920 - $headerH - $copyH - $footerH - $rodapeH;
-        $rowH = floor($gridH / $rows); // px por linha
+        $rowsOnlyH = $gridH - ($rows - 1) * $gapPx - 2 * $padTop;
+        $rowH = max(80, floor($rowsOnlyH / $rows));
 
-        // Escala de fontes baseada na altura disponível por card
-        $cardH = $rowH; // px
-        $tagFs = max(0.58, min(0.85, $cardH / 280));
-        $nomeFs = max(0.70, min(1.15, $cardH / 220));
-        $deFs = max(0.62, min(0.95, $cardH / 280));
-        $precoFs = max(1.10, min(2.50, $cardH / 130));
-        $imgMaxH = max(55, min(160, intval($cardH * 0.42)));
-        $pad = max(7, min(16, intval($cardH * 0.055)));
+        // Escalas de fonte proporcionais à altura das linhas
+        $tagFs = round(max(0.58, min(0.92, $rowH / 275)) * 10) / 10;
+        $nomeFs = round(max(0.72, min(1.25, $rowH / 200)) * 10) / 10;
+        $deFs = round(max(0.62, min(0.98, $rowH / 275)) * 10) / 10;
+        $precoFs = round(max(1.10, min(2.70, $rowH / 120)) * 10) / 10;
+        $imgMaxH = max(50, min(170, intval($rowH * 0.45)));
+        $pad = max(7, min(18, intval($rowH * 0.058)));
 
-        $headerFontB = ($qty > 12) ? '3.8rem' : ($qty > 8 ? '4.8rem' : '5.5rem');
-        $headerFontS = ($qty > 12) ? '2.2rem' : ($qty > 8 ? '2.7rem' : '3rem');
-        $copyFontH = ($qty > 12) ? '1.4rem' : '2rem';
-        $copyFontS = ($qty > 12) ? '0.90rem' : '1.2rem';
+        // Fontes do header (reduzidas para qty alta)
+        $hBadgeFs = ($qty > 12) ? '4rem' : '5.5rem';
+        $hSubFs = ($qty > 12) ? '2.5rem' : '3rem';
+        $copyHFs = ($qty > 12) ? '1.5rem' : '2.2rem';
+        $copySFs = ($qty > 12) ? '0.95rem' : '1.3rem';
     @endphp
 
     <style>
@@ -55,10 +62,11 @@
         }
 
         :root {
-            --azul-vivo: #0057B8;
-            --azul-escuro: #003A7A;
-            --azul-claro: #1A7FE8;
-            --amarelo: #FFD700;
+            --azul: #0057B8;
+            --azulE: #003A7A;
+            --azulC: #1A7FE8;
+            --amar: #FFD700;
+            --amarE: #FFC107;
             --branco: #ffffff;
             --cinza: #1a1a2e;
         }
@@ -66,7 +74,7 @@
         html,
         body {
             font-family: 'Roboto Condensed', Arial, sans-serif;
-            background: var(--azul-vivo);
+            background: var(--azul);
             width: 1080px;
             height: 1920px;
             overflow: hidden;
@@ -75,80 +83,87 @@
             color: var(--cinza);
         }
 
-        /* ──────── HEADER ──────── */
+        /* ──── HEADER (altura fixa + overflow hidden) ──── */
         .header {
             height:
                 {{ $headerH }}
                 px;
-            min-height:
+            max-height:
                 {{ $headerH }}
                 px;
             flex-shrink: 0;
-            background: linear-gradient(135deg, var(--azul-escuro) 0%, var(--azul-vivo) 60%, var(--azul-claro) 100%);
-            color: var(--amarelo);
+            background: linear-gradient(135deg, var(--azulE) 0%, var(--azul) 60%, var(--azulC) 100%);
+            color: var(--amar);
             display: flex;
             align-items: center;
-            padding: 20px 40px;
-            border-bottom: 6px solid var(--amarelo);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, .3);
-            position: relative;
+            padding: 16px 38px;
+            border-bottom: 6px solid var(--amar);
+            box-shadow: 0 5px 18px rgba(0, 0, 0, .3);
             overflow: hidden;
+            position: relative;
         }
 
         .header::before {
             content: '';
             position: absolute;
-            top: -60px;
-            right: -60px;
-            width: 300px;
-            height: 300px;
+            top: -50px;
+            right: -50px;
+            width: 260px;
+            height: 260px;
             border-radius: 50%;
-            background: rgba(255, 215, 0, .08);
+            background: rgba(255, 215, 0, .07);
         }
 
         .header-logo {
-            flex: 1;
+            flex: 0 0 auto;
+            width: 310px;
+            max-width: 310px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            position: relative;
-            z-index: 1;
+            justify-content: center;
+            overflow: hidden;
+            /* garante que o logo não vaze */
+            padding-right: 20px;
         }
 
         .header-logo img {
-            max-height:
-                {{ intval($headerH * 0.67) }}
-                px;
             max-width: 100%;
+            max-height: 160px;
+            /* limite absoluto */
+            width: auto;
+            height: auto;
             object-fit: contain;
-            filter: drop-shadow(2px 2px 6px rgba(0, 0, 0, .4));
+            filter: drop-shadow(2px 2px 5px rgba(0, 0, 0, .4));
+            display: block;
         }
 
         .header-logo .nome-loja {
-            background: var(--azul-escuro);
-            padding: 10px 24px;
-            border-radius: 50px;
-            font-size: 1.7rem;
+            background: var(--azulE);
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 1.5rem;
             font-weight: 900;
+            text-align: center;
             text-transform: uppercase;
             color: var(--branco);
-            border: 3px solid var(--amarelo);
-            box-shadow: 5px 5px 15px rgba(0, 0, 0, .4);
+            border: 3px solid var(--amar);
+            box-shadow: 4px 4px 12px rgba(0, 0, 0, .4);
         }
 
         .tagline {
-            font-size: 1rem;
-            color: var(--amarelo);
-            margin-top: 8px;
+            font-size: 0.85rem;
+            color: var(--amar);
+            margin-top: 6px;
             text-transform: uppercase;
             font-weight: 700;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
+            text-align: center;
         }
 
         .header-info {
-            flex: 2;
-            padding-left: 20px;
+            flex: 1;
+            padding-left: 18px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -160,22 +175,22 @@
             color: var(--branco);
             font-weight: 900;
             font-size:
-                {{ $headerFontB }}
+                {{ $hBadgeFs }}
             ;
-            line-height: .9;
+            line-height: .88;
             text-transform: uppercase;
-            text-shadow: 3px 3px 0 var(--azul-escuro), 6px 6px 0 rgba(0, 0, 0, .3), 8px 8px 12px rgba(0, 0, 0, .4);
+            text-shadow: 2px 2px 0 var(--azulE), 5px 5px 0 rgba(0, 0, 0, .3), 7px 7px 10px rgba(0, 0, 0, .4);
             margin-bottom: 4px;
         }
 
         .header-sub {
             font-size:
-                {{ $headerFontS }}
+                {{ $hSubFs }}
             ;
             font-weight: 900;
-            color: var(--amarelo);
+            color: var(--amar);
             text-transform: uppercase;
-            text-shadow: 3px 3px 0 var(--azul-escuro), 5px 5px 8px rgba(0, 0, 0, .4);
+            text-shadow: 2px 2px 0 var(--azulE), 4px 4px 8px rgba(0, 0, 0, .4);
             margin-bottom: 10px;
         }
 
@@ -185,34 +200,35 @@
             font-weight: 700;
             background: rgba(0, 0, 0, .3);
             padding: 7px 20px;
-            border-radius: 50px;
-            border: 2px solid var(--amarelo);
+            border-radius: 40px;
+            border: 2px solid var(--amar);
             display: inline-block;
         }
 
-        /* ──────── FAIXA COPY ──────── */
+        /* ──── FAIXA COPY ──── */
         .faixa-copy {
             height:
                 {{ $copyH }}
                 px;
-            min-height:
+            max-height:
                 {{ $copyH }}
                 px;
             flex-shrink: 0;
-            background: linear-gradient(to bottom, var(--amarelo), #ffca00);
-            color: var(--azul-escuro);
+            background: linear-gradient(to bottom, var(--amar), #ffca00);
+            color: var(--azulE);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
             padding: 0 30px;
-            border-bottom: 3px solid #ffc107;
+            border-bottom: 3px solid var(--amarE);
+            overflow: hidden;
         }
 
         .faixa-copy .headline {
             font-size:
-                {{ $copyFontH }}
+                {{ $copyHFs }}
             ;
             font-weight: 900;
             text-transform: uppercase;
@@ -221,50 +237,52 @@
 
         .faixa-copy .subtitulo {
             font-size:
-                {{ $copyFontS }}
+                {{ $copySFs }}
             ;
             font-weight: 800;
-            margin-top: 4px;
+            margin-top: 3px;
         }
 
-        /* ──────── WRAPPER BRANCO ──────── */
+        /* ──── WRAPPER ──── */
         .main-content-wrapper {
             background: #EFF4FF;
-            margin: 0 22px;
+            margin: 0 20px;
+            flex: 1;
+            min-height: 0;
+            /* crucial para flex não vazar */
             display: flex;
             flex-direction: column;
-            flex: 1;
             border-radius: 18px 18px 0 0;
             overflow: hidden;
         }
 
-        /* ──────── GRID ──────── */
+        /* ──── GRID ──── */
         .grid-produtos {
             flex: 1;
+            min-height: 0;
+            /* crucial */
             display: grid;
             grid-template-columns: repeat({{ $cols }}, 1fr);
             grid-auto-rows:
                 {{ $rowH }}
                 px;
             gap:
-                {{ max(6, intval($rowH * 0.03)) }}
-                px
-                {{ max(6, intval($rowH * 0.03)) }}
+                {{ $gapPx }}
                 px;
             padding:
-                {{ max(6, intval($rowH * 0.04)) }}
+                {{ $padTop }}
                 px
-                {{ max(8, 20 - $cols) }}
+                {{ $padSide }}
                 px;
             align-content: start;
         }
 
-        /* ──────── CARD ──────── */
+        /* ──── CARD ──── */
         .card {
             background: var(--branco);
             border:
-                {{ max(2, intval($rowH / 90)) }}
-                px solid var(--azul-vivo);
+                {{ max(2, intval($rowH / 95)) }}
+                px solid var(--azul);
             border-radius:
                 {{ max(8, intval($rowH / 28)) }}
                 px;
@@ -276,24 +294,24 @@
             padding:
                 {{ $pad }}
                 px;
-            box-shadow: 0 4px 14px rgba(0, 87, 184, .12);
-            height: 100%;
+            box-shadow: 0 5px 14px rgba(0, 87, 184, .12);
         }
 
+        /* Tag no canto — dentro do card, sem sair */
         .tag-oferta {
             position: absolute;
             top: 0;
             right: 0;
-            background: linear-gradient(135deg, var(--azul-vivo), var(--azul-escuro));
+            background: linear-gradient(135deg, var(--azul), var(--azulE));
             color: var(--branco);
             font-size:
-                {{ round($tagFs * 100) / 100 }}
+                {{ $tagFs }}
                 rem;
             font-weight: 900;
             padding:
-                {{ max(3, intval($pad * 0.4)) }}
+                {{ max(3, intval($pad * .38)) }}
                 px
-                {{ max(6, intval($pad * 0.9)) }}
+                {{ max(7, intval($pad * .9)) }}
                 px;
             text-transform: uppercase;
             border-radius: 0
@@ -304,6 +322,7 @@
             z-index: 2;
         }
 
+        /* Área da imagem */
         .card-topo {
             width: 100%;
             flex: 1;
@@ -312,7 +331,7 @@
             justify-content: center;
             overflow: hidden;
             padding:
-                {{ max(3, intval($pad * 0.5)) }}
+                {{ max(3, intval($pad * .45)) }}
                 px;
         }
 
@@ -327,16 +346,17 @@
             filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .1));
         }
 
+        /* Nome */
         .card-nome {
             font-size:
-                {{ round($nomeFs * 100) / 100 }}
+                {{ $nomeFs }}
                 rem;
             font-weight: 800;
             color: var(--cinza);
             text-align: center;
             line-height: 1.05;
             margin-bottom:
-                {{ max(2, intval($pad * 0.35)) }}
+                {{ max(2, intval($pad * .32)) }}
                 px;
             text-transform: uppercase;
             flex-shrink: 0;
@@ -346,65 +366,68 @@
             -webkit-box-orient: vertical;
         }
 
+        /* Preço de */
         .card-preco-de {
             font-size:
-                {{ round($deFs * 100) / 100 }}
+                {{ $deFs }}
                 rem;
             color: #888;
             text-decoration: line-through;
             margin-bottom:
-                {{ max(2, intval($pad * 0.3)) }}
+                {{ max(2, intval($pad * .28)) }}
                 px;
             font-weight: 600;
             flex-shrink: 0;
         }
 
+        /* Preço por */
         .card-preco-por {
-            background: linear-gradient(to bottom, var(--azul-vivo), var(--azul-escuro));
+            background: linear-gradient(to bottom, var(--azul), var(--azulE));
             border:
-                {{ max(2, intval($rowH / 90)) }}
-                px solid var(--amarelo);
+                {{ max(2, intval($rowH / 95)) }}
+                px solid var(--amar);
             color: var(--branco);
             font-weight: 900;
             font-size:
-                {{ round($precoFs * 100) / 100 }}
+                {{ $precoFs }}
                 rem;
             text-align: center;
             padding:
-                {{ max(3, intval($pad * 0.45)) }}
+                {{ max(3, intval($pad * .42)) }}
                 px
-                {{ max(5, intval($pad * 0.7)) }}
+                {{ max(5, intval($pad * .72)) }}
                 px;
             border-radius:
                 {{ max(6, intval($rowH / 36)) }}
                 px;
             width: 100%;
             line-height: 1;
-            box-shadow: 0 3px 0 var(--azul-escuro), 0 5px 10px rgba(0, 0, 0, .18);
+            box-shadow: 0 3px 0 var(--azulE), 0 5px 10px rgba(0, 0, 0, .18);
             letter-spacing: -1px;
             white-space: nowrap;
             flex-shrink: 0;
         }
 
-        /* ──────── RODAPÉ ──────── */
+        /* ──── RODAPÉ ──── */
         .faixa-endereco {
             height:
                 {{ $footerH }}
                 px;
-            min-height:
+            max-height:
                 {{ $footerH }}
                 px;
             flex-shrink: 0;
-            background: linear-gradient(to right, var(--azul-escuro), var(--azul-vivo), var(--azul-escuro));
+            background: linear-gradient(to right, var(--azulE), var(--azul), var(--azulE));
             color: var(--branco);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             gap: 6px;
-            border-top: 5px solid var(--amarelo);
+            border-top: 5px solid var(--amar);
             text-align: center;
             padding: 0 35px;
+            overflow: hidden;
         }
 
         .faixa-endereco strong {
@@ -426,9 +449,9 @@
                 {{ $rodapeH }}
                 px;
             flex-shrink: 0;
-            background: var(--azul-escuro);
+            background: var(--azulE);
             color: rgba(255, 255, 255, .6);
-            font-size: .75rem;
+            font-size: .76rem;
             padding: 0 28px;
             display: flex;
             justify-content: space-between;
@@ -469,7 +492,7 @@
                 $linhasCopy['subtitulo'] = trim($s[1] ?? '');
             }
             $headline = $linhasCopy['headline'] ?? 'Economize de verdade nesta semana!';
-            $subtitulo = $linhasCopy['subtitulo'] ?? 'Preços que cabem no seu bolso, qualidade que você merece.';
+            $subtitulo = $linhasCopy['subtitulo'] ?? 'Preços que cabem no seu bolso.';
         @endphp
 
         <div class="faixa-copy">
@@ -485,7 +508,7 @@
                         @if(!empty($prod['imagem_url']))
                             <img src="{{ $prod['imagem_url'] }}" alt="{{ $prod['nome'] }}">
                         @else
-                            <img src="https://placehold.co/200x200/e0eeff/4477cc?text=Produto" style="opacity:.35">
+                            <img src="https://placehold.co/200x200/e0eeff/4477cc?text=Produto" style="opacity:.3">
                         @endif
                     </div>
                     <div class="card-nome">{{ $prod['nome'] }}</div>
@@ -493,8 +516,8 @@
                     <div class="card-preco-por">R$ {{ $prod['preco_novo'] }}</div>
                 </div>
             @empty
-                <div style="grid-column:1/-1;text-align:center;padding:60px;color:#4477cc;font-size:1.5rem;">
-                    Nenhum produto selecionado para exibir.
+                <div style="grid-column:1/-1;text-align:center;padding:40px;color:#4477cc;font-size:1.4rem;">
+                    Nenhum produto para exibir.
                 </div>
             @endforelse
         </div>
@@ -506,7 +529,7 @@
             📍 {{ $loja['endereco'] ?? 'Endereço da Loja' }} | 📞 {{ $loja['telefone'] ?? '(00) 0000-0000' }}
         </div>
         @if(!empty($loja['cnpj']))
-            <div style="opacity:.8;font-size:.95rem;">CNPJ: {{ $loja['cnpj'] }}</div>
+            <div style="opacity:.8;font-size:.9rem;">CNPJ: {{ $loja['cnpj'] }}</div>
         @endif
     </div>
 
