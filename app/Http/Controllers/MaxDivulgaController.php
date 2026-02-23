@@ -620,7 +620,7 @@ class MaxDivulgaController extends Controller
      */
     public function themeStudio()
     {
-        $loja   = $this->resolverLoja();
+        $loja = $this->resolverLoja();
         $themes = MaxDivulgaTheme::where('is_active', true)->get();
         $produtos = $loja
             ? Produto::where('loja_id', $loja->id)->orderBy('nome')->get()
@@ -634,10 +634,10 @@ class MaxDivulgaController extends Controller
      */
     public function themePreview(Request $request)
     {
-        $themeId    = $request->get('theme_id');
+        $themeId = $request->get('theme_id');
         $productIds = $request->get('products', []);
-        $qty        = max(1, intval($request->get('qty', 10)));
-        $discount   = floatval($request->get('discount', 0));
+        $qty = max(1, intval($request->get('qty', 10)));
+        $discount = floatval($request->get('discount', 0));
 
         $theme = MaxDivulgaTheme::find($themeId);
         if (!$theme) {
@@ -676,30 +676,31 @@ class MaxDivulgaController extends Controller
             }
 
             $produtos[] = [
-                'nome'           => $prod->nome,
+                'nome' => $prod->nome,
                 'preco_original' => number_format($preco, 2, ',', '.'),
-                'preco_novo'     => number_format($precoNovo, 2, ',', '.'),
-                'codigo_barra'   => $codigoBarra,
-                'imagem_url'     => $imagemUrl,
+                'preco_novo' => number_format($precoNovo, 2, ',', '.'),
+                'codigo_barra' => $codigoBarra,
+                'imagem_url' => $imagemUrl,
             ];
         }
 
         // Dados da loja
         $logoPath = storage_path("app/public/lojas/{$loja->codigo}/logo/logo.png");
-        $logoUrl  = file_exists($logoPath) ? url("storage/lojas/{$loja->codigo}/logo/logo.png") : null;
+        $logoUrl = file_exists($logoPath) ? url("storage/lojas/{$loja->codigo}/logo/logo.png") : null;
         if (!$logoUrl) {
             $logoPathJpg = storage_path("app/public/lojas/{$loja->codigo}/logo/logo.jpg");
-            if (file_exists($logoPathJpg)) $logoUrl = url("storage/lojas/{$loja->codigo}/logo/logo.jpg");
+            if (file_exists($logoPathJpg))
+                $logoUrl = url("storage/lojas/{$loja->codigo}/logo/logo.jpg");
         }
         $dadosLoja = [
-            'nome'         => $loja->nome ?? 'Seu Mercado',
-            'telefone'     => $loja->telefone ?? '(00) 0000-0000',
-            'endereco'     => trim(($loja->endereco ?? '') . ', ' . ($loja->bairro ?? '')),
-            'cidade'       => ($loja->cidade ?? '') . '/' . ($loja->estado ?? ''),
-            'cep'          => $loja->cep ?? '',
-            'cnpj'         => $loja->cnpj ?? '',
-            'codigo'       => $loja->codigo ?? '',
-            'logo_url'     => $logoUrl,
+            'nome' => $loja->nome ?? 'Seu Mercado',
+            'telefone' => $loja->telefone ?? '(00) 0000-0000',
+            'endereco' => trim(($loja->endereco ?? '') . ', ' . ($loja->bairro ?? '')),
+            'cidade' => ($loja->cidade ?? '') . '/' . ($loja->estado ?? ''),
+            'cep' => $loja->cep ?? '',
+            'cnpj' => $loja->cnpj ?? '',
+            'codigo' => $loja->codigo ?? '',
+            'logo_url' => $logoUrl,
         ];
 
         // Campanha fictícia para o template
@@ -707,10 +708,10 @@ class MaxDivulgaController extends Controller
 
         try {
             $html = view($theme->path, [
-                'produtos'   => $produtos,
-                'loja'       => $dadosLoja,
-                'campaign'   => $campaign,
-                'copyTexto'  => null,
+                'produtos' => $produtos,
+                'loja' => $dadosLoja,
+                'campaign' => $campaign,
+                'copyTexto' => null,
             ])->render();
         } catch (\Throwable $e) {
             return response('<pre style="font-family:monospace;padding:30px;color:red">Erro ao renderizar tema:<br>' . htmlspecialchars($e->getMessage()) . '</pre>', 500);
@@ -757,9 +758,230 @@ class MaxDivulgaController extends Controller
         file_put_contents($viewPath, $code);
 
         // Limpa cache de views
-        try { \Artisan::call('view:clear'); } catch (\Throwable $e) {}
+        try {
+            \Artisan::call('view:clear');
+        } catch (\Throwable $e) {
+        }
 
         return response()->json(['success' => true, 'message' => 'Tema salvo com sucesso!']);
     }
+
+    /**
+     * Renderiza código Blade bruto para o live preview do editor
+     */
+    public function themeRenderCode(Request $request)
+    {
+        $code = $request->input('code', '');
+        $themeId = $request->input('theme_id');
+        $qty = max(1, intval($request->input('qty', 6)));
+
+        if (empty(trim($code))) {
+            return response('<p style="font:14px sans-serif;color:#999;padding:30px">Código vazio</p>');
+        }
+
+        $loja = $this->resolverLoja();
+        if (!$loja) {
+            return response('<p style="font:14px sans-serif;color:red;padding:30px">Loja não encontrada</p>', 404);
+        }
+
+        // Produtos de amostra
+        $rawProdutos = Produto::where('loja_id', $loja->id)->limit($qty)->get();
+        $produtos = [];
+        foreach ($rawProdutos as $prod) {
+            $preco = floatval($prod->preco);
+            $codigoBarra = trim($prod->codigo_barra ?? '');
+            $imagemUrl = null;
+            foreach (['.jpg', '.jpeg', '.png', '.webp'] as $ext) {
+                $testPath = storage_path("app/public/lojas/{$loja->codigo}/produtos/{$codigoBarra}{$ext}");
+                if ($codigoBarra && file_exists($testPath)) {
+                    $imagemUrl = url("storage/lojas/{$loja->codigo}/produtos/{$codigoBarra}{$ext}");
+                    break;
+                }
+            }
+            $produtos[] = [
+                'nome' => $prod->nome,
+                'preco_original' => number_format($preco, 2, ',', '.'),
+                'preco_novo' => number_format($preco * 0.9, 2, ',', '.'),
+                'codigo_barra' => $codigoBarra,
+                'imagem_url' => $imagemUrl,
+            ];
+        }
+
+        // Logo da loja
+        $logoUrl = null;
+        foreach (['png', 'jpg', 'jpeg', 'webp'] as $ext) {
+            $p = storage_path("app/public/lojas/{$loja->codigo}/logo/logo.{$ext}");
+            if (file_exists($p)) {
+                $logoUrl = url("storage/lojas/{$loja->codigo}/logo/logo.{$ext}");
+                break;
+            }
+        }
+        $dadosLoja = [
+            'nome' => $loja->nome ?? 'Seu Mercado',
+            'telefone' => $loja->telefone ?? '(00) 0000-0000',
+            'endereco' => trim(($loja->endereco ?? '') . ', ' . ($loja->bairro ?? '')),
+            'cidade' => ($loja->cidade ?? '') . '/' . ($loja->estado ?? ''),
+            'cep' => $loja->cep ?? '',
+            'cnpj' => $loja->cnpj ?? '',
+            'codigo' => $loja->codigo ?? '',
+            'logo_url' => $logoUrl,
+        ];
+        $campaign = (object) ['id' => 'preview', 'copy' => null];
+
+        try {
+            // Renderiza o código Blade em memória usando um arquivo temporário
+            $tmpFile = tempnam(sys_get_temp_dir(), 'blade_') . '.blade.php';
+            file_put_contents($tmpFile, $code);
+
+            // Cria uma view a partir de string usando eval do Blade engine
+            $blade = app('blade.compiler');
+            $compiled = $blade->compileString($code);
+
+            $html = (function () use ($compiled, $produtos, $dadosLoja, $campaign) {
+                extract(['produtos' => $produtos, 'loja' => $dadosLoja, 'campaign' => $campaign, 'copyTexto' => null]);
+                ob_start();
+                eval ('?>' . $compiled);
+                return ob_get_clean();
+            })();
+
+            @unlink($tmpFile);
+        } catch (\Throwable $e) {
+            return response(
+                '<pre style="font:12px monospace;padding:20px;color:red;white-space:pre-wrap">'
+                . 'Erro no template:<br>' . htmlspecialchars($e->getMessage()) . '</pre>'
+            );
+        }
+
+        return response($html)->header('Content-Type', 'text/html; charset=UTF-8');
+    }
+
+    /**
+     * Abre o visual builder GrapeJS
+     */
+    public function themeBuilder(MaxDivulgaTheme $theme)
+    {
+        $loja = $this->resolverLoja();
+        $produtos = $loja ? Produto::where('loja_id', $loja->id)->limit(6)->get() : collect();
+        $previewUrl = route('lojista.maxdivulga.theme_preview', []) . '?theme_id=' . $theme->id . '&qty=6';
+        return view('lojista.maxdivulga.theme_builder', compact('theme', 'loja', 'produtos', 'previewUrl'));
+    }
+
+    /**
+     * Salva o HTML do GrapeJS convertido para Blade
+     */
+    public function themeBuilderSave(Request $request, MaxDivulgaTheme $theme)
+    {
+        $html = $request->input('html', '');
+        $css = $request->input('css', '');
+
+        if (empty(trim($html))) {
+            return response()->json(['success' => false, 'message' => 'HTML vazio.'], 422);
+        }
+
+        $viewPath = resource_path('views/' . str_replace('.', '/', $theme->path) . '.blade.php');
+
+        // Backup
+        if (file_exists($viewPath)) {
+            copy($viewPath, $viewPath . '.bak.' . date('YmdHis'));
+        }
+
+        // Converte HTML com data-* para Blade
+        $blade = $this->convertBuilderHtmlToBlade($html, $css);
+
+        file_put_contents($viewPath, $blade);
+        try {
+            \Artisan::call('view:clear');
+        } catch (\Throwable $e) {
+        }
+
+        return response()->json(['success' => true, 'message' => 'Tema salvo com sucesso!']);
+    }
+
+    /**
+     * Converte HTML do GrapeJS (com marcadores data-*) para template Blade
+     */
+    private function convertBuilderHtmlToBlade(string $html, string $css): string
+    {
+        // Injeta PHP dinâmico no topo
+        $phpBlock = <<<'PHP'
+@php
+    $qty  = count($produtos);
+    if ($qty <= 2)      { $cols = $qty; } elseif ($qty <= 4) { $cols = 2; }
+    elseif ($qty <= 9)  { $cols = 3;   } else                { $cols = 4; }
+    $rows = ceil($qty / $cols);
+    $headerH = 260; $copyH = 90; $footerH = 150; $rodapeH = 44;
+    $gapPx = 10; $padTop = 14;
+    $gridH     = 1920 - $headerH - $copyH - $footerH - $rodapeH;
+    $rowsOnlyH = $gridH - ($rows - 1) * $gapPx - 2 * $padTop;
+    $rowH      = max(80, floor($rowsOnlyH / $rows));
+    $nomeFs    = round(max(0.72, min(1.25, $rowH / 200)) * 10) / 10;
+    $precoFs   = round(max(1.10, min(2.70, $rowH / 120)) * 10) / 10;
+    $imgMaxH   = max(50, min(170, intval($rowH * 0.45)));
+    $pad       = max(7,  min(18,  intval($rowH * 0.058)));
+    @php
+    \Carbon\Carbon::setLocale('pt_BR');
+@endphp
+
+PHP;
+
+        // Substitui marcadores de dados da loja
+        $html = preg_replace('/<([^>]+)data-loja="nome"([^>]*)>.*?<\/\1>/s', "<$1data-loja=\"nome\"$2>{{ \$loja['nome'] ?? 'Seu Mercado' }}</$1>", $html);
+        $html = str_replace('data-loja="nome"', '', $html);
+
+        // Substituições simples
+        $replacements = [
+            // IA copy
+            '{{AI_HEADLINE}}' => "{{ \$headline ?? 'Ofertas da Semana!' }}",
+            '{{AI_SUBTITLE}}' => "{{ \$subtitulo ?? 'Preços imbatíveis para você.' }}",
+            // Loja
+            '{{LOJA_NOME}}' => "{{ \$loja['nome'] ?? 'Seu Mercado' }}",
+            '{{LOJA_FONE}}' => "{{ \$loja['telefone'] ?? '' }}",
+            '{{LOJA_ENDE}}' => "{{ \$loja['endereco'] ?? '' }}",
+            '{{LOJA_CNPJ}}' => "@if(!empty(\$loja['cnpj'])) CNPJ: {{ \$loja['cnpj'] }} @endif",
+            '{{LOJA_CIDADE}}' => "{{ \$loja['cidade'] ?? '' }}",
+            '{{DATA_VALIDADE}}' => "{{ \\Carbon\\Carbon::now()->addDays(7)->translatedFormat('d \\d\\e F') }}",
+            '{{CAMPAIGN_ID}}' => "{{ \$campaign->id ?? '000' }}",
+            // Loop de produtos
+            '{{PRODUCT_LOOP_START}}' => "@forelse(\$produtos as \$prod)",
+            '{{PRODUCT_LOOP_END}}' => "@empty\n<div style=\"grid-column:1/-1;text-align:center;padding:30px;color:#999\">Nenhum produto.</div>\n@endforelse",
+            // Dados do produto
+            '{{PROD_NOME}}' => "{{ \$prod['nome'] }}",
+            '{{PROD_PRECO}}' => "{{ \$prod['preco_novo'] }}",
+            '{{PROD_PRECO_DE}}' => "{{ \$prod['preco_original'] }}",
+            '{{PROD_IMAGEM}}' => "@if(!empty(\$prod['imagem_url']))<img src=\"{{ \$prod['imagem_url'] }}\" alt=\"{{ \$prod['nome'] }}\">@else<img src=\"https://placehold.co/200x200/e0e0e0/999?text=Produto\" style=\"opacity:.3\">@endif",
+            // Grid dinâmico
+            '{{GRID_COLS}}' => "{{ \$cols }}",
+            '{{ROW_H}}' => "{{ \$rowH }}",
+            '{{PAD}}' => "{{ \$pad }}",
+            '{{IMG_MAX_H}}' => "{{ \$imgMaxH }}",
+            '{{NOME_FS}}' => "{{ \$nomeFs }}",
+            '{{PRECO_FS}}' => "{{ \$precoFs }}",
+            // Logo com fallback
+            '{{LOJA_LOGO}}' => "@if(!empty(\$loja['logo_url']))<img src=\"{{ \$loja['logo_url'] }}\" alt=\"{{ \$loja['nome'] }}\" style=\"max-width:100%;max-height:160px;object-fit:contain\">@else<div class=\"nome-loja\">{{ \$loja['nome'] ?? 'Seu Mercado' }}</div>@endif",
+        ];
+
+        foreach ($replacements as $placeholder => $blade) {
+            $html = str_replace($placeholder, $blade, $html);
+        }
+
+        // Copy block padrão
+        $copyBlock = <<<'COPY'
+@php
+    $linhasCopy = [];
+    if (!empty($copyTexto)) {
+        preg_match('/HEADLINE:\s*(.+)/i', $copyTexto, $h);
+        preg_match('/SUBTITULO:\s*(.+)/i', $copyTexto, $s);
+        $linhasCopy['headline']  = trim($h[1] ?? '');
+        $linhasCopy['subtitulo'] = trim($s[1] ?? '');
+    }
+    $headline  = $linhasCopy['headline']  ?? 'Economize de verdade!';
+    $subtitulo = $linhasCopy['subtitulo'] ?? 'Preços imbatíveis para você.';
+@endphp
+COPY;
+
+        $blade = "<!DOCTYPE html>\n<html lang=\"pt-br\">\n<head>\n<meta charset=\"UTF-8\">\n<title>Folheto de Ofertas</title>\n{$phpBlock}\n<style>\n{$css}\n</style>\n</head>\n<body>\n{$copyBlock}\n{$html}\n</body>\n</html>";
+        return $blade;
+    }
 }
+
 
