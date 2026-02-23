@@ -97,19 +97,21 @@
 
 @push('scripts')
     <script src="https://unpkg.com/grapesjs/dist/grapes.min.js"></script>
-    {{-- Blade vars em script separado, antes do @verbatim --}}
     <script>
-        window._BUILDER_CFG = {
-            savePath: '{{ route("lojista.maxdivulga.theme_builder_save", $theme) }}',
-            csrfToken: '{{ csrf_token() }}'
-        };
+        @php
+            $builderCfg = [
+                'savePath'  => route('lojista.maxdivulga.theme_builder_save', $theme),
+                'csrfToken' => csrf_token(),
+            ];
+        @endphp
+        window._CFG = {!! json_encode($builderCfg) !!};
     </script>
     @verbatim
-        <script>
-            const savePath = window._BUILDER_CFG.savePath;
-            const csrfToken = window._BUILDER_CFG.csrfToken;
+    <script>
+        const savePath  = window._CFG.savePath;
+        const csrfToken = window._CFG.csrfToken;
 
-            const BLOCKS = {
+        const BLOCKS = {
                 header: [
                     '<div data-gjs-type="header-section" style="background:linear-gradient(135deg,#003A7A,#0057B8);color:#FFD700;',
                     'display:flex;align-items:center;padding:20px 40px;border-bottom:6px solid #FFD700;min-height:240px;">',
