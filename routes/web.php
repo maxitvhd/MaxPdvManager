@@ -195,7 +195,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/MaxDivulga/config', [MaxDivulgaAdminController::class, 'storeConfig'])->name('admin.maxdivulga.store_config');
         Route::get('/MaxDivulga/themes', [MaxDivulgaAdminController::class, 'themes'])->name('admin.maxdivulga.themes');
         Route::post('/MaxDivulga/themes', [MaxDivulgaAdminController::class, 'storeTheme'])->name('admin.maxdivulga.store_theme');
+        // AI Theme Generator
+        Route::get('/MaxDivulga/themes/create-ai', [MaxDivulgaAdminController::class, 'themeCreateAi'])->name('admin.maxdivulga.theme_create_ai');
+        Route::post('/MaxDivulga/themes/generate-ai', [MaxDivulgaAdminController::class, 'themeGenerateAi'])->name('admin.maxdivulga.theme_generate_ai');
+        Route::post('/MaxDivulga/themes/save-ai', [MaxDivulgaAdminController::class, 'themeSaveAi'])->name('admin.maxdivulga.theme_save_ai');
     });
+
     Route::get('/pagamentos/configuracoes', [\App\Http\Controllers\PagamentosController::class, 'configuracoesAdmin'])->name('pagamentos.configuracoes');
     Route::post('/pagamentos/configuracoes', [\App\Http\Controllers\PagamentosController::class, 'salvarConfiguracoes']);
     Route::get('/pagamentos/faturas', [\App\Http\Controllers\PagamentosController::class, 'indexFaturas'])->name('pagamentos.faturas');

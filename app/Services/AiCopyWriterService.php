@@ -280,4 +280,106 @@ PROMPT;
             default => 'Tom profissional, caloroso e persuasivo, voltado para negócios locais.',
         };
     }
+
+    /**
+     * Gera um template Blade completo para encarte de ofertas com IA.
+     *
+     * @param  array  $config  Parâmetros do formulário (cor, colunas, descrição, etc.)
+     * @return string          Código Blade gerado
+     */
+    public function generateThemeCode(array $config): string
+    {
+        $descricao = $config['descricao'] ?? '';
+        $corPrimaria = $config['cor_primaria'] ?? '#003A7A';
+        $corSecundaria = $config['cor_secundaria'] ?? '#FFD700';
+        $colunas = intval($config['colunas'] ?? 3);
+        $estiloCard = $config['estilo_card'] ?? 'detalhado';
+        $desconto = $config['mostrar_desconto'] ? 'SIM' : 'NÃO';
+        $iaCopy = $config['area_ia_copy'] ? 'SIM' : 'NÃO';
+        $altura = $config['altura'] ?? '1080x1920';
+        [$largura, $altPx] = explode('x', $altura . 'x1920');
+
+        $prompt = <<<PROMPT
+Você é um especialista em HTML/CSS e templates **Laravel Blade** para encartes de marketing varejista.
+
+## MISSÃO
+Gerar um template Blade COMPLETO e FUNCIONAL para um encarte de ofertas de {$largura}×{$altPx}px.
+
+## CONFIGURAÇÃO SOLICITADA PELO ADMIN
+- Descrição criativa: "{$descricao}"
+- Cor primária (fundo principal): {$corPrimaria}
+- Cor de destaque / texto dourado: {$corSecundaria}
+- Número de colunas de produtos: {$colunas}
+- Estilo do card de produto: {$estiloCard}
+- Exibir badge de desconto nos cards: {$desconto}
+- Incluir área de copy da IA (headline/subtítulo): {$iaCopy}
+
+## VARIÁVEIS BLADE DISPONÍVEIS — USE CORRETAMENTE
+```
+\$loja['nome']        → nome da loja
+\$loja['telefone']    → telefone/WhatsApp
+\$loja['endereco']    → endereço completo (pode ser vazio)
+\$loja['cnpj']        → CNPJ (pode ser vazio)
+\$loja['logo_url']    → URL da logo (pode ser null)
+\$headline            → título gerado pela IA de copy
+\$subtitulo           → subtítulo gerado pela IA de copy
+\$campaign->id        → ID da campanha
+\$qty                 → total de produtos (calculado no @php)
+\$cols                → número de colunas (calculado no @php)
+\$rowH                → altura de cada linha em px (calculado no @php)
+
+Loop de produtos: @forelse(\$produtos as \$prod) ... @empty ... @endforelse
+  \$prod['nome']             → nome do produto
+  \$prod['preco_novo']       → preço com desconto
+  \$prod['preco_original']   → preço original (pode ser igual)
+  \$prod['imagem_url']       → URL da imagem (pode ser null — tratar com @if)
+```
+
+## BLOCO @php OBRIGATÓRIO NO INÍCIO
+Calcule exatamente estas variáveis:
+```php
+@php
+    \$qty  = count(\$produtos);
+    if (\$qty <= 2)     { \$cols = \$qty; }
+    elseif (\$qty <= 4) { \$cols = 2; }
+    elseif (\$qty <= 9) { \$cols = 3; }
+    else               { \$cols = 4; }
+    \$rows      = ceil(\$qty / \$cols);
+    \$headerH   = 260; \$copyH = 90; \$footerH = 150; \$rodapeH = 44;
+    \$gapPx     = 10;  \$padTop = 14;
+    \$gridH     = {$altPx} - \$headerH - \$copyH - \$footerH - \$rodapeH;
+    \$rowsOnlyH = \$gridH - (\$rows - 1) * \$gapPx - 2 * \$padTop;
+    \$rowH      = max(80, floor(\$rowsOnlyH / \$rows));
+    \$nomeFs    = round(max(0.72, min(1.25, \$rowH / 200)) * 10) / 10;
+    \$precoFs   = round(max(1.10, min(2.70, \$rowH / 120)) * 10) / 10;
+    \$imgMaxH   = max(50, min(170, intval(\$rowH * 0.45)));
+    \$pad       = max(7, min(18, intval(\$rowH * 0.058)));
+    \Carbon\Carbon::setLocale('pt_BR');
+@endphp
+```
+
+## REGRAS OBRIGATÓRIAS
+- Largura EXATA: {$largura}px — Altura EXATA: {$altPx}px
+- TODO CSS deve ser inline (style="...") — sem Tailwind, sem Bootstrap, sem classes externas
+- Use grid CSS com `grid-template-columns: repeat({{ \$cols }}, 1fr)`
+- Para a logo: `@if(!empty(\$loja['logo_url'])) <img src="{{ \$loja['logo_url'] }}" ...> @else <div>{{ \$loja['nome'] }}</div> @endif`
+- Para imagem do produto: `@if(!empty(\$prod['imagem_url'])) <img src="{{ \$prod['imagem_url'] }}" ...> @endif`
+- Aplique o estilo criativo da DESCRIÇÃO do admin adaptando cores e layout
+- O template deve ter responsividade calculada dinamicamente pelas variáveis PHP (não hardcode de tamanhos de card)
+
+## ESTRUTURA OBRIGATÓRIA (nessa ordem)
+1. Bloco `@php` com cálculo das variáveis
+2. Container principal `{$largura}px × {$altPx}px` com flex-direction:column
+3. HEADER: logo + nome da loja + "VÁLIDO ATÉ: {{ \Carbon\Carbon::now()->addDays(7)->translatedFormat('d \d\e F') }}"
+4. ÁREA COPY IA: `{{ \$headline }}` e `{{ \$subtitulo }}` (se configurado)
+5. GRID DE PRODUTOS: `@forelse(\$produtos as \$prod)` com cards dinâmicos
+6. RODAPÉ: nome, endereço, fone, cnpj da loja
+7. Mini rodapé: ID da campanha
+
+Retorne APENAS o código Blade puro, sem explicações, sem marcações markdown, sem blocos ```.
+PROMPT;
+
+        return $this->chamarIA($prompt, 4000);
+    }
 }
+

@@ -236,6 +236,15 @@
                 <span class="sidenav-normal">Temas Globais</span>
               </a>
             </li>
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('admin/MaxDivulga/themes/create-ai*') ? 'active' : '' }}"
+                href="{{ route('admin.maxdivulga.theme_create_ai') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i class="fas fa-robot"
+                    style="color:#f59e0b;"></i></span>
+                <span class="sidenav-normal" style="color:#f59e0b;font-weight:700;">✨ Criar Tema IA</span>
+              </a>
+            </li>
+
           </ul>
         </div>
       </li>
