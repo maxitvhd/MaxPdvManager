@@ -20,7 +20,7 @@
             right: 0;
             width: 50%;
             height: 100%;
-            background: url('/api/placeholder/800/800') no-repeat center center;
+            background: url('{{ asset('assets/img/landing/hero-bg.png') }}') no-repeat center center;
             background-size: cover;
             opacity: 0.2;
             z-index: -1;
@@ -152,7 +152,8 @@
                                 <li class="mb-3 text-white-50"><i class="fas fa-check text-primary me-2"></i> Cadastro de
                                     Produtos</li>
                                 <li class="mb-3 text-white-50"><i class="fas fa-check text-primary me-2"></i>
-                                    <strong>{{ $plano->limite_dispositivos }}</strong> Dispositivos</li>
+                                    <strong>{{ $plano->limite_dispositivos }}</strong> Dispositivos
+                                </li>
                                 <li class="mb-3 text-white-50"><i class="fas fa-check text-primary me-2"></i>
                                     {{ $plano->meses_validade }} Meses de validade</li>
                                 @if($plano->modulos_adicionais)
