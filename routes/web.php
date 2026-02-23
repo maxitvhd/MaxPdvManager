@@ -221,6 +221,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{campaign}/download', [MaxDivulgaController::class, 'download'])->name('lojista.maxdivulga.download');
         Route::get('/api/produtos', [MaxDivulgaController::class, 'apiProducts'])->name('lojista.maxdivulga.api_products');
 
+        // Theme Studio — Previewer & Editor
+        Route::get('/themes', [MaxDivulgaController::class, 'themeStudio'])->name('lojista.maxdivulga.themes');
+        Route::get('/themes/preview', [MaxDivulgaController::class, 'themePreview'])->name('lojista.maxdivulga.theme_preview');
+        Route::get('/themes/{theme}/editor', [MaxDivulgaController::class, 'themeEditor'])->name('lojista.maxdivulga.theme_editor');
+        Route::post('/themes/{theme}/save', [MaxDivulgaController::class, 'themeEditorSave'])->name('lojista.maxdivulga.theme_editor_save');
+
+
         // Canais Sociais
         Route::prefix('canais')->group(function () {
             Route::get('/', [MaxDivulgaController::class, 'canaisIndex'])->name('lojista.maxdivulga.canais.index');

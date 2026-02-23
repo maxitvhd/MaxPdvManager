@@ -610,4 +610,156 @@ class MaxDivulgaController extends Controller
 
         return view('lojista.maxdivulga.canais.index', compact('socialAccounts'));
     }
+
+    /* ═══════════════════════════════════════════
+     *  THEME STUDIO — Previewer & Editor
+     * ═══════════════════════════════════════════ */
+
+    /**
+     * Painel principal do Theme Studio
+     */
+    public function themeStudio()
+    {
+        $loja   = $this->resolverLoja();
+        $themes = MaxDivulgaTheme::where('is_active', true)->get();
+        $produtos = $loja
+            ? Produto::where('loja_id', $loja->id)->orderBy('nome')->get()
+            : collect();
+
+        return view('lojista.maxdivulga.theme_studio', compact('themes', 'produtos', 'loja'));
+    }
+
+    /**
+     * Renderiza o HTML puro do tema (usado pelo iframe)
+     */
+    public function themePreview(Request $request)
+    {
+        $themeId    = $request->get('theme_id');
+        $productIds = $request->get('products', []);
+        $qty        = max(1, intval($request->get('qty', 10)));
+        $discount   = floatval($request->get('discount', 0));
+
+        $theme = MaxDivulgaTheme::find($themeId);
+        if (!$theme) {
+            return response('<h2 style="font-family:sans-serif;color:red;padding:40px">Tema não encontrado</h2>', 404);
+        }
+
+        $loja = $this->resolverLoja();
+        if (!$loja) {
+            return response('<h2 style="font-family:sans-serif;color:red;padding:40px">Loja não encontrada</h2>', 404);
+        }
+
+        // Busca produtos
+        $query = Produto::where('loja_id', $loja->id);
+        if (!empty($productIds)) {
+            $query->whereIn('id', $productIds);
+        }
+        $rawProdutos = $query->limit($qty)->get();
+
+        // Monta array de produtos no formato esperado pelos templates
+        $produtos = [];
+        foreach ($rawProdutos as $prod) {
+            $preco = floatval($prod->preco);
+            $precoNovo = $discount > 0 ? $preco - ($preco * ($discount / 100)) : $preco;
+
+            $codigoBarra = trim($prod->codigo_barra ?? '');
+            $imagemUrl = null;
+            foreach (['.jpg', '.jpeg', '.png', '.webp'] as $ext) {
+                $testPath = storage_path("app/public/lojas/{$loja->codigo}/produtos/{$codigoBarra}{$ext}");
+                if ($codigoBarra && file_exists($testPath)) {
+                    $imagemUrl = url("storage/lojas/{$loja->codigo}/produtos/{$codigoBarra}{$ext}");
+                    break;
+                }
+            }
+            if (!$imagemUrl && !empty($prod->imagem) && file_exists(storage_path('app/public/' . ltrim($prod->imagem, '/')))) {
+                $imagemUrl = url('storage/' . ltrim($prod->imagem, '/'));
+            }
+
+            $produtos[] = [
+                'nome'           => $prod->nome,
+                'preco_original' => number_format($preco, 2, ',', '.'),
+                'preco_novo'     => number_format($precoNovo, 2, ',', '.'),
+                'codigo_barra'   => $codigoBarra,
+                'imagem_url'     => $imagemUrl,
+            ];
+        }
+
+        // Dados da loja
+        $logoPath = storage_path("app/public/lojas/{$loja->codigo}/logo/logo.png");
+        $logoUrl  = file_exists($logoPath) ? url("storage/lojas/{$loja->codigo}/logo/logo.png") : null;
+        if (!$logoUrl) {
+            $logoPathJpg = storage_path("app/public/lojas/{$loja->codigo}/logo/logo.jpg");
+            if (file_exists($logoPathJpg)) $logoUrl = url("storage/lojas/{$loja->codigo}/logo/logo.jpg");
+        }
+        $dadosLoja = [
+            'nome'         => $loja->nome ?? 'Seu Mercado',
+            'telefone'     => $loja->telefone ?? '(00) 0000-0000',
+            'endereco'     => trim(($loja->endereco ?? '') . ', ' . ($loja->bairro ?? '')),
+            'cidade'       => ($loja->cidade ?? '') . '/' . ($loja->estado ?? ''),
+            'cep'          => $loja->cep ?? '',
+            'cnpj'         => $loja->cnpj ?? '',
+            'codigo'       => $loja->codigo ?? '',
+            'logo_url'     => $logoUrl,
+        ];
+
+        // Campanha fictícia para o template
+        $campaign = (object) ['id' => 'preview', 'copy' => null, 'copy_acompanhamento' => null];
+
+        try {
+            $html = view($theme->path, [
+                'produtos'   => $produtos,
+                'loja'       => $dadosLoja,
+                'campaign'   => $campaign,
+                'copyTexto'  => null,
+            ])->render();
+        } catch (\Throwable $e) {
+            return response('<pre style="font-family:monospace;padding:30px;color:red">Erro ao renderizar tema:<br>' . htmlspecialchars($e->getMessage()) . '</pre>', 500);
+        }
+
+        return response($html)->header('Content-Type', 'text/html; charset=UTF-8');
+    }
+
+    /**
+     * Abre o editor de código do arquivo Blade do tema
+     */
+    public function themeEditor(MaxDivulgaTheme $theme)
+    {
+        $viewPath = resource_path('views/' . str_replace('.', '/', $theme->path) . '.blade.php');
+
+        if (!file_exists($viewPath)) {
+            return back()->with('error', "Arquivo do tema não encontrado: {$viewPath}");
+        }
+
+        $code = file_get_contents($viewPath);
+        return view('lojista.maxdivulga.theme_editor', compact('theme', 'code'));
+    }
+
+    /**
+     * Salva o código editado no arquivo Blade do tema
+     */
+    public function themeEditorSave(Request $request, MaxDivulgaTheme $theme)
+    {
+        $viewPath = resource_path('views/' . str_replace('.', '/', $theme->path) . '.blade.php');
+
+        if (!file_exists($viewPath)) {
+            return response()->json(['success' => false, 'message' => 'Arquivo não encontrado.'], 404);
+        }
+
+        $code = $request->input('code', '');
+        if (empty(trim($code))) {
+            return response()->json(['success' => false, 'message' => 'Código vazio não permitido.'], 422);
+        }
+
+        // Backup antes de salvar
+        $backupPath = $viewPath . '.bak.' . date('YmdHis');
+        copy($viewPath, $backupPath);
+
+        file_put_contents($viewPath, $code);
+
+        // Limpa cache de views
+        try { \Artisan::call('view:clear'); } catch (\Throwable $e) {}
+
+        return response()->json(['success' => true, 'message' => 'Tema salvo com sucesso!']);
+    }
 }
+
