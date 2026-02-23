@@ -624,7 +624,7 @@
                                     <select name="theme_id" class="form-control form-control-lg" required>
                                         @foreach($themes as $theme)
                                             <option value="{{ $theme->id }}"
-                                                x-show="(themeTypeMap['{{ $theme->identifier }}'] || []).includes(campaignType)">
+                                                x-show="!themeTypeMap['{{ $theme->identifier }}'] || themeTypeMap['{{ $theme->identifier }}'].includes(campaignType)">
                                                 {{ $theme->name }}</option>
                                         @endforeach
                                     </select>
