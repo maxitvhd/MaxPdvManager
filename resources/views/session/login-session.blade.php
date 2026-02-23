@@ -1,70 +1,117 @@
 @extends('layouts.user_type.guest')
 
 @section('content')
+  <style>
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent),
+        radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.15), transparent),
+        #0f172a;
+      padding: 20px;
+    }
 
-  <main class="main-content  mt-0">
-    <section>
-      <div class="page-header min-vh-75">
-        <div class="container">
-          <div class="row">
-            <div class="col-xl-4 col-lg-5 col-md-6 d-flex flex-column mx-auto">
-              <div class="card card-plain mt-8">
-                <div class="card-header pb-0 text-left bg-transparent">
-                  <h3 class="font-weight-bolder text-info text-gradient">Bem-vindo de volta</h3>
-                  <p class="mb-0">Crie uma nova conta<br></p>
-                  <p class="mb-0">OU Entre com estas credenciais:</p>
-                  <p class="mb-0">E-mail <b>admin@softui.com</b></p>
-                  <p class="mb-0">Senha <b>secret</b></p>
-                </div>
-                <div class="card-body">
-                  <form role="form" method="POST" action="/app/login">
-                    @csrf
-                    <label>E-mail</label>
-                    <div class="mb-3">
-                      <input type="email" class="form-control" name="email" id="email" placeholder="E-mail"
-                        value="admin@softui.com" aria-label="Email" aria-describedby="email-addon">
-                      @error('email')
-                        <p class="text-danger text-xs mt-2">{{ $message }}</p>
-                      @enderror
-                    </div>
-                    <label>Senha</label>
-                    <div class="mb-3">
-                      <input type="password" class="form-control" name="password" id="password" placeholder="Senha"
-                        value="secret" aria-label="Password" aria-describedby="password-addon">
-                      @error('password')
-                        <p class="text-danger text-xs mt-2">{{ $message }}</p>
-                      @enderror
-                    </div>
-                    <div class="form-check form-switch">
-                      <input class="form-check-input" type="checkbox" id="rememberMe" checked="">
-                      <label class="form-check-label" for="rememberMe">Lembrar-me</label>
-                    </div>
-                    <div class="text-center">
-                      <button type="submit" class="btn bg-gradient-info w-100 mt-4 mb-0">Entrar</button>
-                    </div>
-                  </form>
-                </div>
-                <div class="card-footer text-center pt-0 px-lg-2 px-1">
-                  <small class="text-muted">Esqueceu sua senha? Redefina sua senha
-                    <a href="/login/forgot-password" class="text-info text-gradient font-weight-bold">aqui</a>
-                  </small>
-                  <p class="mb-4 text-sm mx-auto">
-                    Não tem uma conta?
-                    <a href="register" class="text-info text-gradient font-weight-bold">Cadastrar-se</a>
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="oblique position-absolute top-0 h-100 d-md-block d-none me-n8">
-                <div class="oblique-image bg-cover position-absolute fixed-top ms-auto h-100 z-index-0 ms-n6"
-                  style="background-image:url('../assets/img/curved-images/curved6.jpg')"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+    .glass-login-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%;
+      max-width: 450px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .form-control {
+      background: rgba(255, 255, 255, 0.05) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: white !important;
+      border-radius: 12px !important;
+      padding: 12px 15px !important;
+    }
+
+    .form-control:focus {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border-color: #6366f1 !important;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+    }
+
+    .btn-premium {
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.3s;
+      color: white;
+    }
+
+    .btn-premium:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .text-gradient {
+      background: linear-gradient(to right, #6366f1, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  </style>
+
+  <div class="login-container">
+    <div class="glass-login-card animate-fade-in">
+      <div class="text-center mb-5">
+        <h2 class="font-weight-bolder text-white">MAX<span class="text-gradient">PDV</span></h2>
+        <p class="text-white-50">Sentinela do seu Varejo</p>
       </div>
-    </section>
-  </main>
 
+      <div class="mb-4">
+        <h4 class="font-weight-bold text-white mb-1">Bem-vindo de volta</h4>
+        <p class="text-white-50 text-sm">O arsenal do seu sucesso está pronto.</p>
+      </div>
+
+      <form role="form" method="POST" action="/session">
+        @csrf
+        <div class="mb-3">
+          <label class="text-white-50 text-xs mb-1">E-MAIL</label>
+          <input type="email" class="form-control" name="email" id="email" placeholder="Digite seu e-mail"
+            value="{{ old('email') }}" required>
+          @error('email')
+            <p class="text-danger text-xs mt-2">{{ $message }}</p>
+          @enderror
+        </div>
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="text-white-50 text-xs">SENHA</label>
+            <a href="/login/forgot-password" class="text-xs text-info">Esqueceu?</a>
+          </div>
+          <input type="password" class="form-control" name="password" id="password" placeholder="Digite sua senha"
+            required>
+          @error('password')
+            <p class="text-danger text-xs mt-2">{{ $message }}</p>
+          @enderror
+        </div>
+
+        <div class="form-check form-switch mb-4">
+          <input class="form-check-input" type="checkbox" id="rememberMe" checked>
+          <label class="form-check-label text-white-50 text-xs" for="rememberMe">Manter conectado</label>
+        </div>
+
+        <div class="text-center">
+          <button type="submit" class="btn btn-premium w-100 mb-3">🚀 ACESSAR PAINEL</button>
+        </div>
+      </form>
+
+      <div class="text-center mt-4">
+        <p class="text-sm text-white-50">
+          Não tem uma conta?
+          <a href="register" class="text-info font-weight-bold">Cadastrar arsenal</a>
+        </p>
+      </div>
+    </div>
+  </div>
 @endsection
