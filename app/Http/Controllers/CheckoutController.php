@@ -32,7 +32,15 @@ class CheckoutController extends Controller
 {
     public function index(Request $request)
     {
+        $user = Auth::user();
         $query = Checkout::with('licenca');
+
+        // Segurança: Filtrar checkouts por dono da licença
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            $query->whereHas('licenca', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
 
         if ($request->has('licenca')) {
             $query->whereHas('licenca', function ($q) use ($request) {
@@ -46,7 +54,14 @@ class CheckoutController extends Controller
 
     public function create()
     {
-        $licencas = Licenca::where('status', 'ativa')->get();
+        $user = Auth::user();
+        $query = Licenca::where('status', 'ativa');
+
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            $query->where('user_id', $user->id);
+        }
+
+        $licencas = $query->get();
         return view('checkouts.create', compact('licencas'));
     }
 
@@ -57,13 +72,21 @@ class CheckoutController extends Controller
             'descricao' => 'required',
         ]);
 
-        $codigo = Str::random(30);
-
+        $user = Auth::user();
         $licenca = Licenca::find($request->licenca_id);
 
         if (!$licenca || $licenca->status !== 'ativa') {
             return back()->withErrors(['licenca_id' => 'Licença inválida ou inativa.']);
         }
+
+        // Segurança extra: verificar se a licença pertence ao usuário
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if ($licenca->user_id !== $user->id) {
+                return back()->withErrors(['licenca_id' => 'Você não tem permissão para usar esta licença.']);
+            }
+        }
+
+        $codigo = Str::random(30);
 
         Checkout::create([
             'licenca_id' => $licenca->id,
@@ -79,8 +102,19 @@ class CheckoutController extends Controller
 
     public function edit($id)
     {
+        $user = Auth::user();
         $checkout = Checkout::findOrFail($id);
-        $licencas = Licenca::where('status', 'ativa')->get();
+
+        // Segurança: verificar se o checkout pertence a uma licença do usuário
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if ($checkout->licenca->user_id !== $user->id) {
+                abort(403, 'Acesso não autorizado.');
+            }
+            $licencas = Licenca::where('status', 'ativa')->where('user_id', $user->id)->get();
+        } else {
+            $licencas = Licenca::where('status', 'ativa')->get();
+        }
+
         return view('checkouts.edit', compact('checkout', 'licencas'));
     }
 

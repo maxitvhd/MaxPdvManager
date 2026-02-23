@@ -13,13 +13,26 @@ class LicencaController extends Controller
 {
     public function index()
     {
-        $licencas = Licenca::with('loja', 'checkout')->get();
+        $user = Auth::user();
+        $query = Licenca::with('loja', 'checkout');
+
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            $query->where('user_id', $user->id);
+        }
+
+        $licencas = $query->get();
         return view('licencas.index', compact('licencas'));
     }
 
     public function create()
     {
-        $lojas = Loja::all();
+        $user = Auth::user();
+        if ($user->hasRole('admin') || $user->hasRole('super-admin')) {
+            $lojas = Loja::all();
+        } else {
+            $lojas = Loja::where('user_id', $user->id)->get();
+        }
+
         return view('licencas.create', compact('lojas'));
     }
 
@@ -56,7 +69,18 @@ class LicencaController extends Controller
 
     public function edit($codigo)
     {
+        $user = Auth::user();
         $licenca = Licenca::where('codigo', $codigo)->firstOrFail();
+
+        // Segurança: Lojista só vê/edita o que é dele
+        if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
+            if ($licenca->user_id !== $user->id) {
+                abort(403, 'Acesso não autorizado a esta licença.');
+            }
+            $lojas = Loja::where('user_id', $user->id)->get();
+        } else {
+            $lojas = Loja::all();
+        }
 
         // Verifica se a Key existe, caso seja antiga e nula, gera uma por segurança na hora
         if (!$licenca->key) {
@@ -64,7 +88,6 @@ class LicencaController extends Controller
             $licenca->save();
         }
 
-        $lojas = Loja::all();
         return view('licencas.edit', compact('licenca', 'lojas'));
     }
 
