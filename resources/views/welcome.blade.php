@@ -47,7 +47,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark fixed-top py-3" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(15px); border-bottom: 1px solid rgba(255,255,255,0.05);">
         <div class="container">
             <a class="navbar-brand font-weight-bolder" href="#">
-                <span class="text-gradient" style="font-size: 1.5rem; font-weight: 800;">MAX</span>PDV
+                <span class="text-gradient" style="font-size: 1.5rem; font-weight: 800;">Max</span>Checkout
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
