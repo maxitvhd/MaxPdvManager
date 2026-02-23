@@ -253,42 +253,50 @@ function refreshPreview() {
 
     document.getElementById('previewStatus').textContent = '⏳ Renderizando...';
 
-    // Renderiza o Blade via endpoint de preview
-    // Como não temos renderizador client-side do Blade, mostramos o HTML estático
-    // substituindo variáveis Blade por placeholders legíveis para preview
-    const previewHtml = code
-        .replace(/@php[\s\S]*?@endphp/g, '') // Remove blocos php
-        .replace(/@forelse\([^)]*\)/g, '<!-- LOOP PRODUTOS -->')
-        .replace(/@empty/g, '<!-- EMPTY -->')
-        .replace(/@endforelse/g, '<!-- /LOOP -->')
-        .replace(/@foreach\([^)]*\)/g, '<!-- FOREACH -->')
-        .replace(/@endforeach/g, '<!-- /FOREACH -->')
+    // Gera cards de amostra
+    const sampleCard = '<div style="background:#fff;border-radius:10px;padding:12px;display:flex;flex-direction:column;align-items:center;overflow:hidden;"><div style="font-size:0.9rem;font-weight:800;text-align:center;text-transform:uppercase;margin-bottom:4px;">📦 Produto Exemplo</div><div style="font-size:0.8rem;color:#888;text-decoration:line-through;">de R$ 14,99</div><div style="font-size:1.3rem;font-weight:900;color:#0057B8;">R$ 9,99</div></div>';
+    const sampleCards = new Array(6).fill(sampleCard).join('\n');
+
+    let previewHtml = code
+        .replace(/@php[\s\S]*?@endphp/g, '')
+        // Loop de produtos: substitui por cards de amostra
+        .replace(/@forelse[\s\S]*?@endforelse/g, sampleCards)
+        .replace(/@foreach[\s\S]*?@endforeach/g, sampleCards)
         .replace(/@if\([^)]*\)/g, '')
         .replace(/@endif/g, '')
         .replace(/@else/g, '')
-        .replace(/\{\{[^}]*\$loja\['nome'\][^}]*\}\}/g, '🏪 Nome da Loja')
+        // Variáveis Blade
+        .replace(/\{\{[^}]*\$loja\['nome'\][^}]*\}\}/g, '🏪 Meu Mercado')
         .replace(/\{\{[^}]*\$loja\['telefone'\][^}]*\}\}/g, '📞 (11) 9900-0000')
         .replace(/\{\{[^}]*\$loja\['endereco'\][^}]*\}\}/g, '📍 Rua Exemplo, 123')
         .replace(/\{\{[^}]*\$loja\['cnpj'\][^}]*\}\}/g, 'CNPJ: 00.000.000/0001-00')
+        .replace(/\{\{[^}]*\$loja\['logo_url'\][^}]*\}\}/g, '')
         .replace(/\{\{[^}]*\$headline[^}]*\}\}/g, '🤖 OFERTA INCRÍVEL DA SEMANA!')
-        .replace(/\{\{[^}]*\$subtitulo[^}]*\}\}/g, '🤖 Preços que você não vai encontrar em outro lugar.')
-        .replace(/\{\{[^}]*\$prod\['nome'\][^}]*\}\}/g, '📦 Produto Exemplo')
+        .replace(/\{\{[^}]*\$subtitulo[^}]*\}\}/g, '🤖 Preços imperdíveis para você e sua família')
+        .replace(/\{\{[^}]*\$prod\['nome'\][^}]*\}\}/g, '📦 Produto')
         .replace(/\{\{[^}]*\$prod\['preco_novo'\][^}]*\}\}/g, '9,99')
         .replace(/\{\{[^}]*\$prod\['preco_original'\][^}]*\}\}/g, '14,99')
+        .replace(/\{\{[^}]*number_format[^}]*\}\}/g, '9,99')
         .replace(/\{\{[^}]*\$cols[^}]*\}\}/g, '3')
         .replace(/\{\{[^}]*\$rowH[^}]*\}\}/g, '280')
+        .replace(/\{\{[^}]*\$headerH[^}]*\}\}/g, '260')
+        .replace(/\{\{[^}]*\$copyH[^}]*\}\}/g, '90')
+        .replace(/\{\{[^}]*\$footerH[^}]*\}\}/g, '150')
+        .replace(/\{\{[^}]*\$rodapeH[^}]*\}\}/g, '44')
+        .replace(/\{\{[^}]*\$gapPx[^}]*\}\}/g, '10')
+        .replace(/\{\{[^}]*\$padTop[^}]*\}\}/g, '14')
         .replace(/\{\{[^}]*\$imgMaxH[^}]*\}\}/g, '120')
         .replace(/\{\{[^}]*\$nomeFs[^}]*\}\}/g, '0.9')
         .replace(/\{\{[^}]*\$precoFs[^}]*\}\}/g, '1.6')
         .replace(/\{\{[^}]*\$pad[^}]*\}\}/g, '12')
         .replace(/\{\{[^}]*\$campaign[^}]*\}\}/g, '001')
         .replace(/\{\{[^}]*Carbon[^}]*\}\}/g, '01 de Março')
-        .replace(/\{\{.*?\}\}/g, '···')   // restantes
-        .replace(/@\w+[^>]*/g, '');       // demais diretivas
+        .replace(/\{\{.*?\}\}/g, '···')
+        .replace(/@\w+[^>]*/g, '');
 
     const iframe = document.getElementById('previewIframe');
     iframe.srcdoc = previewHtml;
-    document.getElementById('previewStatus').textContent = '✓ Preview atualizado (dados de amostra)';
+    document.getElementById('previewStatus').textContent = '✓ Preview (6 produtos de amostra)';
 }
 
 // ── Salvar ───────────────────────────────────────────────────

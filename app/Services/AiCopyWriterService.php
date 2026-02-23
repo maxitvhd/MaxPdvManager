@@ -335,16 +335,24 @@ Loop de produtos: @forelse(\$produtos as \$prod) ... @empty ... @endforelse
   \$prod['imagem_url']       → URL da imagem (pode ser null — tratar com @if)
 ```
 
-## BLOCO @php OBRIGATÓRIO NO INÍCIO
-Calcule exatamente estas variáveis:
+## BLOCO @php OBRIGATÓRIO NO INÍCIO (COPIAR EXATAMENTE)
+O template DEVE ter este bloco @php EXATAMENTE como abaixo no topo. Ele define defaults para evitar erros de 'Undefined variable':
 ```php
 @php
+    // ─── Defaults obrigatórios (evita Undefined variable) ───
+    $headline  = $headline  ?? 'OFERTAS IMPERDÍVEIS!';
+    $subtitulo = $subtitulo ?? 'Confira nossos preços especiais';
+    $loja      = $loja      ?? ['nome'=>'Minha Loja','telefone'=>'','endereco'=>'','cnpj'=>'','logo_url'=>null];
+    $campaign  = $campaign  ?? (object)['id'=>'0'];
+    $produtos  = $produtos  ?? [];
+
+    // ─── Cálculos de layout dinâmico ───
     \$qty  = count(\$produtos);
-    if (\$qty <= 2)     { \$cols = \$qty; }
+    if (\$qty <= 2)     { \$cols = \$qty ?: 1; }
     elseif (\$qty <= 4) { \$cols = 2; }
     elseif (\$qty <= 9) { \$cols = 3; }
     else               { \$cols = 4; }
-    \$rows      = ceil(\$qty / \$cols);
+    \$rows      = max(1, ceil(\$qty / \$cols));
     \$headerH   = 260; \$copyH = 90; \$footerH = 150; \$rodapeH = 44;
     \$gapPx     = 10;  \$padTop = 14;
     \$gridH     = {$altPx} - \$headerH - \$copyH - \$footerH - \$rodapeH;
@@ -354,9 +362,11 @@ Calcule exatamente estas variáveis:
     \$precoFs   = round(max(1.10, min(2.70, \$rowH / 120)) * 10) / 10;
     \$imgMaxH   = max(50, min(170, intval(\$rowH * 0.45)));
     \$pad       = max(7, min(18, intval(\$rowH * 0.058)));
-    \Carbon\Carbon::setLocale('pt_BR');
+    \\Carbon\\Carbon::setLocale('pt_BR');
 @endphp
 ```
+ATENÇÃO: As 5 primeiras linhas com ?? (null coalescing) são OBRIGATÓRIAS. Sem elas, o template dará erro.
+
 
 ## REGRAS OBRIGATÓRIAS
 - Largura EXATA: {$largura}px — Altura EXATA: {$altPx}px

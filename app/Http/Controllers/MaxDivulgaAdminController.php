@@ -101,6 +101,9 @@ class MaxDivulgaAdminController extends Controller
         $code = preg_replace('/^```\s*$/m', '', $code);
         $code = trim($code);
 
+        // Garante que os defaults obrigatórios existem no topo do @php
+        $code = $this->ensureBladeDefaults($code);
+
         return response()->json(['code' => $code, 'error' => null]);
     }
 
@@ -145,5 +148,33 @@ class MaxDivulgaAdminController extends Controller
             'theme_url' => route('admin.maxdivulga.themes'),
         ]);
     }
-}
 
+    /**
+     * Garante que o código Blade gerado pela IA contém os defaults obrigatórios.
+     * Se o @php já existe, injeta no topo dele. Se não, adiciona um @php novo.
+     */
+    private function ensureBladeDefaults(string $code): string
+    {
+        $defaults = <<<'DEFAULTS'
+    // ─── Defaults obrigatórios (evita Undefined variable) ───
+    $headline  = $headline  ?? 'OFERTAS IMPERDÍVEIS!';
+    $subtitulo = $subtitulo ?? 'Confira nossos preços especiais';
+    $loja      = $loja      ?? ['nome'=>'Minha Loja','telefone'=>'','endereco'=>'','cnpj'=>'','logo_url'=>null];
+    $campaign  = $campaign  ?? (object)['id'=>'0'];
+    $produtos  = $produtos  ?? [];
+DEFAULTS;
+
+        // Se já tem $headline ?? no código, não duplicar
+        if (str_contains($code, '$headline') && str_contains($code, '??')) {
+            return $code;
+        }
+
+        // Se já tem @php, injeta dentro dele
+        if (preg_match('/@php\s/', $code)) {
+            return preg_replace('/@php\s/', "@php\n" . $defaults . "\n", $code, 1);
+        }
+
+        // Se não tem @php, adiciona no topo
+        return "@php\n" . $defaults . "\n@endphp\n\n" . $code;
+    }
+}
