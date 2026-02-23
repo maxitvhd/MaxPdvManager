@@ -7,25 +7,25 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent),
-        radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.15), transparent),
+      background: radial-gradient(circle at top left, rgba(16, 185, 129, 0.1), transparent),
+        radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.1), transparent),
         #0f172a;
-      padding: 20px;
+      padding: 40px 20px;
     }
 
     .glass-login-card {
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255, 255, 255, 0.02);
       backdrop-filter: blur(15px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 24px;
-      padding: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      padding: 45px;
       width: 100%;
       max-width: 450px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6);
     }
 
     .form-control {
-      background: rgba(255, 255, 255, 0.05) !important;
+      background: rgba(255, 255, 255, 0.04) !important;
       border: 1px solid rgba(255, 255, 255, 0.1) !important;
       color: white !important;
       border-radius: 12px !important;
@@ -33,7 +33,7 @@
     }
 
     .form-control:focus {
-      background: rgba(255, 255, 255, 0.08) !important;
+      background: rgba(255, 255, 255, 0.06) !important;
       border-color: #6366f1 !important;
       box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
     }
@@ -42,7 +42,7 @@
       background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
       border: none;
       border-radius: 12px;
-      padding: 14px;
+      padding: 15px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
@@ -52,7 +52,7 @@
 
     .btn-premium:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+      box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
     }
 
     .text-gradient {
@@ -69,8 +69,8 @@
         <p class="text-white-50">Sentinela do seu Varejo</p>
       </div>
 
-      <div class="mb-4">
-        <h4 class="font-weight-bold text-white mb-1">Bem-vindo de volta</h4>
+      <div class="mb-5">
+        <h4 class="font-weight-bold text-white mb-2">Bem-vindo de volta</h4>
         <p class="text-white-50 text-sm">O arsenal do seu sucesso está pronto.</p>
       </div>
 
@@ -106,7 +106,7 @@
         </div>
       </form>
 
-      <div class="text-center mt-4">
+      <div class="mt-4 pt-4 border-top border-white border-opacity-10 text-center">
         <p class="text-sm text-white-50">
           Não tem uma conta?
           <a href="register" class="text-info font-weight-bold">Cadastrar arsenal</a>
