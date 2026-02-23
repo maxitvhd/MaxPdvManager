@@ -400,7 +400,8 @@
                                 </div>
 
                                 {{-- COMPILADO FINAL DOS PRODUTOS SELECIONADOS + DESCONTOS --}}
-                                <h6 class="mt-4 border-top pt-3 text-primary" x-show="productRule === 'manual'">🛒 Produtos
+                                <h6 class="mt-4 border-top pt-3 text-primary" x-show="selectedProducts.length > 0">🛒
+                                    Produtos
                                     Selecionados e Descontos (<span x-text="selectedProducts.length"></span> / <span
                                         x-text="productQty"></span>)</h6>
 
@@ -413,8 +414,8 @@
                                         <span class="input-group-text">%</span>
                                     </div>
                                     <button type="button" class="btn btn-sm btn-dark mb-0"
-                                        x-show="productRule === 'manual' && selectedProducts.length > 0"
-                                        @click="applyGlobalDiscount()">Aplicar Só na Tabela Abaixo</button>
+                                        x-show="selectedProducts.length > 0" @click="applyGlobalDiscount()">Aplicar a Todos
+                                        os Produtos</button>
                                 </div>
 
                                 <div class="border rounded" style="max-height:350px;overflow-y:auto;">

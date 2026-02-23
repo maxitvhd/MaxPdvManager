@@ -511,7 +511,8 @@ class MaxDivulgaController extends Controller
         $limit = $request->get('limit', 10);
 
         if ($rule === 'best_sellers') {
-            // Igual ao DashboardController: agrupa por produto_nome (sem JOIN em produtos)
+            // Busca mais nomes que o necessário para garantir que o limite seja preenchido
+            $buscaNomes = max($limit * 3, 60);
             $topNomes = LojaVendaItem::join('loja_vendas', 'loja_vendas_itens.loja_venda_id', '=', 'loja_vendas.id')
                 ->where('loja_vendas.loja_id', $loja->id)
                 ->select(
@@ -520,12 +521,15 @@ class MaxDivulgaController extends Controller
                 )
                 ->groupBy('loja_vendas_itens.produto_nome')
                 ->orderByDesc('total_vendido')
-                ->limit($limit)
+                ->limit($buscaNomes)
                 ->get()
                 ->pluck('produto_nome');
 
             return response()->json(
-                Produto::where('loja_id', $loja->id)->whereIn('nome', $topNomes)->get()
+                Produto::where('loja_id', $loja->id)
+                    ->whereIn('nome', $topNomes)
+                    ->limit($limit)
+                    ->get()
             );
         }
 
