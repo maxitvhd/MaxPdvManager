@@ -62,7 +62,7 @@
                                 <div class="row mb-3">
                                     <div class="col-md-6">
                                         <label class="form-label font-weight-bold">Tipo de Público</label>
-                                        <select name="type" class="form-control" required>
+                                        <select name="type" class="form-control" x-model="campaignType" required>
                                             <option value="varejo">🛒 Varejo (Consumidor Final)</option>
                                             <option value="atacado">📦 Atacado (Revendedores)</option>
                                             <option value="venda_direta">⚡ Oferta Relâmpago</option>
@@ -617,13 +617,19 @@
 
                                 <div class="form-group mb-3" x-show="['image', 'pdf', 'full'].includes(formatFinal)">
                                     <label class="form-label font-weight-bold">Tema Gráfico</label>
-                                    <p class="text-xs text-muted mb-2">Layout visual da sua arte. A IA preencherá com os
-                                        produtos e copy.</p>
+                                    <p class="text-xs text-muted mb-2">
+                                        Layouts filtrados para: <strong
+                                            x-text="campaignType === 'varejo' ? '🛒 Varejo' : campaignType === 'atacado' ? '📦 Atacado' : '⚡ Oferta Relâmpago'"></strong>
+                                    </p>
                                     <select name="theme_id" class="form-control form-control-lg" required>
                                         @foreach($themes as $theme)
-                                            <option value="{{ $theme->id }}">{{ $theme->name }}</option>
+                                            <option value="{{ $theme->id }}"
+                                                x-show="(themeTypeMap['{{ $theme->identifier }}'] || []).includes(campaignType)">
+                                                {{ $theme->name }}</option>
                                         @endforeach
                                     </select>
+                                    <small class="text-muted text-xs">Apenas layouts adequados ao tipo de público
+                                        selecionado.</small>
                                 </div>
                             </div>
 
@@ -703,8 +709,19 @@
         document.addEventListener('alpine:init', () => {
             Alpine.data('wizardData', () => ({
                 step: 1,
+                campaignType: 'varejo',
+                // Mapeamento tema→tipos de público permitidos
+                themeTypeMap: {
+                    'classico_ofertas': ['varejo', 'venda_direta'],
+                    'elegante_minimalista': ['varejo'],
+                    'azul_ofertas': ['varejo', 'venda_direta'],
+                    'catalogo_atacado': ['atacado'],
+                    'urgencia_feirao': ['venda_direta', 'varejo'],
+                    'destaque_unico': ['venda_direta'],
+                    'flash': ['venda_direta', 'varejo'],
+                },
                 scheduleType: 'unique',
-                scheduledTimesDict: {}, // Ex: { "segunda": ["09:00", "15:00"], "sabado": ["10:30"] }
+                scheduledTimesDict: {},
                 newDay: 'segunda',
                 newTime: '09:00',
                 productQty: 10,
