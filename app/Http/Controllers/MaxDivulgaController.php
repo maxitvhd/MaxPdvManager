@@ -325,6 +325,79 @@ class MaxDivulgaController extends Controller
             }
         }
 
+        // 7. Enviar Redes Sociais IMEDIATAMENTE se houver canais configurados (Campanha Direta)
+        $channels = $campaign->channels ?? [];
+        if (!empty($channels)) {
+            if (env('LOG_MAXDIVULGA', true))
+                Log::info("[MAXDIVULGA-SOCIAL-DIRETO] Iniciando disparos para " . count($channels) . " canais...");
+
+            foreach ($channels as $channelStr) {
+                try {
+                    $parts = explode('|', $channelStr);
+                    $provider = $parts[0];
+                    $targetType = $parts[1] ?? null;
+                    $targetId = $parts[2] ?? null;
+
+                    // Busca contas sociais (mesma lógica inteligente do Cron)
+                    $query = \App\Models\SocialAccount::where('loja_id', $campaign->loja_id)
+                        ->where('provider', $provider);
+
+                    if ($targetId) {
+                        $query->where('provider_id', $targetId);
+                    }
+
+                    $accounts = $query->get();
+
+                    foreach ($accounts as $account) {
+                        $absImagePath = $filePath ? storage_path('app/public/' . str_replace('storage/', '', $filePath)) : null;
+                        $message = $campaign->copy_acompanhamento ?: $copyAcompanhamento;
+
+                        if ($provider === 'facebook' && $absImagePath) {
+                            $fbService = new \App\Services\FacebookPostService();
+                            $finalTargetId = $targetId;
+                            $finalTargetType = $targetType;
+                            $finalToken = $account->token;
+
+                            if (!$finalTargetId && !empty($account->meta_data['pages'])) {
+                                $page = $account->meta_data['pages'][0];
+                                $finalTargetId = $page['id'];
+                                $finalTargetType = 'page';
+                                $finalToken = $page['access_token'] ?? $account->token;
+                            }
+
+                            if ($finalTargetId) {
+                                if ($finalTargetType === 'page') {
+                                    $fbService->postToPage($finalTargetId, $finalToken, $absImagePath, $message);
+                                } else {
+                                    $fbService->postToGroup($finalTargetId, $finalToken, $absImagePath, $message);
+                                }
+                            }
+                        }
+
+                        if ($provider === 'telegram') {
+                            $tgService = new \App\Services\TelegramPostService();
+                            $chatId = $account->provider_id;
+
+                            // Envia Foto (se existir)
+                            if ($absImagePath && file_exists($absImagePath)) {
+                                $tgService->postToChat($chatId, $account->token, $absImagePath, $message);
+                            }
+
+                            // Envia Áudio (se existir)
+                            if (!empty($audioPath)) {
+                                $absAudioPath = storage_path('app/public/' . str_replace('storage/', '', $audioPath));
+                                if (file_exists($absAudioPath)) {
+                                    $tgService->postAudioToChat($chatId, $account->token, $absAudioPath, "Confira a locução desta oferta! 🔊");
+                                }
+                            }
+                        }
+                    }
+                } catch (\Exception $eSocial) {
+                    Log::error("[MAXDIVULGA-SOCIAL-DIRETO] Erro ao postar no canal {$channelStr}: " . $eSocial->getMessage());
+                }
+            }
+        }
+
         return redirect()->route('lojista.maxdivulga.index')
             ->with('success', '✅ Campanha criada! A IA gerou sua arte e o texto de acompanhamento. Clique em "Ver" para conferir.');
     }
