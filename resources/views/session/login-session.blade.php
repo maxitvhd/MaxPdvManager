@@ -65,7 +65,7 @@
   <div class="login-container">
     <div class="glass-login-card animate-fade-in">
       <div class="text-center mb-5">
-        <h2 class="font-weight-bolder text-white">MAX<span class="text-gradient">PDV</span></h2>
+        <h2 class="font-weight-bolder text-white">Max<span class="text-gradient">Checkout</span></h2>
         <p class="text-white-50">Sentinela do seu Varejo</p>
       </div>
 

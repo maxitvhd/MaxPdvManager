@@ -260,7 +260,7 @@
     <!-- Arsenal Max / Features Grid -->
     <section id="arsenal" class="py-5 container" style="margin-top: 50px;">
         <div class="text-center mb-5 animate-fade-in">
-            <h2 class="display-5 font-weight-bold">A Lista Completa do <span class="text-gradient">Arsenal MAX</span></h2>
+            <h2 class="display-5 font-weight-bold">A Lista Completa do <span class="text-gradient">Arsenal MaxCheckout</span></h2>
             <p class="text-white-50">Mostre o poder real do sistema para o seu varejo.</p>
         </div>
         
@@ -324,7 +324,7 @@
         <!-- Big CTA Card -->
         <div class="glass-card mt-5 p-5 text-center bg-primary bg-opacity-10 border-primary border-opacity-25 animate-fade-in">
             <h2 class="font-weight-bolder mb-3">Tudo o que sua loja precisa em <span class="text-gradient">Um Só Ecossistema.</span></h2>
-            <p class="lead text-white-50 mb-5">Sem fidelidade, suporte humanizado e instalação em minutos.</p>
+            <p class="lead text-white-50 mb-5">MaxCheckout - Sem fidelidade, suporte humanizado e instalação em minutos.</p>
             <a href="{{ url('/register') }}" class="btn btn-premium btn-lg px-5 py-3">🚀 CRIAR MINHA CONTA AGORA</a>
         </div>
     </section>
@@ -334,7 +334,7 @@
         <div class="container">
             <div class="row g-4 mb-5">
                 <div class="col-lg-4">
-                    <h3 class="font-weight-bolder mb-3 text-gradient">MAXPDV</h3>
+                    <h3 class="font-weight-bolder mb-3 text-gradient">MaxCheckout</h3>
                     <p class="text-white-50 text-sm">Plataforma de alta resiliência e inteligência para o comércio moderno. Onde tecnologia de ponta encontra a economia real.</p>
                     <div class="d-flex align-items-center gap-3 mt-4">
                         <span class="text-white-50 text-xs text-uppercase"><i class="fas fa-lock me-1"></i> SSL 256B</span>
@@ -369,7 +369,7 @@
             </div>
             <div class="row pt-5 border-top border-white border-opacity-5 align-items-center">
                 <div class="col-md-6">
-                    <p class="text-xs text-white-50 mb-0">&copy; {{ date('Y') }} ECOSSISTEMA MAX - Desenvolvido para Vencer. 🛡️ SHA256 Monitorado.</p>
+                    <p class="text-xs text-white-50 mb-0">&copy; {{ date('Y') }} <strong>MaxCheckout</strong> - Criado Pela <a href="https://www.maximo.tec.br" class="text-white font-weight-bold" target="_blank">Maximo Tec Soluções</a>. 🛡️ SHA256 Monitorado.</p>
                 </div>
                 <div class="col-md-6 text-md-end mt-3 mt-md-0">
                     <div class="d-flex justify-content-center justify-content-md-end gap-3 text-white-50">
