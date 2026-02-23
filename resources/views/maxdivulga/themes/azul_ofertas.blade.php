@@ -7,6 +7,43 @@
     <title>Folheto de Ofertas Azul Premium</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700;900&display=swap"
         rel="stylesheet">
+
+    @php
+        $qty = count($produtos);
+        // Define colunas e escala com base na quantidade
+        if ($qty <= 2) {
+            $cols = $qty;
+            $scale = 1.3;
+        } elseif ($qty <= 4) {
+            $cols = 2;
+            $scale = 1.1;
+        } elseif ($qty <= 6) {
+            $cols = 3;
+            $scale = 1.0;
+        } elseif ($qty <= 9) {
+            $cols = 3;
+            $scale = 0.9;
+        } elseif ($qty <= 12) {
+            $cols = 4;
+            $scale = 0.78;
+        } elseif ($qty <= 16) {
+            $cols = 4;
+            $scale = 0.65;
+        } else {
+            $cols = 4;
+            $scale = 0.55;
+        }
+        $cardPadding    = round(12 * $scale) . 'px';
+        $imgMinH        = round(85 * $scale) . 'px';
+        $imgMaxH        = round(125 * $scale) . 'px';
+        $tagFontSize    = round(0.72 * $scale * 10) / 10 . 'rem';
+        $nomeFont       = round(1.0 * $scale * 10) / 10 . 'rem';
+        $deFont         = round(0.82 * $scale * 10) / 10 . 'rem';
+        $precoFont      = round(1.75 * $scale * 10) / 10 . 'rem';
+        $gridGap        = round(13 * $scale) . 'px';
+        $gridPadding    = $qty > 12 ? '14px 16px' : '20px 28px';
+    @endphp
+
     <style>
         * {
             margin: 0;
@@ -25,70 +62,44 @@
             --borda-card: #FFD700;
         }
 
-        body {
+        html, body {
             font-family: 'Roboto Condensed', Arial, sans-serif;
             background: var(--azul-vivo);
             width: 1080px;
-            height: 1920px;
-            overflow: hidden;
+            min-height: 1920px;
             display: flex;
             flex-direction: column;
             color: var(--cinza-texto);
         }
 
-        /* Container área branca central com moldura azul */
-        .main-content-wrapper {
-            flex: 1;
-            background: var(--branco);
-            margin: 0 25px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3) inset;
-            border-radius: 20px 20px 0 0;
-        }
-
-        /* ===== HEADER AZUL IMPACTANTE ===== */
+        /* Header */
         .header {
             background: linear-gradient(135deg, var(--azul-escuro) 0%, var(--azul-vivo) 60%, var(--azul-claro) 100%);
             color: var(--amarelo-ouro);
             display: flex;
             align-items: center;
-            min-height: 280px;
-            padding: 30px 40px;
+            min-height: {{ $qty > 12 ? '190px' : '270px' }};
+            padding: {{ $qty > 12 ? '18px 35px' : '30px 40px' }};
             border-bottom: 6px solid var(--amarelo-ouro);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
             position: relative;
             z-index: 10;
             overflow: hidden;
+            flex-shrink: 0;
         }
 
-        /* Círculos decorativos de fundo */
         .header::before {
             content: '';
             position: absolute;
-            top: -60px;
-            right: -60px;
-            width: 300px;
-            height: 300px;
+            top: -60px; right: -60px;
+            width: 300px; height: 300px;
             border-radius: 50%;
-            background: rgba(255, 215, 0, 0.08);
-        }
-
-        .header::after {
-            content: '';
-            position: absolute;
-            bottom: -80px;
-            left: 30%;
-            width: 350px;
-            height: 350px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.1);
+            background: rgba(255,215,0,0.08);
         }
 
         .header-logo {
             flex: 1;
-            padding-right: 30px;
+            padding-right: 25px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -98,34 +109,34 @@
         }
 
         .header-logo img {
-            max-height: 180px;
+            max-height: {{ $qty > 12 ? '130px' : '180px' }};
             max-width: 100%;
             object-fit: contain;
-            filter: drop-shadow(2px 2px 6px rgba(0, 0, 0, 0.4));
+            filter: drop-shadow(2px 2px 6px rgba(0,0,0,0.4));
         }
 
         .header-logo .nome-loja {
             background: var(--azul-escuro);
-            padding: 15px 30px;
+            padding: 10px 25px;
             border-radius: 50px;
-            font-size: 1.8rem;
+            font-size: {{ $qty > 12 ? '1.4rem' : '1.8rem' }};
             font-weight: 900;
             text-align: center;
             text-transform: uppercase;
             color: var(--branco);
             display: inline-block;
             border: 3px solid var(--amarelo-ouro);
-            box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.4);
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.4);
         }
 
         .header-logo .tagline {
-            font-size: 1.1rem;
+            font-size: {{ $qty > 12 ? '0.9rem' : '1.1rem' }};
             color: var(--amarelo-ouro);
-            margin-top: 14px;
+            margin-top: 10px;
             text-transform: uppercase;
             font-weight: 700;
             letter-spacing: 2px;
-            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
         }
 
         .header-info {
@@ -139,269 +150,212 @@
             z-index: 1;
         }
 
-        /* Efeito 3D nos títulos */
         .header-badge {
             display: inline-block;
             color: var(--branco);
             font-weight: 900;
-            font-size: 5.5rem;
+            font-size: {{ $qty > 12 ? '3.8rem' : '5.5rem' }};
             line-height: 0.9;
             text-transform: uppercase;
-            text-shadow:
-                3px 3px 0px var(--azul-escuro),
-                6px 6px 0px rgba(0, 0, 0, 0.3),
-                8px 8px 12px rgba(0, 0, 0, 0.4);
-            margin-bottom: 5px;
+            text-shadow: 3px 3px 0px var(--azul-escuro), 6px 6px 0px rgba(0,0,0,0.3), 8px 8px 12px rgba(0,0,0,0.4);
+            margin-bottom: 4px;
         }
 
         .header-sub {
-            font-size: 3rem;
+            font-size: {{ $qty > 12 ? '2.2rem' : '3rem' }};
             font-weight: 900;
             color: var(--amarelo-ouro);
             text-transform: uppercase;
             line-height: 1;
-            text-shadow:
-                3px 3px 0px var(--azul-escuro),
-                5px 5px 8px rgba(0, 0, 0, 0.4);
-            margin-bottom: 15px;
+            text-shadow: 3px 3px 0px var(--azul-escuro), 5px 5px 8px rgba(0,0,0,0.4);
+            margin-bottom: 12px;
         }
 
         .header-data {
-            font-size: 1.2rem;
+            font-size: {{ $qty > 12 ? '1.0rem' : '1.2rem' }};
             color: var(--branco);
             font-weight: 700;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 8px 25px;
+            background: rgba(0,0,0,0.3);
+            padding: 7px 22px;
             border-radius: 50px;
             border: 2px solid var(--amarelo-ouro);
-            box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.3);
+            box-shadow: 3px 3px 10px rgba(0,0,0,0.3);
         }
 
-        /* ===== FAIXA COPY AZUL ===== */
+        /* Faixa Copy */
         .faixa-copy {
             background: linear-gradient(to bottom, var(--amarelo-ouro), #ffca00);
             color: var(--azul-escuro);
-            padding: 25px 36px;
+            padding: {{ $qty > 12 ? '10px 30px' : '20px 36px' }};
             text-align: center;
             border-bottom: 3px solid var(--amarelo-escuro);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
             z-index: 2;
+            flex-shrink: 0;
         }
 
         .faixa-copy .headline {
-            font-size: 2.2rem;
+            font-size: {{ $qty > 12 ? '1.5rem' : '2.2rem' }};
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: -0.5px;
             line-height: 1.1;
-            text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.6);
+            text-shadow: 1px 1px 0px rgba(255,255,255,0.6);
         }
 
         .faixa-copy .subtitulo {
-            font-size: 1.3rem;
+            font-size: {{ $qty > 12 ? '0.95rem' : '1.25rem' }};
             font-weight: 800;
             color: var(--azul-escuro);
-            margin-top: 8px;
+            margin-top: 5px;
         }
 
-        /* ===== GRID PRODUTOS ===== */
+        /* Container principal */
+        .main-content-wrapper {
+            background: #F0F4FF;
+            margin: 0 25px;
+            display: flex;
+            flex-direction: column;
+            border-radius: 20px 20px 0 0;
+            flex: 1;
+        }
+
+        /* Grid de Produtos */
         .grid-produtos {
             display: grid;
-            gap: 20px;
-            padding: 25px 30px;
+            grid-template-columns: repeat({{ $cols }}, 1fr);
+            gap: {{ $gridGap }};
+            padding: {{ $gridPadding }};
             background: #F0F4FF;
-            /* Fundo azul muito claro */
-            flex: 1;
-            min-height: 0;
             align-content: start;
         }
 
-        /* Ajustes de Grid */
-        .grid-produtos.qty-1 {
-            grid-template-columns: 1fr;
-            padding: 50px 200px;
-        }
-
-        .grid-produtos.qty-2 {
-            grid-template-columns: repeat(2, 1fr);
-            padding: 50px;
-            gap: 40px;
-        }
-
-        .grid-produtos.qty-3 {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 30px;
-        }
-
-        .grid-produtos.qty-4 {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 30px;
-        }
-
-        .grid-produtos.qty-5,
-        .grid-produtos.qty-6 {
-            grid-template-columns: repeat(3, 1fr);
-        }
-
-        .grid-produtos.qty-7,
-        .grid-produtos.qty-8,
-        .grid-produtos.qty-9 {
-            grid-template-columns: repeat(3, 1fr);
-        }
-
-        .grid-produtos.qty-10,
-        .grid-produtos.qty-11,
-        .grid-produtos.qty-12 {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-        }
-
-        .grid-produtos.qty-many {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            padding: 15px;
-        }
-
-        /* ===== CARD AZUL ===== */
+        /* Card Azul */
         .card {
             background: var(--branco);
-            border: 3px solid var(--azul-vivo);
-            /* Borda azul */
-            border-radius: 15px;
-            overflow: visible;
+            border: {{ round(2.5 * $scale) }}px solid var(--azul-vivo);
+            border-radius: {{ round(13 * $scale) }}px;
+            overflow: hidden;         /* sem overflow visible - evita sobreposição de tags */
             position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 15px;
-            box-shadow: 0 8px 20px rgba(0, 87, 184, 0.15);
-            height: 100%;
+            padding: {{ $cardPadding }};
+            box-shadow: 0 6px 18px rgba(0,87,184,0.12);
         }
 
+        /* Tag OFERTA — cantoneira sem sair do card */
+        .tag-oferta {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: linear-gradient(135deg, var(--azul-vivo), var(--azul-escuro));
+            color: var(--branco);
+            font-size: {{ $tagFontSize }};
+            font-weight: 900;
+            padding: {{ round(5 * $scale) }}px {{ round(11 * $scale) }}px;
+            text-transform: uppercase;
+            border-radius: 0 {{ round(11 * $scale) }}px 0 {{ round(9 * $scale) }}px;
+            z-index: 2;
+        }
+
+        /* Imagem */
         .card-topo {
             width: 100%;
-            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-grow: 1;
-            min-height: 120px;
-            padding: 10px;
-            margin-bottom: 10px;
+            min-height: {{ $imgMinH }};
+            max-height: {{ $imgMaxH }};
+            padding: {{ round(5 * $scale) }}px;
+            margin-bottom: {{ round(5 * $scale) }}px;
+            overflow: hidden;
         }
 
         .card-topo img {
-            max-width: 95%;
-            max-height: 95%;
+            max-width: 100%;
+            max-height: {{ $imgMaxH }};
             width: auto;
             height: auto;
             object-fit: contain;
-            filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.1));
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
         }
 
-        /* Tag OFERTA azul */
-        .tag-oferta {
-            position: absolute;
-            top: -12px;
-            right: -12px;
-            background: linear-gradient(45deg, var(--azul-vivo), var(--azul-escuro));
-            color: var(--branco);
-            font-size: 0.9rem;
-            font-weight: 900;
-            padding: 8px 20px;
-            text-transform: uppercase;
-            transform: rotate(15deg);
-            box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.4);
-            z-index: 2;
-            border-radius: 4px;
-            border: 2px solid var(--branco);
-        }
-
+        /* Nome */
         .card-nome {
-            font-size: 1.1rem;
+            font-size: {{ $nomeFont }};
             font-weight: 800;
             color: var(--cinza-texto);
             text-align: center;
-            line-height: 1.3;
-            margin-bottom: 8px;
+            line-height: 1.1;
+            margin-bottom: {{ round(5 * $scale) }}px;
             text-transform: uppercase;
-            flex-shrink: 0;
         }
 
-        .qty-10 .card-nome,
-        .qty-11 .card-nome,
-        .qty-12 .card-nome,
-        .qty-many .card-nome {
-            font-size: 0.9rem;
-        }
-
+        /* Preço de */
         .card-preco-de {
-            font-size: 1rem;
+            font-size: {{ $deFont }};
             color: #888;
             text-decoration: line-through;
-            margin-bottom: 5px;
+            margin-bottom: {{ round(4 * $scale) }}px;
             font-weight: 600;
-            flex-shrink: 0;
         }
 
-        /* Box de Preço Azul/Amarelo */
+        /* Preço por — fundo azul + borda amarela */
         .card-preco-por {
             background: linear-gradient(to bottom, var(--azul-vivo), var(--azul-escuro));
-            border: 3px solid var(--amarelo-ouro);
-            /* Borda amarela no preço */
+            border: {{ round(2.5 * $scale) }}px solid var(--amarelo-ouro);
             color: var(--branco);
             font-weight: 900;
-            font-size: 2.4rem;
+            font-size: {{ $precoFont }};
             text-align: center;
-            padding: 5px 15px;
-            border-radius: 12px;
+            padding: {{ round(4 * $scale) }}px {{ round(8 * $scale) }}px;
+            border-radius: {{ round(10 * $scale) }}px;
             width: 100%;
             line-height: 1;
-            box-shadow: 0 5px 0 var(--azul-escuro), 0 8px 15px rgba(0, 0, 0, 0.25);
-            letter-spacing: -1.5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            box-shadow: 0 4px 0 var(--azul-escuro), 0 6px 12px rgba(0,0,0,0.2);
+            letter-spacing: -1px;
             white-space: nowrap;
-            flex-shrink: 0;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
         }
 
-        /* ===== RODAPÉ AZUL ===== */
+        /* Rodapé */
         .faixa-endereco {
             background: linear-gradient(to right, var(--azul-escuro), var(--azul-vivo), var(--azul-escuro));
             color: var(--branco);
-            padding: 30px 40px;
+            padding: {{ $qty > 12 ? '18px 30px' : '28px 40px' }};
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             border-top: 6px solid var(--amarelo-ouro);
             text-align: center;
-            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.2);
             z-index: 10;
+            flex-shrink: 0;
         }
 
         .faixa-endereco strong {
-            font-size: 1.8rem;
+            font-size: {{ $qty > 12 ? '1.4rem' : '1.8rem' }};
             text-transform: uppercase;
             font-weight: 900;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
         }
 
         .faixa-endereco .info-row {
-            font-size: 1.2rem;
+            font-size: {{ $qty > 12 ? '1.0rem' : '1.2rem' }};
             font-weight: 700;
         }
 
         .rodape-sistema {
             background: var(--azul-escuro);
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.8rem;
-            padding: 12px 30px;
+            color: rgba(255,255,255,0.6);
+            font-size: 0.78rem;
+            padding: 10px 30px;
             display: flex;
             justify-content: space-between;
             text-transform: uppercase;
             letter-spacing: 1px;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -429,6 +383,7 @@
     </div>
 
     <div class="main-content-wrapper">
+
         {{-- FAIXA COPY --}}
         @php
             $linhasCopy = [];
@@ -447,18 +402,17 @@
             <div class="subtitulo">{{ $subtitulo }}</div>
         </div>
 
-        @php $qtyClass = count($produtos) <= 12 ? 'qty-' . count($produtos) : 'qty-many'; @endphp
-        <div class="grid-produtos {{ $qtyClass }}">
-            @forelse($produtos as $i => $prod)
+        <div class="grid-produtos">
+            @forelse($produtos as $prod)
                 <div class="card">
+                    <div class="tag-oferta">OFERTA</div>
                     <div class="card-topo">
                         @if(!empty($prod['imagem_url']))
                             <img src="{{ $prod['imagem_url'] }}" alt="{{ $prod['nome'] }}">
                         @else
-                            <img src="https://placehold.co/200x200/e0eeff/4477cc?text=Oferta" style="opacity:0.4">
+                            <img src="https://placehold.co/200x200/e0eeff/4477cc?text=Produto" style="opacity:0.35">
                         @endif
                     </div>
-                    <div class="tag-oferta">OFERTA</div>
                     <div class="card-nome">{{ $prod['nome'] }}</div>
                     <div class="card-preco-de">de R$ {{ $prod['preco_original'] }}</div>
                     <div class="card-preco-por">R$ {{ $prod['preco_novo'] }}</div>
@@ -469,6 +423,7 @@
                 </div>
             @endforelse
         </div>
+
     </div>
 
     <div class="faixa-endereco">
