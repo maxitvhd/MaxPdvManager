@@ -4,7 +4,7 @@
     @if(\Request::is('login/forgot-password'))
         @include('layouts.navbars.guest.nav')
         @yield('content')
-    @elseif(\Request::is('login') || \Request::is('register') || \Request::is('session'))
+    @elseif(\Request::is('login*') || \Request::is('register*') || \Request::is('session*'))
         {{-- Páginas de Autenticação: Foco total sem Navbar ou Footer --}}
         @yield('content')
     @else
@@ -15,7 +15,7 @@
                 </div>
             </div>
         </div>
-        @yield('content')        
+        @yield('content')
         @include('layouts.footers.guest.footer')
     @endif
 @endsection

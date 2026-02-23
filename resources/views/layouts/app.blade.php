@@ -103,7 +103,11 @@
 
   @stack('scripts')
 
-  @if(session('success'))
+  @php
+    $isAuthPage = Request::is('login*') || Request::is('register*') || Request::is('session*');
+  @endphp
+
+  @if(!$isAuthPage && session('success'))
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         Swal.fire('Sucesso!', '{{ session('success') }}', 'success');
@@ -111,7 +115,7 @@
     </script>
   @endif
 
-  @if(session('error'))
+  @if(!$isAuthPage && session('error'))
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         Swal.fire({

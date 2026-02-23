@@ -64,6 +64,6 @@ class SessionsController extends Controller
 
         Auth::logout();
 
-        return redirect('/login')->with(['success' => 'Você\'acabou de sair com sucesso.']);
+        return redirect('/login');
     }
 }

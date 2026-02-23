@@ -78,15 +78,16 @@ class DashboardController extends Controller
                 ->orderBy('data')
                 ->get();
 
-            $lojasPermitidas = $this->getLojasPermitidas(auth()->user());
-            $loja = null;
+            if ($lojasPermitidas->isEmpty()) {
+                return view('dashboard.vazio', ['isVazio' => true]);
+            }
 
             return view('dashboard.admin', compact('lojasAtivas', 'pagamentosMes', 'totalLiquidoMes', 'lojasVencer', 'historicoGlobal', 'lojasPermitidas', 'loja'));
         }
 
         $loja = $this->validarAcessoLoja($request->get('loja_codigo'));
         if (!$loja)
-            return view('dashboard.vazio');
+            return view('dashboard.vazio', ['isVazio' => true]);
 
         $hoje = Carbon::today();
         $mesAtual = Carbon::now()->startOfMonth();
