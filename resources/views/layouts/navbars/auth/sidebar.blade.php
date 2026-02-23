@@ -119,6 +119,58 @@
         </div>
       </li>
 
+
+      <!-- ================= MaxPublica (todos lojistas) ================= -->
+      <li class="nav-item mt-3">
+        <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6 sidenav-heading">MaxPublica</h6>
+      </li>
+      <li class="nav-item">
+        <a data-bs-toggle="collapse" href="#maxpublicaExamples"
+          class="nav-link {{ Request::is('lojista/maxdivulga*') ? 'active' : '' }}" aria-controls="maxpublicaExamples"
+          role="button" aria-expanded="{{ Request::is('lojista/maxdivulga*') ? 'true' : 'false' }}">
+          <div
+            class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center d-flex align-items-center justify-content-center me-2">
+            <i
+              class="fas fa-bullhorn {{ Request::is('lojista/maxdivulga*') ? 'text-white' : 'text-dark' }} text-lg"></i>
+          </div>
+          <span class="nav-link-text ms-1">MaxPublica</span>
+        </a>
+        <div class="collapse {{ Request::is('lojista/maxdivulga*') ? 'show' : '' }}" id="maxpublicaExamples">
+          <ul class="nav ms-4">
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('lojista/maxdivulga') ? 'active' : '' }}"
+                href="{{ route('lojista.maxdivulga.index') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i
+                    class="fas fa-photo-video"></i></span>
+                <span class="sidenav-normal">Campanhas</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('lojista/maxdivulga/create*') ? 'active' : '' }}"
+                href="{{ route('lojista.maxdivulga.create') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i
+                    class="fas fa-plus-circle"></i></span>
+                <span class="sidenav-normal">Nova Campanha</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('lojista/maxdivulga/themes*') ? 'active' : '' }}"
+                href="{{ route('lojista.maxdivulga.themes') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i class="fas fa-palette"></i></span>
+                <span class="sidenav-normal">Theme Studio</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('lojista/maxdivulga/canais*') ? 'active' : '' }}"
+                href="{{ route('lojista.maxdivulga.canais.index') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i class="fas fa-share-alt"></i></span>
+                <span class="sidenav-normal">Canais Sociais</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </li>
+
       <!-- ================= Admin Section ================= -->
       @hasanyrole('admin|super-admin')
       <li class="nav-item mt-3">
@@ -166,6 +218,22 @@
               <a class="nav-link {{ Request::is('usuarios*') ? 'active' : '' }}" href="{{ route('usuarios.index') }}">
                 <span class="sidenav-mini-icon text-xs text-center w-auto me-2"> <i class="fas fa-users"></i> </span>
                 <span class="sidenav-normal"> Usuários </span>
+              </a>
+            </li>
+            {{-- MaxPublica Admin --}}
+            <li class="nav-item mt-1">
+              <a class="nav-link {{ Request::is('admin/MaxDivulga') ? 'active' : '' }}"
+                href="{{ route('admin.maxdivulga.index') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i class="fas fa-robot"></i></span>
+                <span class="sidenav-normal">MaxPublica IA</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('admin/MaxDivulga/themes*') ? 'active' : '' }}"
+                href="{{ route('admin.maxdivulga.themes') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i
+                    class="fas fa-paint-roller"></i></span>
+                <span class="sidenav-normal">Temas Globais</span>
               </a>
             </li>
           </ul>
