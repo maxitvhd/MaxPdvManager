@@ -925,21 +925,25 @@ class MaxDivulgaController extends Controller
         $headline = '🤖 Headline gerado pela IA';
         $subtitulo = '🤖 Subtítulo gerado pela IA';
 
-        // Renderiza o Blade do tema com dados reais
+        // Renderiza o Blade do tema usando Blade::render() (Laravel 9+)
+        // Não usa eval() para evitar problemas com $__env e outras vars internas do Blade
         $viewName = $theme->path;
         try {
-            $blade = app('blade.compiler');
             $viewFile = resource_path('views/' . str_replace('.', '/', $viewName) . '.blade.php');
             $source = file_exists($viewFile) ? file_get_contents($viewFile) : '';
-            $compiled = $blade->compileString($source);
-            $rendered = (function () use ($compiled, $produtos, $dadosLoja, $campaign, $copyTexto, $headline, $subtitulo) {
-                extract(compact('produtos', 'dadosLoja', 'campaign', 'copyTexto', 'headline', 'subtitulo'));
-                $loja = $dadosLoja;
-                ob_start();
-                eval ('?>' . $compiled);
-                return ob_get_clean();
-            })();
+
+            $rendered = \Blade::render($source, [
+                'produtos' => $produtos,
+                'dadosLoja' => $dadosLoja,
+                'loja' => $dadosLoja,
+                'campaign' => $campaign,
+                'copyTexto' => $copyTexto,
+                'headline' => $headline,
+                'subtitulo' => $subtitulo,
+            ]);
+
         } catch (\Throwable $e) {
+
             $rendered = '<p style="color:red;padding:30px;font-family:sans-serif">Erro ao renderizar: ' . htmlspecialchars($e->getMessage()) . '</p>';
         }
 
