@@ -30,9 +30,10 @@ use Spatie\Permission\PermissionRegistrar;
 |
 */
 
+Route::get('/', [HomeController::class, 'home']);
+
 Route::group(['middleware' => 'auth'], function () {
 
-    Route::get('/', [HomeController::class, 'home']);
     Route::get('dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
