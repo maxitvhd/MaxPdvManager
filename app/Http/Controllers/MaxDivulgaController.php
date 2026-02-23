@@ -861,13 +861,101 @@ class MaxDivulgaController extends Controller
     public function themeBuilder(MaxDivulgaTheme $theme)
     {
         $loja = $this->resolverLoja();
-        $produtos = $loja ? Produto::where('loja_id', $loja->id)->limit(6)->get() : collect();
-        $previewUrl = route('lojista.maxdivulga.theme_preview', []) . '?theme_id=' . $theme->id . '&qty=6';
-        return view('lojista.maxdivulga.theme_builder', compact('theme', 'loja', 'produtos', 'previewUrl'));
+        $frameUrl = route('lojista.maxdivulga.theme_builder_frame', $theme);
+        $saveUrl = route('lojista.maxdivulga.theme_builder_save', $theme);
+        return view('lojista.maxdivulga.theme_builder', compact('theme', 'loja', 'frameUrl', 'saveUrl'));
     }
 
     /**
-     * Salva o HTML do GrapeJS convertido para Blade
+     * Renderiza o tema como HTML standalone para o VvvebJs carregar no iframe.
+     * Substitui [[PLACEHOLDER]] por elementos com data-maxdivulga="PLACEHOLDER"
+     * para que o VvvebJs possa identificá-los visualmente.
+     */
+    public function themeBuilderFrame(MaxDivulgaTheme $theme)
+    {
+        $loja = $this->resolverLoja();
+        $qty = 6;
+
+        // Produtos de amostra
+        $rawProdutos = $loja ? Produto::where('loja_id', $loja->id)->limit($qty)->get() : collect();
+        $produtos = [];
+        foreach ($rawProdutos as $prod) {
+            $preco = floatval($prod->preco);
+            $codigoBarra = trim($prod->codigo_barra ?? '');
+            $imagemUrl = null;
+            foreach (['.jpg', '.jpeg', '.png', '.webp'] as $ext) {
+                $testPath = storage_path("app/public/lojas/{$loja->codigo}/produtos/{$codigoBarra}{$ext}");
+                if ($codigoBarra && file_exists($testPath)) {
+                    $imagemUrl = url("storage/lojas/{$loja->codigo}/produtos/{$codigoBarra}{$ext}");
+                    break;
+                }
+            }
+            $produtos[] = [
+                'nome' => $prod->nome,
+                'preco_original' => number_format($preco, 2, ',', '.'),
+                'preco_novo' => number_format($preco * 0.9, 2, ',', '.'),
+                'codigo_barra' => $codigoBarra,
+                'imagem_url' => $imagemUrl,
+            ];
+        }
+
+        // Logo
+        $logoUrl = null;
+        if ($loja) {
+            foreach (['png', 'jpg', 'jpeg', 'webp'] as $ext) {
+                $p = storage_path("app/public/lojas/{$loja->codigo}/logo/logo.{$ext}");
+                if (file_exists($p)) {
+                    $logoUrl = url("storage/lojas/{$loja->codigo}/logo/logo.{$ext}");
+                    break;
+                }
+            }
+        }
+        $dadosLoja = [
+            'nome' => $loja->nome ?? 'Seu Mercado',
+            'telefone' => $loja->telefone ?? '(00) 0000-0000',
+            'endereco' => trim(($loja->endereco ?? '') . ', ' . ($loja->bairro ?? '')),
+            'cidade' => ($loja->cidade ?? '') . '/' . ($loja->estado ?? ''),
+            'cep' => $loja->cep ?? '',
+            'cnpj' => $loja->cnpj ?? '',
+            'codigo' => $loja->codigo ?? '',
+            'logo_url' => $logoUrl,
+        ];
+        $campaign = (object) ['id' => 'preview', 'copy' => null];
+        $copyTexto = null;
+        $headline = '🤖 Headline gerado pela IA';
+        $subtitulo = '🤖 Subtítulo gerado pela IA';
+
+        // Renderiza o Blade do tema com dados reais
+        $viewName = $theme->path;
+        try {
+            $blade = app('blade.compiler');
+            $viewFile = resource_path('views/' . str_replace('.', '/', $viewName) . '.blade.php');
+            $source = file_exists($viewFile) ? file_get_contents($viewFile) : '';
+            $compiled = $blade->compileString($source);
+            $rendered = (function () use ($compiled, $produtos, $dadosLoja, $campaign, $copyTexto, $headline, $subtitulo) {
+                extract(compact('produtos', 'dadosLoja', 'campaign', 'copyTexto', 'headline', 'subtitulo'));
+                $loja = $dadosLoja;
+                ob_start();
+                eval ('?>' . $compiled);
+                return ob_get_clean();
+            })();
+        } catch (\Throwable $e) {
+            $rendered = '<p style="color:red;padding:30px;font-family:sans-serif">Erro ao renderizar: ' . htmlspecialchars($e->getMessage()) . '</p>';
+        }
+
+        // Injeta atributos data-maxdivulga nos elementos dinâmicos
+        // Para que o VvvebJs os identifique no canvas
+        $csrfMeta = '<meta name="csrf-token" content="' . csrf_token() . '">';
+        $vvvebScript = '<script>window.VVVEB_EDITABLE = true;</script>';
+
+        // Retorna HTML standalone com o tema renderizado
+        return response($rendered . "\n<!-- VvvebJs editable frame loaded -->")
+            ->header('Content-Type', 'text/html; charset=UTF-8')
+            ->header('X-Frame-Options', 'SAMEORIGIN');
+    }
+
+    /**
+     * Salva o HTML editado no VvvebJs convertido para Blade
      */
     public function themeBuilderSave(Request $request, MaxDivulgaTheme $theme)
     {
@@ -885,8 +973,9 @@ class MaxDivulgaController extends Controller
             copy($viewPath, $viewPath . '.bak.' . date('YmdHis'));
         }
 
-        // Converte HTML com data-* para Blade
-        $blade = $this->convertBuilderHtmlToBlade($html, $css);
+        // Extrai apenas o CSS personalizado e recombina com o template original
+        // mantendo as variáveis Blade intactas
+        $blade = $this->mergeVvvebCssIntoBlade($viewPath, $css, $html);
 
         file_put_contents($viewPath, $blade);
         try {
@@ -896,6 +985,37 @@ class MaxDivulgaController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Tema salvo com sucesso!']);
     }
+
+    /**
+     * Mescla o CSS customizado do VvvebJs no arquivo Blade original.
+     * Injeta o CSS no bloco <style> existente, preservando toda a lógica Blade.
+     */
+    private function mergeVvvebCssIntoBlade(string $viewPath, string $css, string $html): string
+    {
+        if (!file_exists($viewPath)) {
+            // Fallback: usa o HTML diretamente convertido
+            return $this->convertBuilderHtmlToBlade($html, $css);
+        }
+
+        $original = file_get_contents($viewPath);
+
+        // Remove CSS vazio
+        if (empty(trim($css))) {
+            return $original;
+        }
+
+        // Injeta o CSS customizado antes do </style> da primeira tag style
+        $customCssBlock = "\n/* === VvvebJs Custom CSS === */\n" . trim($css) . "\n/* === End VvvebJs Custom CSS === */\n";
+
+        if (strpos($original, '</style>') !== false) {
+            return str_replace('</style>', $customCssBlock . '</style>', $original, $count);
+        }
+
+        // Se não houver <style>, adiciona no início após @php
+        $styleTag = "\n<style>\n{$customCssBlock}\n</style>\n";
+        return preg_replace('/(@endphp\s*)/', '$1' . $styleTag, $original, 1);
+    }
+
 
     /**
      * Converte HTML do GrapeJS (com marcadores data-*) para template Blade

@@ -231,6 +231,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/themes/{theme}/editor', [MaxDivulgaController::class, 'themeEditor'])->name('lojista.maxdivulga.theme_editor');
             Route::post('/themes/{theme}/save', [MaxDivulgaController::class, 'themeEditorSave'])->name('lojista.maxdivulga.theme_editor_save');
             Route::get('/themes/{theme}/builder', [MaxDivulgaController::class, 'themeBuilder'])->name('lojista.maxdivulga.theme_builder');
+            Route::get('/themes/{theme}/builder-frame', [MaxDivulgaController::class, 'themeBuilderFrame'])->name('lojista.maxdivulga.theme_builder_frame');
             Route::post('/themes/{theme}/builder-save', [MaxDivulgaController::class, 'themeBuilderSave'])->name('lojista.maxdivulga.theme_builder_save');
         });
 
