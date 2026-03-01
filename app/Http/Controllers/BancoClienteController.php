@@ -34,56 +34,80 @@ class BancoClienteController extends Controller
     }
 
     /**
-     * Autenticar cliente (código + PIN, ou facial)
+     * Autenticar cliente — dois modos:
+     *   modo "usuario": identificacao (codigo/usuario) + PIN
+     *   modo "facial":  facial_score >= 0.75 + PIN
+     * O PIN é obrigatório nos dois casos.
      */
     public function autenticar(Request $request)
     {
         $request->validate([
-            'identificacao' => 'required|string',
-            'pin'           => 'nullable|string|min:4|max:8',
-            'metodo'        => 'required|in:pin,facial',
+            'metodo'        => 'required|in:usuario,facial',
+            'pin'           => 'required|string|min:4|max:8',
+            'identificacao' => 'required_if:metodo,usuario|nullable|string',
+            'facial_score'  => 'required_if:metodo,facial|nullable|numeric',
         ], [
-            'identificacao.required' => 'Informe seu código ou usuário.',
+            'pin.required'           => 'O PIN é obrigatório.',
+            'pin.min'                => 'O PIN deve ter pelo menos 4 dígitos.',
+            'identificacao.required_if' => 'Informe seu código ou usuário.',
         ]);
 
-        // Busca o cliente por código ou usuário
-        $cliente = Cliente::where('codigo', $request->identificacao)
-            ->orWhere('usuario', $request->identificacao)
-            ->first();
+        $cliente = null;
 
-        if (!$cliente) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Cliente não encontrado.');
+        /* ---- MODO: USUÁRIO + PIN ---- */
+        if ($request->metodo === 'usuario') {
+            $id = trim($request->identificacao);
+            $cliente = Cliente::where('codigo', $id)
+                ->orWhere('usuario', $id)
+                ->first();
+
+            if (!$cliente) {
+                return redirect()->back()->withInput()
+                    ->with('error', 'Usuário ou código não encontrado.');
+            }
+
+            // Valida o PIN
+            if ($request->pin !== $cliente->pin) {
+                return redirect()->back()->withInput()
+                    ->with('error', 'PIN incorreto. Verifique e tente novamente.');
+            }
         }
 
-        // Verifica status de acesso
+        /* ---- MODO: FACIAL + PIN ---- */
+        if ($request->metodo === 'facial') {
+            $score = (float) $request->get('facial_score', 0);
+
+            if ($score < 0.75) {
+                return redirect()->back()->withInput()
+                    ->with('error', 'Reconhecimento facial não confirmado. Tente de novo ou use o modo Usuário + PIN.');
+            }
+
+            // Busca o cliente pelo código retornado pelo JS (ou por identificação enviada junto)
+            $codigoFacial = $request->get('facial_codigo');
+            if ($codigoFacial) {
+                $cliente = Cliente::where('codigo', $codigoFacial)->first();
+            }
+
+            if (!$cliente) {
+                return redirect()->back()->withInput()
+                    ->with('error', 'Não foi possível identificar o cliente pelo rosto. Use Usuário + PIN.');
+            }
+
+            // Valida o PIN de confirmação (obrigatório mesmo no facial)
+            if ($request->pin !== $cliente->pin) {
+                return redirect()->back()->withInput()
+                    ->with('error', 'PIN incorreto. Mesmo com reconhecimento facial o PIN é exigido.');
+            }
+        }
+
+        /* ---- VERIFICA STATUS DA CONTA ---- */
         if (!in_array($cliente->status, ['ativo', 'pag_atrasado', 'cobranca'])) {
             $label = $cliente->statusLabel();
-            return redirect()->back()
-                ->withInput()
-                ->with('error', "Sua conta está com status: {$label}. Contate a loja.");
+            return redirect()->back()->withInput()
+                ->with('error', "Conta não disponível para acesso (status: {$label}). Contate sua loja.");
         }
 
-        if ($request->metodo === 'pin') {
-            // Verifica PIN
-            if ($request->pin !== $cliente->pin) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'PIN incorreto. Tente novamente.');
-            }
-        } elseif ($request->metodo === 'facial') {
-            // A verificação facial é feita no browser via face-api.js
-            // O score de similaridade é enviado já processado
-            $score = (float) $request->get('facial_score', 0);
-            if ($score < 0.75) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Reconhecimento facial falhou. Tente o PIN.');
-            }
-        }
-
-        // Login bem-sucedido
+        /* ---- LOGIN BEM-SUCEDIDO ---- */
         session([
             'cliente_codigo'  => $cliente->codigo,
             'cliente_loja_id' => $cliente->loja_id,
@@ -91,6 +115,7 @@ class BancoClienteController extends Controller
 
         return redirect()->route('banco.dashboard');
     }
+
 
     /**
      * Dashboard principal do cliente
