@@ -27,7 +27,13 @@ ssh $SSH_USER@$SSH_HOST << 'ENDSSH'
     echo "📥 Sincronizando com GitHub..."
     git fetch --all
     git reset --hard origin/main
-    git clean -fd -e public/phpmyadmin/ # Remove arquivos não rastreados, exceto o PhpMyAdmin
+    git clean -fd \
+        -e public/phpmyadmin/ \
+        -e storage/app/lojas/ \
+        -e storage/app/private/ \
+        -e storage/logs/ \
+        -e storage/framework/sessions/ \
+        -e storage/framework/cache/  # Remove não-rastreados, mas PRESERVA uploads e sessões
     git pull origin main
 
     # Passo B: Ajustar permissões para o servidor Web (www-data)
