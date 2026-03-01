@@ -37,6 +37,10 @@
         .contact-form .form-control:focus { background: rgba(255,255,255,0.08); border-color: var(--primary); box-shadow: none; color: white; }
         .hover-white:hover { color: white !important; }
         .feature-item h6 { font-size: 1.1rem; }
+        .video-container { position: relative; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(10px); }
+        .video-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); transition: opacity 0.3s; }
+        .video-container:hover .video-overlay { opacity: 0; }
+        .play-btn { width: 80px; height: 80px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 0 30px var(--primary); }
     </style>
 </head>
 <body>
@@ -183,6 +187,40 @@
                 </div>
             </div>
             <div class="swiper-pagination mt-4"></div>
+        </div>
+    </section>
+
+    <!-- Video Section -->
+    <section id="video-demonstracao" class="py-5 container mt-5">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-5 animate-fade-in">
+                <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-3 py-2 mb-3 border border-primary border-opacity-25">DEMONSTRAÇÃO REAL</span>
+                <h2 class="display-5 font-weight-bold mb-4">Veja o <span class="text-gradient">Ecossistema</span> em Ação</h2>
+                <p class="lead text-white-50 mb-4">Assista ao vídeo e entenda como nossa tecnologia transforma a operação do seu varejo, trazendo agilidade, segurança e inteligência artificial para o seu dia a dia.</p>
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 font-weight-bold">Tour Completo</h6>
+                        <p class="text-xs text-white-50 mb-0">Entenda cada módulo em 2 minutos.</p>
+                    </div>
+                </div>
+                <a href="{{ url('/register') }}" class="btn btn-premium px-5 py-3">🚀 Quero Testar Agora</a>
+            </div>
+            <div class="col-lg-7 animate-fade-in delay-2">
+                <div class="video-container">
+                    <video id="mainVideo" class="w-100" poster="{{ asset('assets/img/landing/video-thumbnail.jpg') }}" playsinline>
+                        <source src="{{ asset('assets/videos/Ecossistemamax.mp4') }}" type="video/mp4">
+                        Seu navegador não suporta vídeos HTML5.
+                    </video>
+                    <div class="video-overlay" id="videoOverlay" onclick="playMainVideo()">
+                        <div class="play-btn">
+                            <i class="fas fa-play"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -414,6 +452,14 @@
                 obs.observe(el);
             });
         });
+
+        function playMainVideo() {
+            const video = document.getElementById('mainVideo');
+            const overlay = document.getElementById('videoOverlay');
+            video.controls = true;
+            video.play();
+            overlay.style.display = 'none';
+        }
     </script>
 </body>
 </html>
