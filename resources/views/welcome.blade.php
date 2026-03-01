@@ -61,7 +61,7 @@
                     <li class="nav-item"><a class="nav-link px-3" href="#beneficios">Benefícios</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#solucoes">Soluções</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#planos">Planos</a></li>
-                    <li class="nav-item"><a class="nav-link px-3" href="#arsenal">Arsenal Max</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#tecnologia">Tecnologia Max</a></li>
                     <li class="nav-item ms-lg-3 d-none d-lg-block">
                         <a href="{{ route('login') }}" class="text-white text-decoration-none me-3 opacity-75 hover-opacity-100">Entrar</a>
                     </li>
@@ -210,7 +210,7 @@
             </div>
             <div class="col-lg-7 animate-fade-in delay-2">
                 <div class="video-container">
-                    <video id="mainVideo" class="w-100" poster="{{ asset('assets/img/landing/video-thumbnail.jpg') }}" playsinline>
+                    <video id="mainVideo" class="w-100" playsinline>
                         <source src="{{ asset('assets/videos/Ecossistemamax.mp4') }}" type="video/mp4">
                         Seu navegador não suporta vídeos HTML5.
                     </video>
@@ -295,11 +295,11 @@
         </div>
     </section>
 
-    <!-- Arsenal Max / Features Grid -->
-    <section id="arsenal" class="py-5 container" style="margin-top: 50px;">
+    <!-- Tecnologia Max / Features Grid -->
+    <section id="tecnologia" class="py-5 container" style="margin-top: 50px;">
         <div class="text-center mb-5 animate-fade-in">
-            <h2 class="display-5 font-weight-bold">A Lista Completa do <span class="text-gradient">Arsenal MaxCheckout</span></h2>
-            <p class="text-white-50">Mostre o poder real do sistema para o seu varejo.</p>
+            <h2 class="display-5 font-weight-bold">A Engenharia por trás do <span class="text-gradient">Ecossistema Max</span></h2>
+            <p class="text-white-50">Tecnologia de ponta desenhada para a máxima performance do seu varejo.</p>
         </div>
         
         <div class="row g-5">
