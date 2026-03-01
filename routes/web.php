@@ -19,6 +19,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\MaxDivulgaAdminController;
 use App\Http\Controllers\MaxDivulgaController;
+use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\BancoClienteController;
+use App\Http\Controllers\BancoAtivacaoController;
 
 #----- bibliotecas para resetar cache spatie -----
 use Illuminate\Support\Facades\Artisan;
@@ -251,6 +254,45 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{provider}', [\App\Http\Controllers\Lojista\SocialAuthController::class, 'disconnect'])->name('lojista.maxdivulga.canais.disconnect');
             Route::post('/publish/{campaign}', [\App\Http\Controllers\Lojista\SocialAuthController::class, 'publish'])->name('lojista.maxdivulga.canais.publish');
         });
+    });
+});
+
+#------------ ROTAS MAXBANK — PAINEL ADMIN ------------------
+Route::prefix('bank')->middleware(['auth'])->group(function () {
+    Route::get('/clientes', [ClienteController::class, 'index'])->name('bank.clientes.index');
+    Route::get('/clientes/criar', [ClienteController::class, 'create'])->name('bank.clientes.create');
+    Route::post('/clientes', [ClienteController::class, 'store'])->name('bank.clientes.store');
+    Route::get('/clientes/{codigo}', [ClienteController::class, 'show'])->name('bank.clientes.show');
+    Route::get('/clientes/{codigo}/editar', [ClienteController::class, 'edit'])->name('bank.clientes.edit');
+    Route::put('/clientes/{codigo}', [ClienteController::class, 'update'])->name('bank.clientes.update');
+    Route::delete('/clientes/{codigo}', [ClienteController::class, 'destroy'])->name('bank.clientes.destroy');
+    Route::post('/clientes/{codigo}/aprovar', [ClienteController::class, 'aprovar'])->name('bank.clientes.aprovar');
+    Route::post('/clientes/{codigo}/credito', [ClienteController::class, 'adicionarCredito'])->name('bank.clientes.credito');
+    Route::post('/clientes/{codigo}/status', [ClienteController::class, 'alterarStatus'])->name('bank.clientes.status');
+    Route::get('/clientes/{codigo}/transacoes', [ClienteController::class, 'transacoes'])->name('bank.clientes.transacoes');
+    Route::get('/clientes/{codigo}/documentos', [ClienteController::class, 'documentos'])->name('bank.clientes.documentos');
+    Route::post('/clientes/{codigo}/reenviar-link', [ClienteController::class, 'reenviarLink'])->name('bank.clientes.reenviar_link');
+});
+
+#------------ ROTAS MAXBANK — PORTAL DO CLIENTE (sessão própria) ------------------
+Route::prefix('banco')->group(function () {
+    // Públicas (não requer sessão de cliente)
+    Route::get('/login', [BancoClienteController::class, 'loginForm'])->name('banco.login');
+    Route::post('/autenticar', [BancoClienteController::class, 'autenticar'])->name('banco.autenticar');
+
+    // Ativação via link temporário (público)
+    Route::get('/ativar/{token}', [BancoAtivacaoController::class, 'form'])->name('banco.ativar');
+    Route::post('/ativar/{token}', [BancoAtivacaoController::class, 'salvar'])->name('banco.ativar.salvar');
+
+    // Protegidas — requer sessão de cliente autenticado
+    Route::middleware('auth.cliente')->group(function () {
+        Route::get('/dashboard', [BancoClienteController::class, 'dashboard'])->name('banco.dashboard');
+        Route::get('/faturas', [BancoClienteController::class, 'faturas'])->name('banco.faturas');
+        Route::post('/pagar', [BancoClienteController::class, 'pagarSaldo'])->name('banco.pagar');
+        Route::get('/perfil', [BancoClienteController::class, 'perfil'])->name('banco.perfil');
+        Route::put('/perfil', [BancoClienteController::class, 'atualizarPerfil'])->name('banco.perfil.update');
+        Route::post('/documentos', [BancoClienteController::class, 'uploadDocumentos'])->name('banco.documentos');
+        Route::get('/logout', [BancoClienteController::class, 'logout'])->name('banco.logout');
     });
 });
 

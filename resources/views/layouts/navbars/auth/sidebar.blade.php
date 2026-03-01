@@ -120,6 +120,43 @@
       </li>
 
 
+      <!-- ================= MaxBank ================= -->
+      <li class="nav-item mt-3">
+        <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6 sidenav-heading">MaxBank</h6>
+      </li>
+      <li class="nav-item">
+        <a data-bs-toggle="collapse" href="#maxbankExamples"
+          class="nav-link {{ Request::is('bank*') ? 'active' : '' }}" aria-controls="maxbankExamples"
+          role="button" aria-expanded="{{ Request::is('bank*') ? 'true' : 'false' }}">
+          <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center d-flex align-items-center justify-content-center me-2">
+            <i class="fas fa-university {{ Request::is('bank*') ? 'text-white' : 'text-dark' }} text-lg"></i>
+          </div>
+          <span class="nav-link-text ms-1">MaxBank</span>
+        </a>
+        <div class="collapse {{ Request::is('bank*') ? 'show' : '' }}" id="maxbankExamples">
+          <ul class="nav ms-4">
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('bank/clientes') && !Request::is('bank/clientes/criar') ? 'active' : '' }}" href="{{ route('bank.clientes.index') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i class="fas fa-users"></i></span>
+                <span class="sidenav-normal"> Clientes </span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('bank/clientes/criar') ? 'active' : '' }}" href="{{ route('bank.clientes.create') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i class="fas fa-user-plus"></i></span>
+                <span class="sidenav-normal"> Novo Cliente </span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ route('banco.login') }}" target="_blank">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i class="fas fa-mobile-alt text-primary"></i></span>
+                <span class="sidenav-normal" style="color:#3b82f6;font-weight:600;"> Portal do Cliente </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </li>
+
       <!-- ================= MaxPublica (todos lojistas) ================= -->
       <li class="nav-item mt-3">
         <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6 sidenav-heading">MaxPublica</h6>
