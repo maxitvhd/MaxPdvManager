@@ -258,6 +258,9 @@
 </div>
 @endsection
 
+{{-- face-api.js carregado localmente --}}
+<script src="{{ asset('vendor/face-api/face-api.min.js') }}"></script>
+
 @push('bank-scripts')
 <script>
   /* ============================================================
@@ -340,17 +343,40 @@
   }
 
   /* ============================================================
-     WEBCAM
+     WEBCAM + CARREGAMENTO DOS MODELOS
   ============================================================ */
+  let modelsLoaded = false;
+  const MODEL_PATH = '/vendor/face-api/models';
+
+  async function carregarModelos() {
+    const status = document.getElementById('cam-status');
+    status.textContent = 'Carregando modelos de IA...';
+    try {
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_PATH),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_PATH),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_PATH),
+      ]);
+      modelsLoaded = true;
+      status.textContent = 'Posicione seu rosto no guia oval';
+      status.className   = '';
+    } catch(e) {
+      status.textContent = 'Erro ao carregar modelos de IA.';
+      status.className   = 'err';
+      document.getElementById('captureBtn').disabled = true;
+    }
+  }
+
   async function iniciarWebcam() {
     const status = document.getElementById('cam-status');
+    status.textContent = 'Iniciando câmera...';
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
       });
       document.getElementById('webcam-video').srcObject = mediaStream;
-      status.textContent = 'Posicione seu rosto no guia oval';
-      status.className   = '';
+      // Carrega modelos em paralelo com a câmera
+      await carregarModelos();
     } catch(e) {
       status.textContent = 'Câmera indisponível. Use Usuário + PIN.';
       status.className   = 'err';
@@ -374,37 +400,40 @@
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0);
 
-    // Extrai vetor facial via face-api.js (se disponível) ou usa simulação
+    // Verifica se os modelos estão prontos
+    if (!modelsLoaded) {
+      alerta('Os modelos de IA ainda estão carregando. Aguarde.', 'warning');
+      btn.disabled  = false;
+      btn.innerHTML = '<i class="fas fa-camera me-2"></i>Capturar e Reconhecer Rosto';
+      return;
+    }
+
+    // Detecta o rosto e extrai o vetor de 128 floats com face-api.js
     let vetorJSON = null;
+    status.textContent = 'Detectando rosto...';
+    status.className   = '';
+    try {
+      const options   = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.4 });
+      const detection = await faceapi
+        .detectSingleFace(canvas, options)
+        .withFaceLandmarks(true)   // true = usar tiny landmarks
+        .withFaceDescriptor();
 
-    if (typeof faceapi !== 'undefined') {
-      // Usa face-api.js real para extrair o descriptor de 128 floats
-      status.textContent = 'Detectando rosto...';
-      try {
-        const detection = await faceapi
-          .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
-          .withFaceLandmarks()
-          .withFaceDescriptor();
-
-        if (!detection) {
-          oval.className = 'err';
-          status.textContent = 'Nenhum rosto detectado. Tente novamente.';
-          status.className = 'err';
-          return;
-        }
-        vetorJSON = JSON.stringify(Array.from(detection.descriptor));
-      } catch(e) {
+      if (!detection) {
         oval.className = 'err';
-        status.textContent = 'Erro ao processar rosto. Tente novamente.';
-        status.className = 'err';
+        status.textContent = 'Nenhum rosto detectado. Ajuste a posição e tente novamente.';
+        status.className   = 'err';
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="fas fa-camera me-2"></i>Tentar Novamente';
         return;
       }
-    } else {
-      // face-api.js não carregado — informa ao usuário
+      vetorJSON = JSON.stringify(Array.from(detection.descriptor));
+    } catch(e) {
       oval.className = 'err';
-      status.textContent = 'Módulo facial não carregado. Use Usuário + PIN.';
+      status.textContent = 'Erro ao processar rosto. Tente novamente.';
       status.className   = 'err';
-      alerta('face-api.js não está carregado. Use o modo Usuário + PIN no momento.', 'warning');
+      btn.disabled  = false;
+      btn.innerHTML = '<i class="fas fa-camera me-2"></i>Tentar Novamente';
       return;
     }
 
