@@ -53,6 +53,9 @@ class DashboardController extends Controller
     {
         // Visão Global para Super Admin/Owner
         if (auth()->user()->hasRole('admin') && !$request->has('loja_codigo')) {
+            $lojasPermitidas = $this->getLojasPermitidas(auth()->user());
+            $loja = null;
+
             $lojasAtivas = \App\Models\Loja::where('status', 'ativo')
                 ->orWhere('status', '1')->count();
 
