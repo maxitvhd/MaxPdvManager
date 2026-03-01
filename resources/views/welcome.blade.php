@@ -41,6 +41,12 @@
         .video-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); transition: opacity 0.3s; }
         .video-container:hover .video-overlay { opacity: 0; }
         .play-btn { width: 80px; height: 80px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 0 30px var(--primary); }
+        .os-card { background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; transition: all 0.3s ease; }
+        .os-card:hover { border-color: var(--secondary); background: rgba(15, 23, 42, 0.6); transform: translateY(-5px); }
+        .os-badge { background: rgba(168, 85, 247, 0.1); color: var(--secondary); font-size: 0.7rem; padding: 4px 10px; border-radius: 50px; border: 1px solid rgba(168, 85, 247, 0.2); }
+        .tool-icon { width: 45px; height: 45px; background: rgba(255,255,255,0.03); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: var(--primary); border: 1px solid rgba(255,255,255,0.05); }
+        .spec-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); }
+        .spec-value { font-size: 1.1rem; font-weight: 700; color: white; }
     </style>
 </head>
 <body>
@@ -364,6 +370,94 @@
             <h2 class="font-weight-bolder mb-3">Tudo o que sua loja precisa em <span class="text-gradient">Um Só Ecossistema.</span></h2>
             <p class="lead text-white-50 mb-5">MaxCheckout - Sem fidelidade, suporte humanizado e instalação em minutos.</p>
             <a href="{{ url('/register') }}" class="btn btn-premium btn-lg px-5 py-3">🚀 CRIAR MINHA CONTA AGORA</a>
+        </div>
+    </section>
+
+    <!-- MaxOS Deep Dive -->
+    <section id="maxos" class="py-5 bg-black bg-opacity-40">
+        <div class="container py-5">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-6 animate-fade-in">
+                    <span class="os-badge mb-3 d-inline-block">BASEADO EM DEBIAN LINUX</span>
+                    <h2 class="display-5 font-weight-bold mb-4">MaxOS: O Motor <span class="text-gradient">Inquebrável</span></h2>
+                    <p class="text-white-50 mb-5">Diferente de sistemas convencionais, o MaxOS é uma engenharia dedicada. Ele remove tudo o que é desnecessário para entregar o PDV mais rápido do mundo, blindado contra erros e invasões.</p>
+                    
+                    <div class="row g-4 mb-5">
+                        <div class="col-6">
+                            <div class="spec-label">Consumo do OS</div>
+                            <div class="spec-value text-success">300 MB RAM</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="spec-label">OS + PDV (Total)</div>
+                            <div class="spec-value text-primary">800 MB RAM</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="spec-label">Requisito Mínimo</div>
+                            <div class="spec-value">1 GB RAM / 10 GB HD</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="spec-label">Arquitetura</div>
+                            <div class="spec-value">Read-Only Blindada</div>
+                        </div>
+                    </div>
+
+                    <h5 class="font-weight-bold mb-4">Ecossistema de Apps Integrados:</h5>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="os-card p-3 text-center" style="width: 100px;">
+                            <i class="fab fa-chrome fa-lg mb-2 text-info"></i>
+                            <div class="text-xs text-white-50">Chrome</div>
+                        </div>
+                        <div class="os-card p-3 text-center" style="width: 100px;">
+                            <i class="fas fa-headset fa-lg mb-2 text-danger"></i>
+                            <div class="text-xs text-white-50">AnyDesk</div>
+                        </div>
+                        <div class="os-card p-3 text-center" style="width: 100px;">
+                            <i class="fas fa-file-pdf fa-lg mb-2 text-warning"></i>
+                            <div class="text-xs text-white-50">Leitor PDF</div>
+                        </div>
+                        <div class="os-card p-3 text-center" style="width: 100px;">
+                            <i class="fas fa-calculator fa-lg mb-2 text-primary"></i>
+                            <div class="text-xs text-white-50">Calculadora</div>
+                        </div>
+                        <div class="os-card p-3 text-center" style="width: 100px;">
+                            <i class="fas fa-sync fa-lg mb-2 text-success"></i>
+                            <div class="text-xs text-white-50">Updates</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 animate-fade-in delay-2">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="os-card p-4 h-100">
+                                <div class="tool-icon"><i class="fas fa-lock"></i></div>
+                                <h6 class="font-weight-bold">Blindagem Read-Only</h6>
+                                <p class="text-xs text-white-50 mb-0">Proteção total contra corrupção de arquivos por quedas de luz ou desligamentos abruptos.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="os-card p-4 h-100">
+                                <div class="tool-icon" style="color: #f59e0b;"><i class="fas fa-eye"></i></div>
+                                <h6 class="font-weight-bold">Modo Quiosque (Kiosk)</h6>
+                                <p class="text-xs text-white-50 mb-0">O operador foca 100% na venda. O sistema bloqueia o desktop e garante produtividade total.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="os-card p-4 h-100">
+                                <div class="tool-icon" style="color: #10b981;"><i class="fas fa-dog"></i></div>
+                                <h6 class="font-weight-bold">Watchdog Ativo</h6>
+                                <p class="text-xs text-white-50 mb-0">Auto-recuperação contínua. Se o PDV fechar ou travar, o Watchdog o reabre instantaneamente.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="os-card p-4 h-100">
+                                <div class="tool-icon" style="color: #ef4444;"><i class="fas fa-shield-alt"></i></div>
+                                <h6 class="font-weight-bold">Cyber Security Linux</h6>
+                                <p class="text-xs text-white-50 mb-0">Firewall nativo, bloqueio de portas e IPs. Um sistema imune a vírus e hackers.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
