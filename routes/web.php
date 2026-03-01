@@ -279,6 +279,7 @@ Route::prefix('banco')->group(function () {
     // Públicas (não requer sessão de cliente)
     Route::get('/login', [BancoClienteController::class, 'loginForm'])->name('banco.login');
     Route::post('/autenticar', [BancoClienteController::class, 'autenticar'])->name('banco.autenticar');
+    Route::post('/reconhecer-facial', [BancoClienteController::class, 'reconhecerFacial'])->name('banco.reconhecer');
 
     // Ativação via link temporário (público)
     Route::get('/ativar/{token}', [BancoAtivacaoController::class, 'form'])->name('banco.ativar');

@@ -116,6 +116,83 @@ class BancoClienteController extends Controller
         return redirect()->route('banco.dashboard');
     }
 
+    /**
+     * Endpoint AJAX: recebe vetor facial capturado pelo browser (face-api.js),
+     * compara com todos os clientes do banco usando similaridade de cosseno
+     * e retorna o código do cliente mais similar (se acima do limiar).
+     */
+    public function reconhecerFacial(Request $request)
+    {
+        $request->validate([
+            'vetor' => 'required|string', // JSON array de 128 floats
+        ]);
+
+        $vetorCapturado = json_decode($request->vetor, true);
+
+        if (!is_array($vetorCapturado) || count($vetorCapturado) < 32) {
+            return response()->json(['ok' => false, 'msg' => 'Vetor facial inválido.'], 400);
+        }
+
+        // Busca apenas clientes com vetor facial cadastrado e status permitido
+        $clientes = Cliente::whereNotNull('facial_vector')
+            ->whereIn('status', ['ativo', 'pag_atrasado', 'cobranca'])
+            ->get(['codigo', 'facial_vector', 'loja_id']);
+
+        $melhorScore  = 0;
+        $melhorCliente = null;
+        $limiar = 0.62; // similaridade mínima para aceitar (ajuste conforme necessário)
+
+        foreach ($clientes as $c) {
+            // O vetor pode estar salvo como string JSON ou já como array (cast)
+            $vetorSalvo = is_string($c->facial_vector)
+                ? json_decode($c->facial_vector, true)
+                : $c->facial_vector;
+
+            if (!is_array($vetorSalvo) || count($vetorSalvo) !== count($vetorCapturado)) {
+                continue;
+            }
+
+            $sim = $this->cosineSimilarity($vetorCapturado, $vetorSalvo);
+
+            if ($sim > $melhorScore) {
+                $melhorScore   = $sim;
+                $melhorCliente = $c;
+            }
+        }
+
+        if ($melhorCliente && $melhorScore >= $limiar) {
+            return response()->json([
+                'ok'     => true,
+                'codigo' => $melhorCliente->codigo,
+                'score'  => round($melhorScore, 4),
+            ]);
+        }
+
+        return response()->json([
+            'ok'  => false,
+            'msg' => 'Rosto não reconhecido (score: ' . round($melhorScore, 3) . ').',
+        ], 404);
+    }
+
+    /**
+     * Calcula a similaridade de cosseno entre dois vetores.
+     */
+    private function cosineSimilarity(array $a, array $b): float
+    {
+        $dot  = 0.0;
+        $magA = 0.0;
+        $magB = 0.0;
+        $n    = min(count($a), count($b));
+
+        for ($i = 0; $i < $n; $i++) {
+            $dot  += $a[$i] * $b[$i];
+            $magA += $a[$i] ** 2;
+            $magB += $b[$i] ** 2;
+        }
+
+        $denom = sqrt($magA) * sqrt($magB);
+        return $denom > 0 ? $dot / $denom : 0.0;
+    }
 
     /**
      * Dashboard principal do cliente
