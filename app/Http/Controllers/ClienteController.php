@@ -479,6 +479,39 @@ class ClienteController extends Controller
     }
 
     /**
+     * VER DOCUMENTO: Serve a imagem do documento do storage local (protegida)
+     */
+    public function verDocumento(string $codigo, string $doc)
+    {
+        $user    = auth()->user();
+        $cliente = Cliente::where('codigo', $codigo)->with('loja')->firstOrFail();
+
+        if (!$this->podeGerenciarLoja($user, $cliente->loja)) {
+            abort(403, 'Sem permissão para visualizar documentos.');
+        }
+
+        // Campos de documentos permitidos
+        $camposPermitidos = ['foto_perfil', 'foto_cpf', 'foto_habilitacao', 'foto_comprovante'];
+
+        if (!in_array($doc, $camposPermitidos)) {
+            abort(404, 'Documento não encontrado.');
+        }
+
+        $path = $cliente->$doc;
+
+        if (!$path || !Storage::disk('local')->exists($path)) {
+            abort(404, 'Arquivo não encontrado.');
+        }
+
+        $conteudo  = Storage::disk('local')->get($path);
+        $mimeType  = Storage::disk('local')->mimeType($path) ?: 'image/jpeg';
+
+        return response($conteudo, 200)
+            ->header('Content-Type', $mimeType)
+            ->header('Cache-Control', 'private, max-age=300');
+    }
+
+    /**
      * REENVIAR LINK: Regenera o link de ativação
      */
     public function reenviarLink(string $codigo)

@@ -272,6 +272,7 @@ Route::prefix('bank')->middleware(['auth'])->group(function () {
     Route::get('/clientes/{codigo}/transacoes', [ClienteController::class, 'transacoes'])->name('bank.clientes.transacoes');
     Route::get('/clientes/{codigo}/documentos', [ClienteController::class, 'documentos'])->name('bank.clientes.documentos');
     Route::post('/clientes/{codigo}/reenviar-link', [ClienteController::class, 'reenviarLink'])->name('bank.clientes.reenviar_link');
+    Route::get('/clientes/{codigo}/doc/{doc}', [ClienteController::class, 'verDocumento'])->name('bank.doc.view');
 });
 
 #------------ ROTAS MAXBANK — PORTAL DO CLIENTE (sessão própria) ------------------
