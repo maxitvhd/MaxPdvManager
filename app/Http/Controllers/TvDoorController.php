@@ -115,8 +115,12 @@ class TvDoorController extends Controller
 
     public function createLayout()
     {
-        $loja = $this->resolverLoja();
-        $produtos = Produto::where('loja_id', $loja->id)->get();
+        $loja    = $this->resolverLoja();
+        $produtos = Produto::where('loja_id', $loja->id)->get()->map(function($p) use ($loja) {
+            // Tenta encontrar a imagem pelo path padrão: lojas/{codigo}/produtos/{filename}
+            $p->imagem_url = $this->resolveProductImageUrl($p, $loja);
+            return $p;
+        });
         return view('lojista.tvdoor.layouts.editor', compact('produtos', 'loja'));
     }
 
@@ -149,8 +153,41 @@ class TvDoorController extends Controller
     public function editLayout(TvDoorLayout $layout)
     {
         $loja = $this->resolverLoja();
-        $produtos = Produto::where('loja_id', $loja->id)->get();
+        $produtos = Produto::where('loja_id', $loja->id)->get()->map(function($p) use ($loja) {
+            $p->imagem_url = $this->resolveProductImageUrl($p, $loja);
+            return $p;
+        });
         return view('lojista.tvdoor.layouts.editor', compact('produtos', 'loja', 'layout'));
+    }
+
+    /**
+     * Resolve a URL da imagem do produto
+     * Padrão do sistema: storage/lojas/{codigo}/produtos/{filename}
+     */
+    private function resolveProductImageUrl($produto, $loja)
+    {
+        // 1. Tenta pelo campo imagem (normalmente só o filename)
+        if ($produto->imagem) {
+            $filename = basename($produto->imagem);
+            $byCode   = 'lojas/' . $loja->codigo . '/produtos/' . $filename;
+            if (\Storage::disk('public')->exists($byCode)) {
+                return asset('storage/' . $byCode);
+            }
+            // Se imagem tiver o path completo ou parcial
+            if (\Storage::disk('public')->exists($produto->imagem)) {
+                return asset('storage/' . ltrim($produto->imagem, '/'));
+            }
+        }
+        // 2. Tenta pelo codigo_barras (padrao mais comum do MaxPDV)
+        if ($produto->codigo_barras) {
+            foreach (['.jpg', '.jpeg', '.png', '.webp'] as $ext) {
+                $path = 'lojas/' . $loja->codigo . '/produtos/' . $produto->codigo_barras . $ext;
+                if (\Storage::disk('public')->exists($path)) {
+                    return asset('storage/' . $path);
+                }
+            }
+        }
+        return null;
     }
 
     public function updateLayout(Request $request, TvDoorLayout $layout)

@@ -438,26 +438,19 @@
         function playLayout(item, screen) {
             const dur = (item.duration || 15) * 1000;
 
-            // Pega o JSON do Fabric.js
             let fabricData = item.layout_fabric;
             if (!fabricData) { next(); return; }
-
-            // Pode vir como string ou objeto
             if (typeof fabricData === 'string') {
                 try { fabricData = JSON.parse(fabricData); } catch (e) { next(); return; }
             }
 
-            // Verifica se tem a estrutura fabric aninhada (o editor salva assim)
             const canvasData = fabricData.fabric || fabricData;
-
             const wrapper = document.getElementById('fabric-wrapper');
             const canvasEl = document.getElementById('fabric-canvas');
 
-            // Dimensões do layout
             const lw = fabricData.width || canvasData.width || 1920;
             const lh = fabricData.height || canvasData.height || 1080;
 
-            // Escala para preencher a tela mantendo proporção
             const scaleX = window.innerWidth / lw;
             const scaleY = window.innerHeight / lh;
             const scale = Math.min(scaleX, scaleY);
@@ -473,34 +466,80 @@
             wrapper.style.height = dispH + 'px';
             wrapper.style.left = Math.round((window.innerWidth - dispW) / 2) + 'px';
             wrapper.style.top = Math.round((window.innerHeight - dispH) / 2) + 'px';
+            wrapper.style.position = 'fixed';
+            wrapper.style.overflow = 'hidden';
 
-            // Destrói canvas anterior se existir
             if (fabricCanvas) { fabricCanvas.dispose(); fabricCanvas = null; }
+            // Remove overlays anteriores
+            wrapper.querySelectorAll('.media-overlay').forEach(el => el.remove());
 
             fabricCanvas = new fabric.Canvas('fabric-canvas', {
-                selection: false,
-                interactive: false,
-                width: lw,
-                height: lh,
+                selection: false, interactive: false,
+                width: lw, height: lh,
             });
 
-            // Define o background
             if (canvasData.background) {
                 fabricCanvas.setBackgroundColor(canvasData.background, fabricCanvas.renderAll.bind(fabricCanvas));
             }
 
-            // Carrega objetos
             fabricCanvas.loadFromJSON(canvasData, () => {
                 // Desabilita interatividade
                 fabricCanvas.getObjects().forEach(obj => {
                     obj.selectable = false;
                     obj.evented = false;
+
+                    const d = obj.data || {};
+
+                    // GIF animado: cria overlay <img>
+                    if (d.type === 'gif' && d.src) {
+                        obj.set('opacity', 0); // oculta o objeto estático
+                        const bounds = obj.getBoundingRect();
+                        const img = document.createElement('img');
+                        img.src = d.src;
+                        img.className = 'media-overlay';
+                        img.style.cssText = `
+                            position:absolute;
+                            left:${bounds.left * scale}px;
+                            top:${bounds.top * scale}px;
+                            width:${bounds.width * scale}px;
+                            height:${bounds.height * scale}px;
+                            object-fit:cover;
+                            border-radius:${(obj.rx || 0) * scale}px;
+                            transform:rotate(${obj.angle || 0}deg);
+                            transform-origin:center;
+                            z-index:10;
+                        `;
+                        wrapper.appendChild(img);
+                    }
+
+                    // Vídeo: cria overlay <video>
+                    if (d.type === 'video' && d.src) {
+                        obj.set('opacity', 0);
+                        const bounds = obj.getBoundingRect();
+                        const video = document.createElement('video');
+                        video.src = d.src;
+                        video.autoplay = true;
+                        video.muted = false;
+                        video.loop = true;
+                        video.className = 'media-overlay';
+                        video.style.cssText = `
+                            position:absolute;
+                            left:${bounds.left * scale}px;
+                            top:${bounds.top * scale}px;
+                            width:${bounds.width * scale}px;
+                            height:${bounds.height * scale}px;
+                            object-fit:cover;
+                            border-radius:4px;
+                            z-index:10;
+                        `;
+                        wrapper.appendChild(video);
+                        video.play().catch(() => { });
+                    }
                 });
 
-                // Escala o canvas no DOM
-                const canvasWrapper = fabricCanvas.wrapperEl;
-                canvasWrapper.style.transform = `scale(${scale})`;
-                canvasWrapper.style.transformOrigin = 'top left';
+                // Escala o canvas wrapper
+                fabricCanvas.wrapperEl.style.transform = `scale(${scale})`;
+                fabricCanvas.wrapperEl.style.transformOrigin = 'top left';
 
                 fabricCanvas.renderAll();
                 activateFabricClocks();
@@ -510,10 +549,7 @@
             if (clockTimer) clearInterval(clockTimer);
             clockTimer = setInterval(activateFabricClocks, 1000);
 
-            setTimeout(() => {
-                hideFabric();
-                next();
-            }, dur);
+            setTimeout(() => { hideFabric(); next(); }, dur);
         }
 
         function activateFabricClocks() {

@@ -131,14 +131,15 @@
           <div class="prod-list" id="prod-list">
             @forelse($produtos as $prod)
             <div class="prod-item" data-name="{{ strtolower($prod->nome) }}" data-codigo="{{ $prod->codigo_barras ?? '' }}"
-                 onclick="addProduct('{{ addslashes($prod->nome) }}', '{{ number_format($prod->preco_venda, 2, ',', '.') }}', '{{ $prod->imagem ? asset('storage/'.$prod->imagem) : '' }}')">
+                 onclick="addProduct('{{ addslashes($prod->nome) }}', '{{ number_format($prod->preco_venda, 2, \',\', \'.\') }}', '{{ $prod->imagem_url ?? '' }}')">
               <img class="prod-img"
-                   src="{{ $prod->imagem ? asset('storage/'.$prod->imagem) : 'https://placehold.co/34x34/f0f0f0/aaa?text=?' }}"
+                   src="{{ $prod->imagem_url ?? 'https://placehold.co/34x34/f0f0f0/aaa?text=?' }}"
                    onerror="this.src='https://placehold.co/34x34/f0f0f0/aaa?text=?'"
-                   alt="{{ $prod->nome }}">
+                   alt="{{ $prod->nome }}"
+                   crossorigin="anonymous">
               <div>
                 <div class="prod-name">{{ Str::limit($prod->nome, 20) }}</div>
-                <div class="prod-price">R$ {{ number_format($prod->preco_venda, 2, ',', '.') }}</div>
+                <div class="prod-price">R$ {{ number_format($prod->preco_venda, 2, \',\', \'.\') }}</div>
                 @if($prod->codigo_barras)
                   <div style="font-size:.62rem;color:#aaa;">{{ $prod->codigo_barras }}</div>
                 @endif
