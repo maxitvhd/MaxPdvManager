@@ -167,7 +167,7 @@
           class="nav-link {{ $maxpublicaActive ? 'active' : '' }}" aria-controls="maxpublicaExamples"
           role="button" aria-expanded="{{ $maxpublicaActive ? 'true' : 'false' }}">
           <div
-            class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center d-flex align-items-center justify-content-center me-2">
+            class="icon icon-shape icon-sm shadow border-radius-md {{ $maxpublicaActive ? 'bg-gradient-primary' : 'bg-white' }} text-center d-flex align-items-center justify-content-center me-2">
             <i
               class="fas fa-bullhorn {{ $maxpublicaActive ? 'text-white' : 'text-dark' }} text-lg"></i>
           </div>
@@ -218,7 +218,7 @@
           class="nav-link {{ Request::is('lojista/tvdoor*') ? 'active' : '' }}" aria-controls="tvdoorExamples"
           role="button" aria-expanded="{{ Request::is('lojista/tvdoor*') ? 'true' : 'false' }}">
           <div
-            class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center d-flex align-items-center justify-content-center me-2">
+            class="icon icon-shape icon-sm shadow border-radius-md {{ Request::is('lojista/tvdoor*') ? 'bg-gradient-primary' : 'bg-white' }} text-center d-flex align-items-center justify-content-center me-2">
             <i
               class="fas fa-tv {{ Request::is('lojista/tvdoor*') ? 'text-white' : 'text-dark' }} text-lg"></i>
           </div>

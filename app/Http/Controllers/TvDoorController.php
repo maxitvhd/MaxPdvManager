@@ -51,6 +51,13 @@ class TvDoorController extends Controller
         return redirect()->route('lojista.tvdoor.players.index')->with('success', 'Player adicionado! Use o código de pareamento no dispositivo.');
     }
 
+    public function editPlayer(TvDoorPlayer $player)
+    {
+        $loja = $this->resolverLoja();
+        $players = TvDoorPlayer::where('loja_id', $loja->id)->get();
+        return view('lojista.tvdoor.players.index', compact('players', 'loja', 'player'));
+    }
+
     public function updatePlayer(Request $request, TvDoorPlayer $player)
     {
         $request->validate(['name' => 'required|string|max:255']);
@@ -204,6 +211,19 @@ class TvDoorController extends Controller
         ]));
 
         return redirect()->route('lojista.tvdoor.schedules.index')->with('success', 'Agendamento criado!');
+    }
+
+    public function editSchedule(TvDoorSchedule $schedule)
+    {
+        $loja = $this->resolverLoja();
+        $players = TvDoorPlayer::where('loja_id', $loja->id)->get();
+        $media = TvDoorMedia::where('loja_id', $loja->id)->get();
+        $layouts = TvDoorLayout::where('loja_id', $loja->id)->get();
+        $campaigns = MaxDivulgaCampaign::where('loja_id', $loja->id)->where('is_active', true)->get();
+        $schedules = TvDoorSchedule::whereIn('player_id', $players->pluck('id'))
+            ->orderBy('priority', 'desc')->get();
+        
+        return view('lojista.tvdoor.schedules.index', compact('schedules', 'players', 'media', 'layouts', 'campaigns', 'loja', 'schedule'));
     }
 
     public function updateSchedule(Request $request, TvDoorSchedule $schedule)

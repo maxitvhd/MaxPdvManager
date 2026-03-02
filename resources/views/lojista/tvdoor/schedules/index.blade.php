@@ -405,5 +405,22 @@ function previewSchedule(name, type, start, end, res) {
     document.getElementById('preview-res').innerText  = res;
     new bootstrap.Modal(document.getElementById('previewModal')).show();
 }
+
+// ---- Auto-abrir modal de edição se passar o objeto via GET ----
+@isset($schedule)
+document.addEventListener('DOMContentLoaded', () => {
+    openEditSchedule(
+        {{ $schedule->id }},
+        {{ $schedule->player_id }},
+        {{ $schedule->schedulable_id }},
+        '{{ addslashes($schedule->schedulable_type) }}',
+        {{ json_encode($schedule->days ?? []) }},
+        '{{ $schedule->start_time }}',
+        '{{ $schedule->end_time }}',
+        {{ $schedule->priority ?? 0 }},
+        '{{ $schedule->resolution ?? '1920x1080' }}'
+    );
+});
+@endisset
 </script>
 @endsection

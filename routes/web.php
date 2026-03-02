@@ -253,6 +253,7 @@ Route::middleware(['auth'])->group(function () {
             // Players
             Route::get('/players', [TvDoorController::class, 'players'])->name('lojista.tvdoor.players.index');
             Route::post('/players', [TvDoorController::class, 'storePlayer'])->name('lojista.tvdoor.players.store');
+            Route::get('/players/{player}/edit', [TvDoorController::class, 'editPlayer'])->name('lojista.tvdoor.players.edit');
             Route::put('/players/{player}', [TvDoorController::class, 'updatePlayer'])->name('lojista.tvdoor.players.update');
             Route::delete('/players/{player}', [TvDoorController::class, 'destroyPlayer'])->name('lojista.tvdoor.players.destroy');
 
@@ -272,6 +273,7 @@ Route::middleware(['auth'])->group(function () {
             // Schedules
             Route::get('/schedules', [TvDoorController::class, 'schedules'])->name('lojista.tvdoor.schedules.index');
             Route::post('/schedules', [TvDoorController::class, 'storeSchedule'])->name('lojista.tvdoor.schedules.store');
+            Route::get('/schedules/{schedule}/edit', [TvDoorController::class, 'editSchedule'])->name('lojista.tvdoor.schedules.edit');
             Route::put('/schedules/{schedule}', [TvDoorController::class, 'updateSchedule'])->name('lojista.tvdoor.schedules.update');
             Route::delete('/schedules/{schedule}', [TvDoorController::class, 'destroySchedule'])->name('lojista.tvdoor.schedules.destroy');
         });

@@ -188,5 +188,14 @@ function viewPairingCode(code, name) {
     document.getElementById('pairingPlayerName').innerText = name;
     new bootstrap.Modal(document.getElementById('pairingModal')).show();
 }
+    new bootstrap.Modal(document.getElementById('pairingModal')).show();
+}
+
+// ---- Auto-abrir modal de edição se passar o objeto via GET ----
+@isset($player)
+document.addEventListener('DOMContentLoaded', () => {
+    openEditPlayer({{ $player->id }}, '{{ addslashes($player->name) }}');
+});
+@endisset
 </script>
 @endsection
