@@ -663,55 +663,64 @@ async function addVideo(input) {
 }
 
 function addProduct(name, price, imgUrl) {
-    const groupPadding = 15;
+    const startX = 150;
+    const startY = 150;
     const cardW = 260;
     const cardH = 320;
 
     // Fundo do Card
     const rect = new fabric.Rect({
+        left: startX, top: startY,
         width: cardW, height: cardH,
         fill: 'rgba(20, 20, 45, 0.9)',
         rx: 18, ry: 18,
         stroke: '#4a4ae2', strokeWidth: 2,
-        shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.5)', blur: 15, offsetX: 5, offsetY: 5 })
+        shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.5)', blur: 15, offsetX: 5, offsetY: 5 }),
+        data: { part: 'bg' }
     });
 
-    // Nome (IText permite edição direta)
+    // Nome
     const nameText = new fabric.IText(name, {
-        top: 200, left: 15, width: 230,
+        left: startX + 15, top: startY + 200, width: 230,
         fontSize: 20, fill: '#ffffff',
         fontWeight: 'bold', fontFamily: 'Segoe UI, sans-serif',
         textAlign: 'center', splitByGrapheme: true,
-        lineHeight: 1.1, charSpacing: 10
+        lineHeight: 1.1, charSpacing: 10,
+        data: { part: 'name' }
     });
 
     // Preço
     const priceText = new fabric.IText('R$ ' + price, {
-        top: 250, left: 15, width: 230,
+        left: startX + 15, top: startY + 250, width: 230,
         fontSize: 28, fill: '#43e97b',
         fontWeight: 'bold', fontFamily: 'Segoe UI, sans-serif',
-        textAlign: 'center'
+        textAlign: 'center',
+        data: { part: 'price' }
     });
 
     const finishAdd = (imgObj) => {
-        const elements = [rect];
-        if (imgObj) elements.push(imgObj);
-        elements.push(nameText, priceText);
+        canvas.add(rect);
+        if (imgObj) canvas.add(imgObj);
+        canvas.add(nameText);
+        canvas.add(priceText);
 
-        const group = new fabric.Group(elements, {
-            left: 150, top: 150,
-            subTargetCheck: true // Permite interagir com sub-objetos se necessário
-        });
-
-        canvas.add(group);
-        canvas.setActiveObject(group);
+        // Cria uma seleção ativa com todos os novos objetos
+        const selItems = [rect, nameText, priceText];
+        if (imgObj) selItems.push(imgObj);
+        
+        const sel = new fabric.ActiveSelection(selItems, { canvas: canvas });
+        canvas.setActiveObject(sel);
         canvas.renderAll();
     };
 
     if (imgUrl) {
         fabric.Image.fromURL(imgUrl, img => {
             img.scaleToWidth(200);
-            img.set({ top: 20, left: 30, shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.3)', blur: 10 }) });
+            img.set({ 
+                left: startX + 30, top: startY + 20, 
+                shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.3)', blur: 10 }),
+                data: { part: 'image' }
+            });
             finishAdd(img);
         }, { crossOrigin: 'anonymous' });
     } else {
@@ -1020,17 +1029,17 @@ saveHistory(); // Estado inicial
 
     const data = @json($layout->content);
     if (data) {
-        const canvasData = typeof data === 'string' ? JSON.parse(data) : data;
-        const toLoad = canvasData.fabric || canvasData;
-        if (toLoad) {
-            canvas.loadFromJSON(toLoad, () => {
-                canvas.renderAll();
-                updateCanvasScaling();
-                // Pequeno delay para garantir que o Fabric carregue tudo
-                setTimeout(updateCanvasScaling, 300);
-                setTimeout(updateCanvasScaling, 1000);
-            });
-        }
+        try {
+            const canvasData = typeof data === 'string' ? JSON.parse(data) : data;
+            const toLoad = canvasData.fabric || canvasData;
+            if (toLoad && (toLoad.objects || toLoad.backgroundImage)) {
+                canvas.loadFromJSON(toLoad, () => {
+                    canvas.renderAll();
+                    updateCanvasScaling();
+                    setTimeout(updateCanvasScaling, 500);
+                });
+            }
+        } catch(e) { console.error("Erro ao carregar layout:", e); }
     }
 })();
 @endisset

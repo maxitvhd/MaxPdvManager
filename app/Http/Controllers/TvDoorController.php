@@ -127,12 +127,12 @@ class TvDoorController extends Controller
             'content' => 'required|string',
         ]);
 
-        // Decodifica o JSON vindo do editor
-        $content = json_decode($request->content, true);
-        
-        // Se falhar a decodificação, usa um array vazio ou tenta salvar o raw se for array
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $content = is_array($request->content) ? $request->content : [];
+        $content = $request->content;
+        if (is_string($content)) {
+            $decoded = json_decode($content, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $content = $decoded;
+            }
         }
 
         TvDoorLayout::create([
@@ -229,9 +229,12 @@ class TvDoorController extends Controller
             'content' => 'required|string',
         ]);
         
-        $content = json_decode($request->content, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $content = is_array($request->content) ? $request->content : $layout->content;
+        $content = $request->content;
+        if (is_string($content)) {
+            $decoded = json_decode($content, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $content = $decoded;
+            }
         }
 
         $layout->update([

@@ -420,10 +420,19 @@
                 video.src = item.media_url;
                 video.className = 'media-item';
                 video.autoplay = true;
-                video.muted = false;
+                video.muted = item.mute ?? true; // Segue a preferência ou silencia por segurança
+                video.setAttribute('playsinline', '');
                 video.onended = next;
                 screen.appendChild(video);
+
+                video.play().catch(err => {
+                    console.warn("Play bloqueado, tentando novamente...", err);
+                    setTimeout(() => video.play(), 1000);
+                });
+
                 animateProgress(dur);
+                // Fallback se o vídeo falhar ou demorar demais
+                setTimeout(() => { if (video.parentElement) next(); }, dur + 2000);
             } else {
                 const img = document.createElement('img');
                 img.src = item.media_url;
@@ -535,7 +544,8 @@
                         `;
                         wrapper.appendChild(video);
                         video.play().catch(err => {
-                            console.error("Erro ao dar play no vídeo overlay:", err);
+                            console.warn("Autoplay bloqueado ou erro inicial. Tentando novamente em 1s...", err);
+                            setTimeout(() => video.play().catch(e => console.error("Falha persistente no vídeo:", e)), 1000);
                         });
                     }
                 });
