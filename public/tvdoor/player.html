@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TvDoor Player</title>
+    <!-- Fabric.js para renderizar layouts criados no editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -156,17 +158,20 @@
             animation: fadeIn 0.5s ease;
         }
 
-        .layout-container {
+        /* Container para canvas do Fabric.js */
+        #fabric-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            position: relative;
-            background: #111;
-            animation: fadeIn 0.5s ease;
+            display: none;
         }
 
-        .layout-element {
+        #fabric-wrapper canvas {
             position: absolute;
-            color: white;
+            top: 0;
+            left: 0;
         }
 
         #status-bar {
@@ -262,10 +267,15 @@
         </div>
     </div>
 
+    <!-- Canvas wrapper para Fabric.js -->
+    <div id="fabric-wrapper">
+        <canvas id="fabric-canvas"></canvas>
+    </div>
+
     <div id="status-bar">
         <span id="status-label"><span class="status-dot"></span> Aguardando...</span>
         <span id="now-label"></span>
-        <span>TvDoor Player v1.1</span>
+        <span>TvDoor Player v2.0</span>
     </div>
     <div id="progress-bar"></div>
 
@@ -276,8 +286,10 @@
         let playlist = [];
         let idx = 0;
         let isPlaying = false;
+        let fabricCanvas = null;
+        let clockTimer = null;
 
-        // Relógio
+        // Relógio na status bar
         setInterval(() => {
             document.getElementById('now-label').innerText = new Date().toLocaleTimeString('pt-BR');
         }, 1000);
@@ -290,7 +302,7 @@
             }
         }
 
-        // PASSO 1: Digita código de pareamento → API retorna token
+        // === PAREAMENTO ===
         async function doParear() {
             const code = document.getElementById('code-input').value.trim().toUpperCase();
             if (code.length < 4) { showPairError('Digite o código completo.'); return; }
@@ -314,7 +326,6 @@
                 }
             } catch (e) {
                 showPairError('Erro de conexão. Verifique a rede.');
-                console.error(e);
             }
 
             document.getElementById('pair-loading').style.display = 'none';
@@ -332,7 +343,7 @@
             if (e.key === 'Enter') doParear();
         });
 
-        // PASSO 2: Sincronizar playlist
+        // === SINCRONIZAÇÃO ===
         async function startSync() {
             setStatus('Sincronizando...', false);
             try {
@@ -347,14 +358,24 @@
                 }
 
                 const data = await res.json();
-                if (data.success) {
-                    playlist = data.playlist || [];
+
+                if (data.success && data.playlist && data.playlist.length > 0) {
                     const syncSec = data.config?.sync_interval || 60;
-                    setStatus('Online · ' + playlist.length + ' item(s)', true);
-                    if (!isPlaying) { isPlaying = true; idx = 0; playNext(); }
+                    // Reinicia playlist apenas se mudou
+                    const newHash = JSON.stringify(data.playlist);
+                    if (JSON.stringify(playlist) !== newHash) {
+                        playlist = data.playlist;
+                        idx = 0;
+                        isPlaying = false;
+                    }
+                    setStatus('Online · ' + playlist.length + ' item(s) na playlist', true);
+                    if (!isPlaying) { isPlaying = true; playNext(); }
                     setTimeout(startSync, syncSec * 1000);
                 } else {
-                    setStatus('Sem programação agendada', true);
+                    setStatus('Sem programação agendada para agora', true);
+                    playlist = [];
+                    isPlaying = false;
+                    showIdle();
                     setTimeout(startSync, 30000);
                 }
             } catch (e) {
@@ -363,85 +384,187 @@
             }
         }
 
-        // PASSO 3: Reproduzir
+        // === REPRODUÇÃO DA PLAYLIST ===
         function playNext() {
             if (playlist.length === 0) { showIdle(); isPlaying = false; return; }
 
             const item = playlist[idx % playlist.length];
             const screen = document.getElementById('screen');
+
+            // Oculta canvas Fabric se estava ativo
+            hideFabric();
             screen.innerHTML = '';
             animateProgress(0);
 
             if (item.type && item.type.includes('Media')) {
-                const dur = (item.duration || 10) * 1000;
-                if (item.media_type === 'video') {
-                    const video = document.createElement('video');
-                    video.src = item.media_url;
-                    video.className = 'media-item';
-                    video.autoplay = true;
-                    video.onended = next;
-                    screen.appendChild(video);
-                    animateProgress(dur);
-                } else {
-                    const img = document.createElement('img');
-                    img.src = item.media_url;
-                    img.className = 'media-item';
-                    screen.appendChild(img);
-                    animateProgress(dur);
-                    setTimeout(next, dur);
-                }
+                playMedia(item, screen);
             } else if (item.type && item.type.includes('Layout')) {
-                const dur = 15000;
-                const container = document.createElement('div');
-                container.className = 'layout-container';
-                (item.layout_content || []).forEach(el => {
-                    const div = document.createElement('div');
-                    div.className = 'layout-element';
-                    div.style.left = el.x + 'px';
-                    div.style.top = el.y + 'px';
-                    div.style.width = el.w + 'px';
-                    div.style.height = el.h + 'px';
-                    div.innerHTML = el.content;
-                    container.appendChild(div);
-                });
-                screen.appendChild(container);
-                activateClocks(screen);
-                animateProgress(dur);
-                setTimeout(next, dur);
+                playLayout(item, screen);
             } else if (item.type && item.type.includes('Campaign')) {
-                const dur = 15000;
-                if (item.media_url) {
-                    const img = document.createElement('img');
-                    img.src = item.media_url;
-                    img.className = 'media-item';
-                    screen.appendChild(img);
-                }
-                if (item.audio_url) { new Audio(item.audio_url).play().catch(() => { }); }
-                animateProgress(dur);
-                setTimeout(next, dur);
-            } else { next(); }
+                playCampaign(item, screen);
+            } else {
+                next();
+            }
         }
 
-        function next() { idx = (idx + 1) % (playlist.length || 1); playNext(); }
+        function next() {
+            idx = (idx + 1) % (playlist.length || 1);
+            playNext();
+        }
 
+        // --- Mídia (imagem/vídeo) ---
+        function playMedia(item, screen) {
+            const dur = (item.duration || 10) * 1000;
+            if (item.media_type === 'video') {
+                const video = document.createElement('video');
+                video.src = item.media_url;
+                video.className = 'media-item';
+                video.autoplay = true;
+                video.muted = false;
+                video.onended = next;
+                screen.appendChild(video);
+                animateProgress(dur);
+            } else {
+                const img = document.createElement('img');
+                img.src = item.media_url;
+                img.className = 'media-item';
+                screen.appendChild(img);
+                animateProgress(dur);
+                setTimeout(next, dur);
+            }
+        }
+
+        // --- Layout via Fabric.js ---
+        function playLayout(item, screen) {
+            const dur = (item.duration || 15) * 1000;
+
+            // Pega o JSON do Fabric.js
+            let fabricData = item.layout_fabric;
+            if (!fabricData) { next(); return; }
+
+            // Pode vir como string ou objeto
+            if (typeof fabricData === 'string') {
+                try { fabricData = JSON.parse(fabricData); } catch (e) { next(); return; }
+            }
+
+            // Verifica se tem a estrutura fabric aninhada (o editor salva assim)
+            const canvasData = fabricData.fabric || fabricData;
+
+            const wrapper = document.getElementById('fabric-wrapper');
+            const canvasEl = document.getElementById('fabric-canvas');
+
+            // Dimensões do layout
+            const lw = fabricData.width || canvasData.width || 1920;
+            const lh = fabricData.height || canvasData.height || 1080;
+
+            // Escala para preencher a tela mantendo proporção
+            const scaleX = window.innerWidth / lw;
+            const scaleY = window.innerHeight / lh;
+            const scale = Math.min(scaleX, scaleY);
+
+            const dispW = Math.round(lw * scale);
+            const dispH = Math.round(lh * scale);
+
+            canvasEl.width = lw;
+            canvasEl.height = lh;
+
+            wrapper.style.display = 'block';
+            wrapper.style.width = dispW + 'px';
+            wrapper.style.height = dispH + 'px';
+            wrapper.style.left = Math.round((window.innerWidth - dispW) / 2) + 'px';
+            wrapper.style.top = Math.round((window.innerHeight - dispH) / 2) + 'px';
+
+            // Destrói canvas anterior se existir
+            if (fabricCanvas) { fabricCanvas.dispose(); fabricCanvas = null; }
+
+            fabricCanvas = new fabric.Canvas('fabric-canvas', {
+                selection: false,
+                interactive: false,
+                width: lw,
+                height: lh,
+            });
+
+            // Define o background
+            if (canvasData.background) {
+                fabricCanvas.setBackgroundColor(canvasData.background, fabricCanvas.renderAll.bind(fabricCanvas));
+            }
+
+            // Carrega objetos
+            fabricCanvas.loadFromJSON(canvasData, () => {
+                // Desabilita interatividade
+                fabricCanvas.getObjects().forEach(obj => {
+                    obj.selectable = false;
+                    obj.evented = false;
+                });
+
+                // Escala o canvas no DOM
+                const canvasWrapper = fabricCanvas.wrapperEl;
+                canvasWrapper.style.transform = `scale(${scale})`;
+                canvasWrapper.style.transformOrigin = 'top left';
+
+                fabricCanvas.renderAll();
+                activateFabricClocks();
+            });
+
+            animateProgress(dur);
+            if (clockTimer) clearInterval(clockTimer);
+            clockTimer = setInterval(activateFabricClocks, 1000);
+
+            setTimeout(() => {
+                hideFabric();
+                next();
+            }, dur);
+        }
+
+        function activateFabricClocks() {
+            if (!fabricCanvas) return;
+            fabricCanvas.getObjects().forEach(obj => {
+                if (obj.data && obj.data.type === 'clock') {
+                    obj.set('text', new Date().toLocaleTimeString('pt-BR'));
+                }
+            });
+            fabricCanvas.renderAll();
+        }
+
+        function hideFabric() {
+            if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
+            const wrapper = document.getElementById('fabric-wrapper');
+            wrapper.style.display = 'none';
+            if (fabricCanvas) { fabricCanvas.dispose(); fabricCanvas = null; }
+        }
+
+        // --- Campanha ---
+        function playCampaign(item, screen) {
+            const dur = (item.duration || 15) * 1000;
+            if (item.media_url) {
+                const img = document.createElement('img');
+                img.src = item.media_url;
+                img.className = 'media-item';
+                screen.appendChild(img);
+            } else {
+                screen.innerHTML = '<div style="text-align:center;opacity:0.5;font-size:2rem;padding:40px;">📢 Campanha em exibição</div>';
+            }
+            if (item.audio_url) { new Audio(item.audio_url).play().catch(() => { }); }
+            animateProgress(dur);
+            setTimeout(next, dur);
+        }
+
+        // --- Idle ---
         function showIdle() {
+            hideFabric();
             document.getElementById('screen').innerHTML =
                 '<div style="text-align:center;opacity:0.3;"><div style="font-size:4rem">📺</div><p style="margin-top:10px;font-size:1.2rem">Sem programação no momento</p></div>';
-            setTimeout(() => { isPlaying = true; startSync(); }, 15000);
         }
 
-        function activateClocks(container) {
-            container.querySelectorAll('[data-type="clock"]').forEach(el => {
-                el.innerText = new Date().toLocaleTimeString('pt-BR');
-                setInterval(() => { el.innerText = new Date().toLocaleTimeString('pt-BR'); }, 1000);
-            });
-        }
-
+        // === UTILITÁRIOS ===
         function animateProgress(durationMs) {
             const bar = document.getElementById('progress-bar');
             bar.style.transition = 'none';
             bar.style.width = '0%';
-            setTimeout(() => { bar.style.transition = `width ${durationMs}ms linear`; bar.style.width = '100%'; }, 50);
+            setTimeout(() => {
+                bar.style.transition = `width ${durationMs}ms linear`;
+                bar.style.width = '100%';
+            }, 50);
         }
 
         function setStatus(msg, online) {

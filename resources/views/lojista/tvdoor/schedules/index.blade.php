@@ -131,7 +131,7 @@
         <h5 class="modal-title"><i class="fas fa-plus me-2 text-success"></i>Nova Programação</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form action="{{ route('lojista.tvdoor.schedules.store') }}" method="POST" id="addScheduleForm">
+      <form action="{{ route('lojista.tvdoor.schedules.store') }}" method="POST" id="addScheduleForm" onsubmit="serializeAll('add')">
         @csrf
         <div class="modal-body">
           <div class="row">
@@ -225,7 +225,7 @@
         <h5 class="modal-title"><i class="fas fa-edit me-2 text-warning"></i>Editar Programação</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form id="editScheduleForm" method="POST">
+      <form id="editScheduleForm" method="POST" onsubmit="serializeAll('edit')">
         @csrf @method('PUT')
         <div class="modal-body">
           <div class="row">
@@ -467,6 +467,12 @@ function validateScheduleForm(mode) {
         return false;
     }
     return true;
+}
+
+// Função para garantir que tudo seja serializado antes do submit
+function serializeAll(mode) {
+    serializeSlots(`${mode}-slots-container`, `${mode}_time_slots`);
+    updatePlaylist(mode);
 }
 
 // Inicializar slot vazio no modal de adicionar quando abrir

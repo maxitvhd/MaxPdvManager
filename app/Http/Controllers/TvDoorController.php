@@ -319,44 +319,102 @@ class TvDoorController extends Controller
         $player->update(['last_seen_at' => now(), 'status' => 'online']);
 
         $now = now()->toTimeString();
-        $day = strtolower(date('D'));
+        $day = strtolower(now()->format('D')); // mon, tue, ...
 
-        $schedules = TvDoorSchedule::with('schedulable')
-            ->where('player_id', $player->id)
+        // Busca todos os agendamentos ativos do player
+        $schedules = TvDoorSchedule::where('player_id', $player->id)
             ->where('is_active', true)
             ->get()
             ->filter(function ($s) use ($day, $now) {
-                return in_array($day, $s->days) && ($now >= $s->start_time && $now <= $s->end_time);
+                // Novo sistema: verifica time_slots
+                if (!empty($s->time_slots)) {
+                    foreach ($s->time_slots as $slot) {
+                        if (($slot['day'] ?? '') === $day &&
+                            $now >= ($slot['start'] ?? '00:00') &&
+                            $now <= ($slot['end'] ?? '23:59')) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                // Retrocompatibilidade: sistema antigo com days/start_time/end_time
+                return in_array($day, $s->days ?? []) &&
+                       $now >= ($s->start_time ?? '00:00') &&
+                       $now <= ($s->end_time ?? '23:59');
             })
             ->sortByDesc('priority');
 
-        $playlist = $schedules->map(function ($s) {
-            $item = [
-                'id' => $s->id,
-                'type' => $s->schedulable_type,
-                'duration' => 15,
-            ];
+        $playlist = [];
 
-            if ($s->schedulable_type === TvDoorMedia::class) {
-                $item['media_url'] = asset('storage/' . $s->schedulable->file_path);
-                $item['media_type'] = $s->schedulable->type;
-                $item['duration'] = $s->schedulable->duration;
-            } elseif ($s->schedulable_type === TvDoorLayout::class) {
-                $item['layout_content'] = $s->schedulable->content;
-            } elseif ($s->schedulable_type === MaxDivulgaCampaign::class) {
-                $item['media_url'] = $s->schedulable->file_path ? asset('storage/' . $s->schedulable->file_path) : null;
-                $item['audio_url'] = $s->schedulable->audio_file_path ? asset('storage/' . $s->schedulable->audio_file_path) : null;
+        foreach ($schedules as $s) {
+            // Novo sistema: usa content_items (playlist)
+            $contentItems = $s->content_items ?? [];
+
+            if (empty($contentItems)) {
+                // Retrocompatibilidade: usa schedulable único
+                if ($s->schedulable_id) {
+                    $contentItems = [['id' => $s->schedulable_id, 'type' => $s->schedulable_type]];
+                }
             }
 
-            return $item;
-        })->values();
+            foreach ($contentItems as $ci) {
+                $type = $ci['type'] ?? '';
+                $id   = $ci['id'] ?? null;
+                if (!$id) continue;
+
+                $entry = ['type' => $type, 'duration' => 15, 'schedule_id' => $s->id];
+
+                if (str_contains($type, 'TvDoorMedia')) {
+                    $media = TvDoorMedia::find($id);
+                    if ($media) {
+                        // file_path já inclui o caminho relativo ao storage
+                        $entry['media_url']  = asset('storage/' . $media->file_path);
+                        $entry['media_type'] = $media->type;
+                        $entry['duration']   = $media->duration ?? 10;
+                    }
+                } elseif (str_contains($type, 'TvDoorLayout')) {
+                    $layout = TvDoorLayout::find($id);
+                    if ($layout) {
+                        // Retorna o JSON completo do Fabric.js para renderização no player
+                        $entry['layout_fabric'] = $layout->content;
+                        $entry['resolution']    = $layout->resolution ?? '1920x1080';
+                        $entry['duration']      = 15;
+                    }
+                } elseif (str_contains($type, 'MaxDivulgaCampaign')) {
+                    $campaign = MaxDivulgaCampaign::find($id);
+                    if ($campaign) {
+                        // Corrige path duplicado: se já começa com storage/, usa asset() direto
+                        $filePath  = $campaign->file_path ?? '';
+                        $audioPath = $campaign->audio_file_path ?? '';
+
+                        $entry['media_url'] = $filePath
+                            ? (str_starts_with($filePath, 'storage/')
+                                ? asset($filePath)
+                                : asset('storage/' . $filePath))
+                            : null;
+
+                        $entry['audio_url'] = $audioPath
+                            ? (str_starts_with($audioPath, 'storage/')
+                                ? asset($audioPath)
+                                : asset('storage/' . $audioPath))
+                            : null;
+
+                        $entry['duration'] = 15;
+                    }
+                }
+
+                $playlist[] = $entry;
+            }
+        }
+
+        if (empty($playlist)) {
+            return response()->json(['success' => false, 'message' => 'Sem programação ativa agora.']);
+        }
 
         return response()->json([
-            'success' => true,
-            'playlist' => $playlist,
-            'config' => [
-                'sync_interval' => 60,
-            ]
+            'success'  => true,
+            'playlist' => array_values($playlist),
+            'config'   => ['sync_interval' => 60],
         ]);
     }
 }
