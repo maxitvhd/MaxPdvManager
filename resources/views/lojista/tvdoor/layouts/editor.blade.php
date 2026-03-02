@@ -54,7 +54,15 @@
     <h6 class="mb-0"><i class="fas fa-edit me-2 text-primary"></i>Editor de Layout TvDoor</h6>
     <div class="d-flex gap-2">
       <a href="{{ route('lojista.tvdoor.layouts.index') }}" class="btn btn-sm btn-outline-secondary">← Voltar</a>
-      <button class="save-btn" onclick="salvarLayout()"><i class="fas fa-save me-1"></i> Salvar Layout</button>
+      <button class="save-btn" style="background:linear-gradient(135deg,#4facfe,#00f2fe)" onclick="salvarSemSair()" id="btn-save-only">
+        <i class="fas fa-save me-1"></i> Salvar
+      </button>
+      <button class="save-btn" onclick="salvarLayout()" id="btn-save-exit">
+        <i class="fas fa-check-circle me-1"></i> Salvar e Voltar
+      </button>
+      <button class="save-btn" style="background:linear-gradient(135deg,#f7971e,#ffd200);color:#333" onclick="previewLayout()">
+        <i class="fas fa-eye me-1"></i> Prévia
+      </button>
     </div>
   </div>
 
@@ -133,27 +141,18 @@
       <div class="section-divider">
         <div class="panel-header">Produtos do Catálogo</div>
         <div style="padding:8px 12px 4px;">
-          <input type="text" id="prod-search" placeholder="🔍 Buscar por nome ou código..." oninput="filterProdutos()">
+          <input type="text" id="prod-search" placeholder="🔍 Buscar por nome ou código..."
+                 oninput="debounceSearch()" style="margin-bottom:6px;">
           <div class="prod-list" id="prod-list">
-            @forelse($produtos as $prod)
-            <div class="prod-item" data-name="{{ strtolower($prod->nome) }}" data-codigo="{{ $prod->codigo_barras ?? '' }}"
-                 onclick="addProduct('{{ addslashes($prod->nome) }}', '{{ number_format($prod->preco_venda, 2, ',', '.') }}', '{{ $prod->imagem_url ?? '' }}')">
-              <img class="prod-img"
-                   src="{{ $prod->imagem_url ?? 'https://placehold.co/34x34/f0f0f0/aaa?text=?' }}"
-                   onerror="this.src='https://placehold.co/34x34/f0f0f0/aaa?text=?'"
-                   alt="{{ $prod->nome }}"
-                   crossorigin="anonymous">
-              <div>
-                <div class="prod-name">{{ Str::limit($prod->nome, 20) }}</div>
-                <div class="prod-price">R$ {{ number_format($prod->preco_venda, 2, ',', '.') }}</div>
-                @if($prod->codigo_barras)
-                  <div style="font-size:.62rem;color:#aaa;">{{ $prod->codigo_barras }}</div>
-                @endif
-              </div>
+            <div id="prod-loading" style="text-align:center;padding:12px;font-size:.75rem;color:#999;">
+              <i class="fas fa-spinner fa-spin"></i> Carregando...
             </div>
-            @empty
-            <p style="font-size:.75rem;color:#999;text-align:center;padding:12px;">Catálogo vazio.</p>
-            @endforelse
+          </div>
+          <div id="prod-pagination" style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:.7rem;color:#888;">
+            <span id="prod-info"></span>
+            <button id="prod-more" onclick="loadMoreProdutos()" class="undo-redo-btn" style="display:none;font-size:.7rem;padding:3px 8px;">
+              <i class="fas fa-chevron-down me-1"></i>Ver mais
+            </button>
           </div>
         </div>
       </div>
@@ -673,15 +672,74 @@ function addProduct(name, price, imgUrl) {
     }
 }
 
-// ===== BUSCA DE PRODUTOS =====
-function filterProdutos() {
-    const q = document.getElementById('prod-search').value.toLowerCase().trim();
-    document.querySelectorAll('#prod-list .prod-item').forEach(item => {
-        const name   = item.dataset.name    || '';
-        const codigo = item.dataset.codigo  || '';
-        item.style.display = (!q || name.includes(q) || codigo.includes(q)) ? '' : 'none';
-    });
+// ===== BUSCA DE PRODUTOS (AJAX, 5 por página) =====
+let prodPage = 0;
+let prodQuery = '';
+let prodTotal = 0;
+let prodSearchTimer = null;
+
+function debounceSearch() {
+    clearTimeout(prodSearchTimer);
+    prodSearchTimer = setTimeout(() => {
+        prodPage = 0;
+        prodQuery = document.getElementById('prod-search').value.trim();
+        document.getElementById('prod-list').innerHTML = '<div id="prod-loading" style="text-align:center;padding:12px;font-size:.75rem;color:#999;"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>';
+        searchProdutos();
+    }, 400);
 }
+
+async function searchProdutos() {
+    try {
+        const url = '{{ route("lojista.tvdoor.layouts.search_products") }}?q=' + encodeURIComponent(prodQuery) + '&page=' + prodPage;
+        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const data = await res.json();
+        prodTotal = data.total;
+
+        const list = document.getElementById('prod-list');
+        const loading = document.getElementById('prod-loading');
+        if (loading) loading.remove();
+
+        if (prodPage === 0) {
+            list.innerHTML = '';
+        }
+
+        if (data.produtos.length === 0 && prodPage === 0) {
+            list.innerHTML = '<p style="font-size:.75rem;color:#999;text-align:center;padding:12px;">Nenhum produto encontrado.</p>';
+        }
+
+        data.produtos.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'prod-item';
+            div.onclick = () => addProduct(p.nome, p.preco, p.imagem_url || '');
+            div.innerHTML = `
+                <img class="prod-img" src="${p.imagem_url || 'https://placehold.co/34x34/f0f0f0/aaa?text=?'}"
+                     onerror="this.src='https://placehold.co/34x34/f0f0f0/aaa?text=?'"
+                     alt="${p.nome}" crossorigin="anonymous">
+                <div>
+                    <div class="prod-name">${p.nome.substring(0, 20)}${p.nome.length > 20 ? '…' : ''}</div>
+                    <div class="prod-price">R$ ${p.preco}</div>
+                    ${p.codigo ? `<div style="font-size:.62rem;color:#aaa;">${p.codigo}</div>` : ''}
+                </div>`;
+            list.appendChild(div);
+        });
+
+        const loaded = (prodPage + 1) * 5;
+        const moreBtn = document.getElementById('prod-more');
+        const infoEl  = document.getElementById('prod-info');
+        infoEl.innerText = `${Math.min(loaded, prodTotal)} de ${prodTotal}`;
+        moreBtn.style.display = loaded < prodTotal ? '' : 'none';
+    } catch (e) {
+        console.error('Erro ao buscar produtos:', e);
+    }
+}
+
+function loadMoreProdutos() {
+    prodPage++;
+    searchProdutos();
+}
+
+// Carrega os primeiros produtos ao abrir o editor
+document.addEventListener('DOMContentLoaded', () => searchProdutos());
 
 // ===== AÇÕES DE CANVAS =====
 function deleteSelected() {
@@ -737,18 +795,13 @@ function setPropNum(prop, val) { setProp(prop, parseFloat(val)); }
 canvas.on('object:modified', showProps);
 
 // ===== SALVAR LAYOUT =====
+// ===== SALVAR LAYOUT (COM SAÍDA) =====
 function salvarLayout() {
     const name = document.getElementById('layout-name').value.trim();
     const duration = document.getElementById('layout-duration').value;
     if (!name) { alert('Digite um nome para o layout!'); return; }
 
-    const json = canvas.toJSON(['data']);
-    const content = JSON.stringify({
-        fabric:     json,
-        width:      canvasW,
-        height:     canvasH,
-        resolution: document.getElementById('layout-resolution').value,
-    });
+    const content = obterConteudoLayout();
 
     document.getElementById('save-name').value       = name;
     document.getElementById('save-duration').value   = duration;
@@ -756,6 +809,97 @@ function salvarLayout() {
     document.getElementById('save-resolution').value = document.getElementById('layout-resolution').value;
     document.getElementById('save-form').submit();
 }
+
+// ===== HELPER: extrai JSON atual do canvas =====
+function obterConteudoLayout() {
+    const json = canvas.toJSON(['data']);
+    return JSON.stringify({
+        fabric:     json,
+        width:      canvasW,
+        height:     canvasH,
+        resolution: document.getElementById('layout-resolution').value,
+    });
+}
+
+// ===== SALVAR SEM SAIR (AJAX) =====
+async function salvarSemSair() {
+    const name = document.getElementById('layout-name').value.trim();
+    const duration = document.getElementById('layout-duration').value;
+    if (!name) { alert('Digite um nome para o layout!'); return; }
+
+    const btn = document.getElementById('btn-save-only');
+    const origText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Salvando...';
+    btn.disabled = true;
+
+    const content = obterConteudoLayout();
+    const resolution = document.getElementById('layout-resolution').value;
+
+    const formData = new FormData();
+    formData.append('_token', '{{ csrf_token() }}');
+    @isset($layout)
+    formData.append('_method', 'PUT');
+    @endisset
+    formData.append('name', name);
+    formData.append('duration', duration);
+    formData.append('content', content);
+    formData.append('resolution', resolution);
+
+    try {
+        const url = document.getElementById('save-form').action;
+        const res = await fetch(url, { method: 'POST', body: formData });
+        const text = await res.text();
+        // Se redirecionar, houve sucesso (Laravel normalmente retorna redirect 302)
+        showToast('✅ Layout salvo com sucesso!', 'success');
+
+        // Atualiza o ID da prévia se recém criado
+        if (res.ok && !document.getElementById('save-form').action.includes('/update')) {
+            // Tenta extrair ID do redirect
+            const match = text.match(/\/layouts\/(\d+)\/edit/);
+            if (match) {
+                document.getElementById('save-form').action = document.getElementById('save-form').action.replace('layouts/store', `layouts/${match[1]}/update`);
+            }
+        }
+    } catch (e) {
+        showToast('❌ Erro ao salvar. Tente novamente.', 'error');
+    } finally {
+        btn.innerHTML = origText;
+        btn.disabled = false;
+    }
+}
+
+// ===== PRÉVIA EM NOVA ABA =====
+function previewLayout() {
+    const content = obterConteudoLayout();
+    // Encoda e abre em nova aba via sessionStorage
+    sessionStorage.setItem('tvdoor_preview', content);
+    window.open('{{ route("lojista.tvdoor.layouts.preview") }}', '_blank');
+}
+
+// ===== TOAST NOTIFICATION =====
+function showToast(msg, type = 'success') {
+    let toast = document.getElementById('editor-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'editor-toast';
+        toast.style.cssText = `
+            position:fixed; bottom:20px; right:20px; z-index:99999;
+            padding:12px 20px; border-radius:10px; font-size:.85rem;
+            font-weight:600; color:#fff; box-shadow:0 4px 20px rgba(0,0,0,.3);
+            transition:all .3s; opacity:0; transform:translateY(20px);
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.style.background = type === 'success' ? 'linear-gradient(135deg,#43e97b,#38f9d7)' : 'linear-gradient(135deg,#ff416c,#ff4b2b)';
+    toast.innerText = msg;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+    }, 3000);
+}
+
 
 // ===== INICIALIZAR =====
 applyBgSolid();

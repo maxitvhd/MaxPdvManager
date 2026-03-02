@@ -115,13 +115,8 @@ class TvDoorController extends Controller
 
     public function createLayout()
     {
-        $loja    = $this->resolverLoja();
-        $produtos = Produto::where('loja_id', $loja->id)->get()->map(function($p) use ($loja) {
-            // Tenta encontrar a imagem pelo path padrão: lojas/{codigo}/produtos/{filename}
-            $p->imagem_url = $this->resolveProductImageUrl($p, $loja);
-            return $p;
-        });
-        return view('lojista.tvdoor.layouts.editor', compact('produtos', 'loja'));
+        $loja = $this->resolverLoja();
+        return view('lojista.tvdoor.layouts.editor', compact('loja'));
     }
 
     public function storeLayout(Request $request)
@@ -158,7 +153,47 @@ class TvDoorController extends Controller
             $p->imagem_url = $this->resolveProductImageUrl($p, $loja);
             return $p;
         });
-        return view('lojista.tvdoor.layouts.editor', compact('produtos', 'loja', 'layout'));
+        return view('lojista.tvdoor.layouts.editor', compact('loja', 'layout'));
+    }
+
+    /**
+     * Busca paginada de produtos via AJAX (5 por página)
+     */
+    public function searchProducts(Request $request)
+    {
+        $loja  = $this->resolverLoja();
+        $q     = $request->get('q', '');
+        $page  = max(0, (int) $request->get('page', 0));
+        $limit = 5;
+
+        $query = Produto::where('loja_id', $loja->id);
+        if ($q) {
+            $query->where(function($sq) use ($q) {
+                $sq->where('nome', 'like', "%{$q}%")
+                   ->orWhere('codigo_barras', 'like', "%{$q}%");
+            });
+        }
+
+        $total = $query->count();
+        $produtos = $query->skip($page * $limit)->take($limit)->get()->map(function($p) use ($loja) {
+            $p->imagem_url = $this->resolveProductImageUrl($p, $loja);
+            return [
+                'nome'      => $p->nome,
+                'preco'     => number_format($p->preco_venda, 2, ',', '.'),
+                'codigo'    => $p->codigo_barras,
+                'imagem_url'=> $p->imagem_url,
+            ];
+        });
+
+        return response()->json(['total' => $total, 'produtos' => array_values($produtos->toArray())]);
+    }
+
+    /**
+     * View de prévia de layout (new tab)
+     */
+    public function previewLayout()
+    {
+        return view('lojista.tvdoor.layouts.preview');
     }
 
     /**

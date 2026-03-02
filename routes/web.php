@@ -277,6 +277,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/layouts', [TvDoorController::class, 'layouts'])->name('lojista.tvdoor.layouts.index');
         Route::get('/layouts/create', [TvDoorController::class, 'createLayout'])->name('lojista.tvdoor.layouts.create');
         Route::post('/layouts', [TvDoorController::class, 'storeLayout'])->name('lojista.tvdoor.layouts.store');
+        Route::get('/layouts/preview', [TvDoorController::class, 'previewLayout'])->name('lojista.tvdoor.layouts.preview');
+        Route::get('/layouts/search-products', [TvDoorController::class, 'searchProducts'])->name('lojista.tvdoor.layouts.search_products');
         Route::get('/layouts/{layout}/edit', [TvDoorController::class, 'editLayout'])->name('lojista.tvdoor.layouts.edit');
         Route::post('/layouts/upload-asset', [TvDoorController::class, 'uploadLayoutAsset'])->name('lojista.tvdoor.layouts.upload_asset');
         Route::put('/layouts/{layout}', [TvDoorController::class, 'updateLayout'])->name('lojista.tvdoor.layouts.update');
