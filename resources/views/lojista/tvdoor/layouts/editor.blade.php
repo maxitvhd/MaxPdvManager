@@ -69,6 +69,7 @@
   <div class="editor-wrap">
     <!-- ===== PAINEL ESQUERDO ===== -->
     <div class="panel tools-panel">
+      <!-- Nome e Duração -->
       <div class="prop-group" style="padding:12px;background:#f8f9fa;border-bottom:1px solid #e9ecef;">
         <label>Nome do Layout</label>
         <input type="text" id="layout-name" value="{{ $layout->name ?? 'Novo Layout' }}">
@@ -282,15 +283,12 @@
         </div>
       </div>
 
-      <!-- Salvar -->
-      <div class="panel-header" style="margin-top:auto;">Salvar</div>
-      <div class="prop-group">
-        <label>Nome do Layout</label>
-        <input type="text" id="layout-name" placeholder="Ex: Promoção de Verão" value="{{ $layout->name ?? '' }}">
-      </div>
+      <!-- Salvar (Oculto ou consolidado) -->
+      <div class="panel-header" style="margin-top:auto;">Ações</div>
       <div class="prop-group">
         <label>Resolução Alvo</label>
-        <input type="text" id="layout-resolution" value="{{ $layout->resolution ?? '1920x1080' }}" readonly style="color:#aaa;">
+        <div id="res-label" style="font-size:.8rem;font-weight:700;color:#5e72e4;">{{ $layout->resolution ?? '1920x1080' }}</div>
+        <input type="hidden" id="layout-resolution" value="{{ $layout->resolution ?? '1920x1080' }}">
       </div>
       <div class="prop-group">
         <button class="save-btn w-100" onclick="salvarLayout()"><i class="fas fa-save me-1"></i> Salvar</button>
@@ -337,8 +335,15 @@ let autoScale = 1.0;
 // Escala o canvas visualmente via CSS para caber na tela
 function updateCanvasScaling() {
     const wrap = document.querySelector('.canvas-wrap');
+    if (!wrap) return;
     const cw = wrap.clientWidth - 40;
     const ch = wrap.clientHeight - 40;
+    
+    if (cw <= 0 || ch <= 0) {
+        setTimeout(updateCanvasScaling, 200);
+        return;
+    }
+
     autoScale = Math.min(cw / canvasW, ch / canvasH, 1.0);
     applyTransform();
 }
@@ -1042,39 +1047,43 @@ saveHistory(); // Estado inicial
 // ===== CARREGAR LAYOUT EXISTENTE =====
 @isset($layout)
 (function() {
-    const res = @json($layout->resolution ?? '1920x1080');
-    const [rw, rh] = res.split('x').map(Number);
+    // 1. Define a resolução primeiro
+    const resValue = @json($layout->resolution ?? '1920x1080');
+    const [rw, rh] = resValue.split('x').map(Number);
     if (rw && rh) setResolution(rw, rh);
 
+    // 2. Carrega o conteúdo
     let data = @json($layout->content);
     if (data) {
         try {
-            // Se for string vinda do banco, decodifica
+            // Se for string vinda do banco (raro com Laravel cast, mas acontece), decodifica
             const canvasData = typeof data === 'string' ? JSON.parse(data) : data;
             
             // Suporta formatos {"fabric": {...}} ou direto {...}
             const toLoad = canvasData.fabric || canvasData;
             
             if (toLoad && (toLoad.objects || toLoad.backgroundImage)) {
-                // Limpa o canvas antes de carregar
-                canvas.clear();
-                
-                canvas.loadFromJSON(toLoad, () => {
-                    canvas.renderAll();
-                    updateCanvasScaling();
-                    
-                    // Garante que o fundo seja aplicado se estiver no JSON
-                    if (toLoad.background && typeof toLoad.background === 'string') {
-                        canvas.setBackgroundColor(toLoad.background, canvas.renderAll.bind(canvas));
-                    }
-                    
-                    setTimeout(updateCanvasScaling, 500);
-                    setTimeout(updateCanvasScaling, 1500); // Segurança extra para imagens pesadas
-                });
+                // Pequeno delay para garantir que o Fabric Canvas esteja estável
+                setTimeout(() => {
+                    canvas.loadFromJSON(toLoad, () => {
+                        console.log("Layout carregado com sucesso!");
+                        
+                        // Garante que o fundo seja aplicado se estiver no JSON
+                        if (toLoad.background && typeof toLoad.background === 'string') {
+                            canvas.setBackgroundColor(toLoad.background, () => canvas.renderAll());
+                        }
+
+                        canvas.renderAll();
+                        updateCanvasScaling();
+                        
+                        // Força redimensionamento visual após imagens carregarem
+                        setTimeout(updateCanvasScaling, 500);
+                        setTimeout(updateCanvasScaling, 1500);
+                    });
+                }, 100);
             }
         } catch(e) { 
             console.error("Erro ao carregar layout:", e);
-            showToast('❌ Erro ao carregar objetos salvos.', 'error');
         }
     }
 })();
