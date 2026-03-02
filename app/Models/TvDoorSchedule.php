@@ -15,9 +15,11 @@ class TvDoorSchedule extends Model
         'player_id',
         'schedulable_id',
         'schedulable_type',
+        'content_items',
         'days',
         'start_time',
         'end_time',
+        'time_slots',
         'priority',
         'is_active',
         'resolution'
@@ -25,6 +27,8 @@ class TvDoorSchedule extends Model
 
     protected $casts = [
         'days' => 'array',
+        'content_items' => 'array',
+        'time_slots' => 'array',
         'is_active' => 'boolean'
     ];
 

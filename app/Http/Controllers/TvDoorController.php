@@ -195,32 +195,40 @@ class TvDoorController extends Controller
         $layouts = TvDoorLayout::where('loja_id', $loja->id)->get();
         $campaigns = MaxDivulgaCampaign::where('loja_id', $loja->id)->where('is_active', true)->get();
         $schedules = TvDoorSchedule::whereIn('player_id', $players->pluck('id'))
-            ->with(['player', 'schedulable'])
+            ->with(['player'])
             ->orderBy('priority', 'desc')
             ->get();
-
         return view('lojista.tvdoor.schedules.index', compact('players', 'media', 'layouts', 'campaigns', 'schedules', 'loja'));
     }
 
     public function storeSchedule(Request $request)
     {
         $request->validate([
-            'player_id'       => 'required|exists:tv_door_players,id',
-            'schedulable_id'  => 'required|integer',
-            'schedulable_type'=> 'required|string',
-            'days'            => 'required|array',
-            'start_time'      => 'required',
-            'end_time'        => 'required',
-            'priority'        => 'nullable|integer',
-            'resolution'      => 'nullable|string',
+            'player_id'     => 'required|exists:tv_door_players,id',
+            'content_items' => 'required|string',
+            'time_slots'    => 'required|string',
+            'priority'      => 'nullable|integer',
+            'resolution'    => 'nullable|string',
         ]);
 
-        TvDoorSchedule::create($request->only([
-            'player_id','schedulable_id','schedulable_type',
-            'days','start_time','end_time','priority','is_active','resolution'
-        ]));
+        $contentItems = json_decode($request->content_items, true) ?: [];
+        $timeSlots    = json_decode($request->time_slots, true) ?: [];
 
-        return redirect()->route('lojista.tvdoor.schedules.index')->with('success', 'Agendamento criado!');
+        TvDoorSchedule::create([
+            'player_id'        => $request->player_id,
+            'content_items'    => $contentItems,
+            'time_slots'       => $timeSlots,
+            'schedulable_id'   => $contentItems[0]['id'] ?? null,
+            'schedulable_type' => $contentItems[0]['type'] ?? null,
+            'days'             => array_values(array_unique(array_column($timeSlots, 'day'))),
+            'start_time'       => $timeSlots[0]['start'] ?? '00:00',
+            'end_time'         => $timeSlots[0]['end'] ?? '23:59',
+            'priority'         => $request->priority ?? 0,
+            'resolution'       => $request->resolution ?? '1920x1080',
+            'is_active'        => true,
+        ]);
+
+        return redirect()->route('lojista.tvdoor.schedules.index')->with('success', 'Programação criada com sucesso!');
     }
 
     public function editSchedule(TvDoorSchedule $schedule)
@@ -239,20 +247,30 @@ class TvDoorController extends Controller
     public function updateSchedule(Request $request, TvDoorSchedule $schedule)
     {
         $request->validate([
-            'player_id'        => 'required|exists:tv_door_players,id',
-            'schedulable_id'   => 'required|integer',
-            'schedulable_type' => 'required|string',
-            'days'             => 'required|array',
-            'start_time'       => 'required',
-            'end_time'         => 'required',
-            'priority'         => 'nullable|integer',
-            'resolution'       => 'nullable|string',
+            'player_id'     => 'required|exists:tv_door_players,id',
+            'content_items' => 'required|string',
+            'time_slots'    => 'required|string',
+            'priority'      => 'nullable|integer',
+            'resolution'    => 'nullable|string',
         ]);
-        $schedule->update($request->only([
-            'player_id','schedulable_id','schedulable_type',
-            'days','start_time','end_time','priority','resolution'
-        ]));
-        return redirect()->route('lojista.tvdoor.schedules.index')->with('success', 'Agendamento atualizado!');
+
+        $contentItems = json_decode($request->content_items, true) ?: [];
+        $timeSlots    = json_decode($request->time_slots, true) ?: [];
+
+        $schedule->update([
+            'player_id'        => $request->player_id,
+            'content_items'    => $contentItems,
+            'time_slots'       => $timeSlots,
+            'schedulable_id'   => $contentItems[0]['id'] ?? $schedule->schedulable_id,
+            'schedulable_type' => $contentItems[0]['type'] ?? $schedule->schedulable_type,
+            'days'             => array_values(array_unique(array_column($timeSlots, 'day'))),
+            'start_time'       => $timeSlots[0]['start'] ?? $schedule->start_time,
+            'end_time'         => $timeSlots[0]['end'] ?? $schedule->end_time,
+            'priority'         => $request->priority ?? $schedule->priority,
+            'resolution'       => $request->resolution ?? $schedule->resolution,
+        ]);
+
+        return redirect()->route('lojista.tvdoor.schedules.index')->with('success', 'Programação atualizada!');
     }
 
     public function destroySchedule(TvDoorSchedule $schedule)

@@ -12,12 +12,12 @@
         <div class="card-header pb-0">
           <div class="row align-items-center">
             <div class="col-md-8">
-              <h6>Agendamentos da TvDoor</h6>
-              <p class="text-sm mb-0">Defina o que será exibido em cada player e em qual horário.</p>
+              <h6>Programações da TvDoor</h6>
+              <p class="text-sm mb-0">Defina o que será exibido em cada player, em quais dias e horários (suporte a playlist).</p>
             </div>
             <div class="col-md-4 text-end">
               <button type="button" class="btn bg-gradient-success btn-sm mb-0" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
-                <i class="fas fa-plus me-1"></i> Novo Agendamento
+                <i class="fas fa-plus me-1"></i> Nova Programação
               </button>
             </div>
           </div>
@@ -28,72 +28,83 @@
               <thead>
                 <tr>
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Player</th>
-                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Conteúdo</th>
-                  <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Dias / Horários</th>
+                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Conteúdo (Playlist)</th>
+                  <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Horários</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Resolução</th>
-                  <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Prioridade</th>
+                  <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Prior.</th>
                   <th class="text-secondary opacity-7">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                @forelse($schedules as $schedule)
-                @php $type = class_basename($schedule->schedulable_type ?? ''); @endphp
+                @forelse($schedules as $sched)
                 <tr>
                   <td>
                     <div class="d-flex px-3 py-1 align-items-center gap-2">
                       <i class="fas fa-desktop text-primary"></i>
-                      <span class="text-sm font-weight-bold">{{ $schedule->player->name ?? 'N/A' }}</span>
+                      <span class="text-sm font-weight-bold">{{ $sched->player->name ?? 'N/A' }}</span>
                     </div>
                   </td>
                   <td>
-                    <div class="d-flex px-2 py-1 align-items-center gap-2">
-                      <span class="badge badge-sm bg-gradient-{{ $type === 'TvDoorLayout' ? 'info' : ($type === 'TvDoorMedia' ? 'success' : 'primary') }}">{{ $type }}</span>
-                      <span class="text-sm">{{ $schedule->schedulable->name ?? '-' }}</span>
+                    <div class="px-2 py-1">
+                      @php $items = $sched->content_items ?? []; @endphp
+                      @if(count($items))
+                        @foreach($items as $ci)
+                          @php
+                            $ciType = class_basename($ci['type'] ?? '');
+                            $ciModel = match($ci['type'] ?? '') {
+                              'App\Models\TvDoorLayout' => $layouts->find($ci['id'] ?? 0),
+                              'App\Models\TvDoorMedia' => $media->find($ci['id'] ?? 0),
+                              'App\Models\MaxDivulgaCampaign' => $campaigns->find($ci['id'] ?? 0),
+                              default => null
+                            };
+                          @endphp
+                          <span class="badge badge-sm bg-gradient-{{ $ciType === 'TvDoorLayout' ? 'info' : ($ciType === 'TvDoorMedia' ? 'success' : 'primary') }} me-1 mb-1">
+                            {{ $ciModel->name ?? '#'.$ci['id'] }}
+                          </span>
+                        @endforeach
+                      @else
+                        <span class="text-secondary text-xs">Sem conteúdo</span>
+                      @endif
                     </div>
                   </td>
                   <td class="align-middle text-center">
-                    <p class="text-xs font-weight-bold mb-0">
-                      @foreach($schedule->days ?? [] as $d)
-                        @php $labels = ['mon'=>'Seg','tue'=>'Ter','wed'=>'Qua','thu'=>'Qui','fri'=>'Sex','sat'=>'Sáb','sun'=>'Dom']; @endphp
-                        <span class="badge bg-secondary me-1 text-xxs">{{ $labels[$d] ?? $d }}</span>
+                    @php $slots = $sched->time_slots ?? []; @endphp
+                    @if(count($slots))
+                      @foreach($slots as $slot)
+                        @php
+                          $dayLabels = ['mon'=>'Seg','tue'=>'Ter','wed'=>'Qua','thu'=>'Qui','fri'=>'Sex','sat'=>'Sáb','sun'=>'Dom'];
+                        @endphp
+                        <p class="text-xxs mb-0">
+                          <span class="badge bg-secondary me-1 text-xxs">{{ $dayLabels[$slot['day'] ?? ''] ?? ($slot['day'] ?? '?') }}</span>
+                          {{ $slot['start'] ?? '' }}–{{ $slot['end'] ?? '' }}
+                        </p>
                       @endforeach
-                    </p>
-                    <p class="text-xxs text-secondary mb-0">{{ $schedule->start_time }} – {{ $schedule->end_time }}</p>
+                    @else
+                      <span class="text-secondary text-xs">—</span>
+                    @endif
                   </td>
                   <td class="align-middle text-center">
-                    <span class="badge badge-sm bg-gradient-dark">{{ $schedule->resolution ?? '1920x1080' }}</span>
+                    <span class="badge badge-sm bg-gradient-dark">{{ $sched->resolution ?? '1920x1080' }}</span>
                   </td>
                   <td class="align-middle text-center">
-                    <span class="badge badge-sm bg-gradient-warning">{{ $schedule->priority ?? 0 }}</span>
+                    <span class="badge badge-sm bg-gradient-warning">{{ $sched->priority ?? 0 }}</span>
                   </td>
                   <td class="align-middle">
                     <div class="d-flex gap-1 px-2">
                       {{-- Editar --}}
                       <button class="btn btn-link text-warning p-1 mb-0 btn-edit-schedule" title="Editar"
-                        data-id="{{ $schedule->id }}"
-                        data-player="{{ $schedule->player_id }}"
-                        data-schedulable-id="{{ $schedule->schedulable_id }}"
-                        data-schedulable-type="{{ $schedule->schedulable_type }}"
-                        data-days="{{ json_encode($schedule->days ?? []) }}"
-                        data-start="{{ $schedule->start_time }}"
-                        data-end="{{ $schedule->end_time }}"
-                        data-priority="{{ $schedule->priority ?? 0 }}"
-                        data-res="{{ $schedule->resolution ?? '1920x1080' }}">
+                        data-id="{{ $sched->id }}"
+                        data-player="{{ $sched->player_id }}"
+                        data-content-items="{{ json_encode($sched->content_items ?? []) }}"
+                        data-time-slots="{{ json_encode($sched->time_slots ?? []) }}"
+                        data-priority="{{ $sched->priority ?? 0 }}"
+                        data-res="{{ $sched->resolution ?? '1920x1080' }}">
                         <i class="fas fa-edit"></i>
                       </button>
-                      {{-- Preview --}}
-                      <button class="btn btn-link text-info p-1 mb-0 btn-preview-schedule" title="Pré-visualizar"
-                        data-name="{{ $schedule->schedulable->name ?? 'N/A' }}"
-                        data-type="{{ $type }}"
-                        data-start="{{ $schedule->start_time }}"
-                        data-end="{{ $schedule->end_time }}"
-                        data-res="{{ $schedule->resolution ?? '1920x1080' }}">
-                        <i class="fas fa-eye"></i>
-                      </button>
                       {{-- Excluir --}}
-                      <form action="{{ route('lojista.tvdoor.schedules.destroy', $schedule->id) }}" method="POST">
+                      <form action="{{ route('lojista.tvdoor.schedules.destroy', $sched->id) }}" method="POST">
                         @csrf @method('DELETE')
-                        <button type="submit" class="btn btn-link text-danger p-1 mb-0" onclick="return confirm('Excluir este agendamento?')">
+                        <button type="submit" class="btn btn-link text-danger p-1 mb-0" onclick="return confirm('Excluir esta programação?')">
                           <i class="fas fa-trash"></i>
                         </button>
                       </form>
@@ -101,7 +112,7 @@
                   </td>
                 </tr>
                 @empty
-                <tr><td colspan="6" class="text-center py-4 text-sm text-secondary">Nenhum agendamento criado.</td></tr>
+                <tr><td colspan="6" class="text-center py-4 text-sm text-secondary">Nenhuma programação criada.</td></tr>
                 @endforelse
               </tbody>
             </table>
@@ -112,21 +123,20 @@
   </div>
 </div>
 
-{{-- ========== Modal Novo Agendamento ========== --}}
+{{-- ========== Modal Nova Programação ========== --}}
 <div class="modal fade" id="addScheduleModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content border-radius-xl">
       <div class="modal-header">
-        <h5 class="modal-title">Novo Agendamento</h5>
+        <h5 class="modal-title"><i class="fas fa-plus me-2 text-success"></i>Nova Programação</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form action="{{ route('lojista.tvdoor.schedules.store') }}" method="POST">
+      <form action="{{ route('lojista.tvdoor.schedules.store') }}" method="POST" id="addScheduleForm">
         @csrf
-        <input type="hidden" name="schedulable_id"   id="new_schedulable_id">
-        <input type="hidden" name="schedulable_type" id="new_schedulable_type">
         <div class="modal-body">
           <div class="row">
-            <div class="col-md-6">
+            {{-- Coluna 1: Configurações --}}
+            <div class="col-md-4">
               <div class="form-group mb-3">
                 <label class="form-label fw-bold">Player</label>
                 <select name="player_id" class="form-control" required>
@@ -136,7 +146,7 @@
                 </select>
               </div>
               <div class="form-group mb-3">
-                <label class="form-label fw-bold">Resolução do Player</label>
+                <label class="form-label fw-bold">Resolução</label>
                 <select name="resolution" class="form-control" required>
                   <option value="1920x1080">Full HD (1920×1080)</option>
                   <option value="1280x720">HD (1280×720)</option>
@@ -145,95 +155,82 @@
                   <option value="1080x1080">Quadrado</option>
                 </select>
               </div>
-              <label class="form-label fw-bold">Dias da Semana</label>
-              <div class="d-flex flex-wrap gap-2 mb-3">
-                @foreach(['mon'=>'Seg','tue'=>'Ter','wed'=>'Qua','thu'=>'Qui','fri'=>'Sex','sat'=>'Sáb','sun'=>'Dom'] as $val => $label)
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="days[]" value="{{ $val }}" id="new-day-{{ $val }}" checked>
-                    <label class="form-check-label text-xs" for="new-day-{{ $val }}">{{ $label }}</label>
-                  </div>
-                @endforeach
-              </div>
-              <div class="row">
-                <div class="col-6">
-                  <div class="form-group mb-3">
-                    <label class="form-label fw-bold">Início</label>
-                    <input type="time" name="start_time" class="form-control" value="08:00" required>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="form-group mb-3">
-                    <label class="form-label fw-bold">Fim</label>
-                    <input type="time" name="end_time" class="form-control" value="22:00" required>
-                  </div>
-                </div>
-              </div>
               <div class="form-group mb-3">
                 <label class="form-label fw-bold">Prioridade</label>
-                <input type="number" name="priority" class="form-control" value="0">
+                <input type="number" name="priority" class="form-control" value="0" min="0" max="100">
               </div>
+
+              {{-- Horários dinâmicos --}}
+              <label class="form-label fw-bold">Horários de Exibição</label>
+              <div id="add-slots-container" class="mb-2"></div>
+              <button type="button" class="btn btn-sm bg-gradient-info w-100" onclick="addSlot('add-slots-container', 'add_time_slots')">
+                <i class="fas fa-plus me-1"></i> Adicionar Horário
+              </button>
+              <input type="hidden" name="time_slots" id="add_time_slots" value="[]">
             </div>
-            <div class="col-md-6">
-              <label class="form-label fw-bold">O que deseja exibir?</label>
-              <div style="max-height:380px;overflow-y:auto;border:1px solid #dee2e6;border-radius:10px;padding:10px;">
+
+            {{-- Coluna 2: Conteúdo (Playlist) --}}
+            <div class="col-md-8">
+              <label class="form-label fw-bold">Conteúdo — Playlist (selecione um ou mais, na ordem de exibição)</label>
+              <input type="hidden" name="content_items" id="add_content_items" value="[]">
+              <div id="add-playlist-selected" class="mb-2 d-flex flex-wrap gap-2 p-2 border rounded" style="min-height:40px;background:#f8f9fa;">
+                <span class="text-secondary text-xs" id="add-playlist-empty-msg">Nenhum item selecionado. Clique nos itens abaixo para adicionar.</span>
+              </div>
+              <div style="max-height:320px;overflow-y:auto;border:1px solid #dee2e6;border-radius:10px;padding:10px;">
                 @if($layouts->count())
                   <p class="text-xxs text-secondary text-uppercase fw-bold mb-1">🎨 Layouts</p>
                   @foreach($layouts as $l)
-                  <div class="form-check mb-2">
-                    <input class="form-check-input" type="radio" name="content_radio" value="{{ $l->id }}|App\Models\TvDoorLayout" id="c-lay-{{ $l->id }}" onchange="setContent(this.value)">
-                    <label class="form-check-label text-sm" for="c-lay-{{ $l->id }}">{{ $l->name }}</label>
+                  <div class="form-check mb-1">
+                    <input class="form-check-input add-content-check" type="checkbox" value="{{ $l->id }}|App\Models\TvDoorLayout" id="al-{{ $l->id }}" onchange="updatePlaylist('add')">
+                    <label class="form-check-label text-sm" for="al-{{ $l->id }}">{{ $l->name }}</label>
                   </div>
                   @endforeach
                 @endif
                 @if($media->count())
                   <p class="text-xxs text-secondary text-uppercase fw-bold mb-1 mt-2">📁 Mídias</p>
                   @foreach($media as $m)
-                  <div class="form-check mb-2">
-                    <input class="form-check-input" type="radio" name="content_radio" value="{{ $m->id }}|App\Models\TvDoorMedia" id="c-med-{{ $m->id }}" onchange="setContent(this.value)">
-                    <label class="form-check-label text-sm" for="c-med-{{ $m->id }}">{{ $m->name }}</label>
+                  <div class="form-check mb-1">
+                    <input class="form-check-input add-content-check" type="checkbox" value="{{ $m->id }}|App\Models\TvDoorMedia" id="am-{{ $m->id }}" onchange="updatePlaylist('add')">
+                    <label class="form-check-label text-sm" for="am-{{ $m->id }}">{{ $m->name }}</label>
                   </div>
                   @endforeach
                 @endif
                 @if($campaigns->count())
                   <p class="text-xxs text-secondary text-uppercase fw-bold mb-1 mt-2">🚀 Campanhas MaxDivulga</p>
                   @foreach($campaigns as $c)
-                  <div class="form-check mb-2">
-                    <input class="form-check-input" type="radio" name="content_radio" value="{{ $c->id }}|App\Models\MaxDivulgaCampaign" id="c-cam-{{ $c->id }}" onchange="setContent(this.value)">
-                    <label class="form-check-label text-sm" for="c-cam-{{ $c->id }}">{{ $c->name }}</label>
+                  <div class="form-check mb-1">
+                    <input class="form-check-input add-content-check" type="checkbox" value="{{ $c->id }}|App\Models\MaxDivulgaCampaign" id="ac-{{ $c->id }}" onchange="updatePlaylist('add')">
+                    <label class="form-check-label text-sm" for="ac-{{ $c->id }}">{{ $c->name }}</label>
                   </div>
                   @endforeach
-                @endif
-                @if($layouts->isEmpty() && $media->isEmpty() && $campaigns->isEmpty())
-                  <p class="text-sm text-center text-secondary py-3">Nenhum conteúdo disponível.</p>
                 @endif
               </div>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-          <button type="submit" class="btn bg-gradient-success">Agendar</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn bg-gradient-success" onclick="return validateScheduleForm('add')">Salvar Programação</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-{{-- ========== Modal Editar Agendamento ========== --}}
+{{-- ========== Modal Editar Programação ========== --}}
 <div class="modal fade" id="editScheduleModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content border-radius-xl">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="fas fa-edit me-2 text-warning"></i>Editar Agendamento</h5>
+        <h5 class="modal-title"><i class="fas fa-edit me-2 text-warning"></i>Editar Programação</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="editScheduleForm" method="POST">
         @csrf @method('PUT')
-        <input type="hidden" name="schedulable_id"   id="edit_schedulable_id">
-        <input type="hidden" name="schedulable_type" id="edit_schedulable_type">
         <div class="modal-body">
           <div class="row">
-            <div class="col-md-6">
+            {{-- Coluna 1: Configurações --}}
+            <div class="col-md-4">
               <div class="form-group mb-3">
                 <label class="form-label fw-bold">Player</label>
                 <select name="player_id" id="edit_player_id" class="form-control" required>
@@ -252,67 +249,52 @@
                   <option value="1080x1080">Quadrado</option>
                 </select>
               </div>
-              <label class="form-label fw-bold">Dias da Semana</label>
-              <div class="d-flex flex-wrap gap-2 mb-3" id="edit-days-wrap">
-                @foreach(['mon'=>'Seg','tue'=>'Ter','wed'=>'Qua','thu'=>'Qui','fri'=>'Sex','sat'=>'Sáb','sun'=>'Dom'] as $val => $label)
-                  <div class="form-check">
-                    <input class="form-check-input edit-day-check" type="checkbox" name="days[]" value="{{ $val }}" id="edit-day-{{ $val }}">
-                    <label class="form-check-label text-xs" for="edit-day-{{ $val }}">{{ $label }}</label>
-                  </div>
-                @endforeach
-              </div>
-              <div class="row">
-                <div class="col-6">
-                  <div class="form-group mb-3">
-                    <label class="form-label fw-bold">Início</label>
-                    <input type="time" name="start_time" id="edit_start_time" class="form-control" required>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="form-group mb-3">
-                    <label class="form-label fw-bold">Fim</label>
-                    <input type="time" name="end_time" id="edit_end_time" class="form-control" required>
-                  </div>
-                </div>
-              </div>
               <div class="form-group mb-3">
                 <label class="form-label fw-bold">Prioridade</label>
-                <input type="number" name="priority" id="edit_priority" class="form-control" value="0">
+                <input type="number" name="priority" id="edit_priority" class="form-control" value="0" min="0" max="100">
               </div>
+
+              {{-- Horários dinâmicos --}}
+              <label class="form-label fw-bold">Horários de Exibição</label>
+              <div id="edit-slots-container" class="mb-2"></div>
+              <button type="button" class="btn btn-sm bg-gradient-info w-100" onclick="addSlot('edit-slots-container', 'edit_time_slots')">
+                <i class="fas fa-plus me-1"></i> Adicionar Horário
+              </button>
+              <input type="hidden" name="time_slots" id="edit_time_slots" value="[]">
             </div>
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Conteúdo</label>
-              <div style="max-height:380px;overflow-y:auto;border:1px solid #dee2e6;border-radius:10px;padding:10px;" id="edit-content-list">
+
+            {{-- Coluna 2: Conteúdo (Playlist) --}}
+            <div class="col-md-8">
+              <label class="form-label fw-bold">Conteúdo — Playlist (selecione um ou mais, na ordem de exibição)</label>
+              <input type="hidden" name="content_items" id="edit_content_items" value="[]">
+              <div id="edit-playlist-selected" class="mb-2 d-flex flex-wrap gap-2 p-2 border rounded" style="min-height:40px;background:#f8f9fa;">
+                <span class="text-secondary text-xs" id="edit-playlist-empty-msg">Nenhum item selecionado.</span>
+              </div>
+              <div style="max-height:320px;overflow-y:auto;border:1px solid #dee2e6;border-radius:10px;padding:10px;">
                 @if($layouts->count())
-                  <p class="text-xxs text-secondary fw-bold mb-1 mt-1">🎨 LAYOUTS</p>
+                  <p class="text-xxs text-secondary text-uppercase fw-bold mb-1">🎨 Layouts</p>
                   @foreach($layouts as $l)
-                  <div class="form-check mb-2">
-                    <input class="form-check-input edit-content-radio" type="radio" name="content_radio_edit"
-                      value="{{ $l->id }}|App\Models\TvDoorLayout"
-                      id="ec-lay-{{ $l->id }}" onchange="setEditContent(this.value)">
-                    <label class="form-check-label text-sm" for="ec-lay-{{ $l->id }}">{{ $l->name }}</label>
+                  <div class="form-check mb-1">
+                    <input class="form-check-input edit-content-check" type="checkbox" value="{{ $l->id }}|App\Models\TvDoorLayout" id="el-{{ $l->id }}" onchange="updatePlaylist('edit')">
+                    <label class="form-check-label text-sm" for="el-{{ $l->id }}">{{ $l->name }}</label>
                   </div>
                   @endforeach
                 @endif
                 @if($media->count())
-                  <p class="text-xxs text-secondary fw-bold mb-1 mt-2">📁 MÍDIAS</p>
+                  <p class="text-xxs text-secondary text-uppercase fw-bold mb-1 mt-2">📁 Mídias</p>
                   @foreach($media as $m)
-                  <div class="form-check mb-2">
-                    <input class="form-check-input edit-content-radio" type="radio" name="content_radio_edit"
-                      value="{{ $m->id }}|App\Models\TvDoorMedia"
-                      id="ec-med-{{ $m->id }}" onchange="setEditContent(this.value)">
-                    <label class="form-check-label text-sm" for="ec-med-{{ $m->id }}">{{ $m->name }}</label>
+                  <div class="form-check mb-1">
+                    <input class="form-check-input edit-content-check" type="checkbox" value="{{ $m->id }}|App\Models\TvDoorMedia" id="em-{{ $m->id }}" onchange="updatePlaylist('edit')">
+                    <label class="form-check-label text-sm" for="em-{{ $m->id }}">{{ $m->name }}</label>
                   </div>
                   @endforeach
                 @endif
                 @if($campaigns->count())
-                  <p class="text-xxs text-secondary fw-bold mb-1 mt-2">🚀 CAMPANHAS</p>
+                  <p class="text-xxs text-secondary text-uppercase fw-bold mb-1 mt-2">🚀 Campanhas MaxDivulga</p>
                   @foreach($campaigns as $c)
-                  <div class="form-check mb-2">
-                    <input class="form-check-input edit-content-radio" type="radio" name="content_radio_edit"
-                      value="{{ $c->id }}|App\Models\MaxDivulgaCampaign"
-                      id="ec-cam-{{ $c->id }}" onchange="setEditContent(this.value)">
-                    <label class="form-check-label text-sm" for="ec-cam-{{ $c->id }}">{{ $c->name }}</label>
+                  <div class="form-check mb-1">
+                    <input class="form-check-input edit-content-check" type="checkbox" value="{{ $c->id }}|App\Models\MaxDivulgaCampaign" id="ec-{{ $c->id }}" onchange="updatePlaylist('edit')">
+                    <label class="form-check-label text-sm" for="ec-{{ $c->id }}">{{ $c->name }}</label>
                   </div>
                   @endforeach
                 @endif
@@ -322,86 +304,123 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn bg-gradient-warning">Salvar Alterações</button>
+          <button type="submit" class="btn bg-gradient-warning" onclick="return validateScheduleForm('edit')">Salvar Alterações</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-{{-- ========== Modal Preview ========== --}}
-<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-radius-xl">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="fas fa-eye me-2 text-info"></i>Detalhes do Agendamento</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body p-4">
-        <ul class="list-group list-group-flush">
-          <li class="list-group-item"><strong>Conteúdo:</strong> <span id="preview-name"></span></li>
-          <li class="list-group-item"><strong>Tipo:</strong> <span id="preview-type"></span></li>
-          <li class="list-group-item"><strong>Horário:</strong> <span id="preview-time"></span></li>
-          <li class="list-group-item"><strong>Resolução:</strong> <span id="preview-res"></span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
+// ============================================================
+// SLOTS (Horários por dia)
+// ============================================================
+const DAYS = {mon:'Seg',tue:'Ter',wed:'Qua',thu:'Qui',fri:'Sex',sat:'Sáb',sun:'Dom'};
+
+function addSlot(containerId, hiddenId, data = {}) {
+    const container = document.getElementById(containerId);
+    const slotId = Date.now();
+    const div = document.createElement('div');
+    div.className = 'card p-2 mb-2 border';
+    div.dataset.slotId = slotId;
+    div.innerHTML = `
+        <div class="row g-1 align-items-center">
+            <div class="col-4">
+                <select class="form-control form-control-sm slot-day" onchange="serializeSlots('${containerId}','${hiddenId}')">
+                    ${Object.entries(DAYS).map(([v,l]) => `<option value="${v}" ${data.day===v?'selected':''}>${l}</option>`).join('')}
+                </select>
+            </div>
+            <div class="col-3">
+                <input type="time" class="form-control form-control-sm slot-start" value="${data.start||'08:00'}" onchange="serializeSlots('${containerId}','${hiddenId}')">
+            </div>
+            <div class="col-1 text-center text-xs">às</div>
+            <div class="col-3">
+                <input type="time" class="form-control form-control-sm slot-end" value="${data.end||'22:00'}" onchange="serializeSlots('${containerId}','${hiddenId}')">
+            </div>
+            <div class="col-1">
+                <button type="button" class="btn btn-link text-danger p-0" onclick="this.closest('[data-slot-id]').remove(); serializeSlots('${containerId}','${hiddenId}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>`;
+    container.appendChild(div);
+    serializeSlots(containerId, hiddenId);
+}
+
+function serializeSlots(containerId, hiddenId) {
+    const slots = [];
+    document.querySelectorAll(`#${containerId} [data-slot-id]`).forEach(div => {
+        slots.push({
+            day: div.querySelector('.slot-day').value,
+            start: div.querySelector('.slot-start').value,
+            end: div.querySelector('.slot-end').value
+        });
+    });
+    document.getElementById(hiddenId).value = JSON.stringify(slots);
+}
+
+// ============================================================
+// PLAYLIST (Conteúdo)
+// ============================================================
+function updatePlaylist(mode) {
+    const prefix = mode === 'add' ? 'add' : 'edit';
+    const checks = document.querySelectorAll(`.${prefix}-content-check:checked`);
+    const items = Array.from(checks).map(c => {
+        const [id, type] = c.value.split('|');
+        const label = c.parentElement.querySelector('label').textContent.trim();
+        return {id: parseInt(id), type, label};
+    });
+
+    // Atualiza o hidden input
+    document.getElementById(`${prefix}_content_items`).value = JSON.stringify(
+        items.map(i => ({id: i.id, type: i.type}))
+    );
+
+    // Atualiza a visualização de selecionados
+    const display = document.getElementById(`${prefix}-playlist-selected`);
+    const emptyMsg = document.getElementById(`${prefix}-playlist-empty-msg`);
+    display.innerHTML = '';
+    if (items.length === 0) {
+        const span = document.createElement('span');
+        span.className = 'text-secondary text-xs';
+        span.id = `${prefix}-playlist-empty-msg`;
+        span.textContent = 'Nenhum item selecionado.';
+        display.appendChild(span);
+    } else {
+        items.forEach((item, idx) => {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-gradient-primary';
+            badge.textContent = `${idx+1}. ${item.label}`;
+            display.appendChild(badge);
+        });
+    }
+}
+
+// ============================================================
+// ABRIR MODAL DE EDIÇÃO
+// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // ---- Listeners para Editar ----
+    // Listener para botões de editar
     document.querySelectorAll('.btn-edit-schedule').forEach(btn => {
         btn.addEventListener('click', function() {
             const d = this.dataset;
             openEditSchedule(
-                d.id, d.player, d.schedulableId, d.schedulableType,
-                JSON.parse(d.days), d.start, d.end, d.priority, d.res
+                d.id,
+                d.player,
+                JSON.parse(d.contentItems || '[]'),
+                JSON.parse(d.timeSlots || '[]'),
+                parseInt(d.priority) || 0,
+                d.res
             );
         });
     });
-
-    // ---- Listeners para Preview ----
-    document.querySelectorAll('.btn-preview-schedule').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const d = this.dataset;
-            previewSchedule(d.name, d.type, d.start, d.end, d.res);
-        });
-    });
-
-    // ---- Auto-abrir se vier via GET ----
-    @isset($schedule)
-    openEditSchedule(
-        {!! $schedule->id !!},
-        {!! $schedule->player_id !!},
-        {!! $schedule->schedulable_id !!},
-        {!! json_encode($schedule->schedulable_type) !!},
-        {!! json_encode($schedule->days ?? []) !!},
-        {!! json_encode($schedule->start_time) !!},
-        {!! json_encode($schedule->end_time) !!},
-        {!! $schedule->priority ?? 0 !!},
-        {!! json_encode($schedule->resolution ?? '1920x1080') !!}
-    );
-    @endisset
 });
 
-// ---- Novo agendamento: setar conteúdo via radio ----
-function setContent(value) {
-    const [id, type] = value.split('|');
-    document.getElementById('new_schedulable_id').value   = id;
-    document.getElementById('new_schedulable_type').value = type;
-}
+function openEditSchedule(id, playerId, contentItems, timeSlots, priority, resolution) {
+    // Limpar
+    document.getElementById('edit-slots-container').innerHTML = '';
+    document.querySelectorAll('.edit-content-check').forEach(c => c.checked = false);
 
-// ---- Editar: setar conteúdo via radio ----
-function setEditContent(value) {
-    const [id, type] = value.split('|');
-    document.getElementById('edit_schedulable_id').value   = id;
-    document.getElementById('edit_schedulable_type').value = type;
-}
-
-// ---- Abrir modal de edição com dados preenchidos ----
-function openEditSchedule(id, playerId, schedulableId, schedulableType, days, start, end, priority, resolution) {
     // Action do form
     document.getElementById('editScheduleForm').action = `/lojista/tvdoor/schedules/${id}`;
 
@@ -412,36 +431,53 @@ function openEditSchedule(id, playerId, schedulableId, schedulableType, days, st
     const resEl = document.getElementById('edit_resolution');
     Array.from(resEl.options).forEach(o => o.selected = (o.value === resolution));
 
-    // Dias
-    document.querySelectorAll('.edit-day-check').forEach(cb => {
-        cb.checked = days.includes(cb.value);
-    });
-
-    // Horários
-    document.getElementById('edit_start_time').value = start;
-    document.getElementById('edit_end_time').value   = end;
-
     // Prioridade
     document.getElementById('edit_priority').value = priority;
 
-    // Conteúdo (selecionar radio correspondente)
-    document.getElementById('edit_schedulable_id').value   = schedulableId;
-    document.getElementById('edit_schedulable_type').value = schedulableType;
-    document.querySelectorAll('.edit-content-radio').forEach(r => {
-        const [rid, rtype] = r.value.split('|');
-        r.checked = (rid == schedulableId && rtype == schedulableType);
+    // Horários
+    (timeSlots || []).forEach(slot => addSlot('edit-slots-container', 'edit_time_slots', slot));
+    if (!timeSlots || timeSlots.length === 0) {
+        addSlot('edit-slots-container', 'edit_time_slots');
+    }
+
+    // Conteúdo (checar os checkboxes correspondentes)
+    (contentItems || []).forEach(ci => {
+        const cb = document.querySelector(`.edit-content-check[value="${ci.id}|${ci.type}"]`);
+        if (cb) cb.checked = true;
     });
+    updatePlaylist('edit');
 
     new bootstrap.Modal(document.getElementById('editScheduleModal')).show();
 }
 
-// ---- Preview ----
-function previewSchedule(name, type, start, end, res) {
-    document.getElementById('preview-name').innerText = name;
-    document.getElementById('preview-type').innerText = type;
-    document.getElementById('preview-time').innerText = start + ' – ' + end;
-    document.getElementById('preview-res').innerText  = res;
-    new bootstrap.Modal(document.getElementById('previewModal')).show();
+// ============================================================
+// VALIDAÇÃO
+// ============================================================
+function validateScheduleForm(mode) {
+    const prefix = mode === 'add' ? 'add' : 'edit';
+    const items = JSON.parse(document.getElementById(`${prefix}_content_items`).value || '[]');
+    const slots = JSON.parse(document.getElementById(`${prefix}_time_slots`).value || '[]');
+
+    if (items.length === 0) {
+        alert('Selecione pelo menos um item de conteúdo para a playlist.');
+        return false;
+    }
+    if (slots.length === 0) {
+        alert('Adicione pelo menos um horário de exibição.');
+        return false;
+    }
+    return true;
 }
+
+// Inicializar slot vazio no modal de adicionar quando abrir
+document.getElementById('addScheduleModal').addEventListener('show.bs.modal', function() {
+    const c = document.getElementById('add-slots-container');
+    if (c.children.length === 0) {
+        addSlot('add-slots-container', 'add_time_slots');
+    }
+    // Limpar checkboxes
+    document.querySelectorAll('.add-content-check').forEach(c => c.checked = false);
+    updatePlaylist('add');
+});
 </script>
 @endsection
