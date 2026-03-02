@@ -69,23 +69,25 @@
                   <td class="align-middle">
                     <div class="d-flex gap-1 px-2">
                       {{-- Editar --}}
-                      <button class="btn btn-link text-warning p-1 mb-0" title="Editar"
-                        onclick="openEditSchedule(
-                          {{ $schedule->id }},
-                          {{ $schedule->player_id }},
-                          {{ $schedule->schedulable_id }},
-                          '{{ addslashes($schedule->schedulable_type) }}',
-                          {{ json_encode($schedule->days ?? []) }},
-                          '{{ $schedule->start_time }}',
-                          '{{ $schedule->end_time }}',
-                          {{ $schedule->priority ?? 0 }},
-                          '{{ $schedule->resolution ?? '1920x1080' }}'
-                        )">
+                      <button class="btn btn-link text-warning p-1 mb-0 btn-edit-schedule" title="Editar"
+                        data-id="{{ $schedule->id }}"
+                        data-player="{{ $schedule->player_id }}"
+                        data-schedulable-id="{{ $schedule->schedulable_id }}"
+                        data-schedulable-type="{{ $schedule->schedulable_type }}"
+                        data-days="{{ json_encode($schedule->days ?? []) }}"
+                        data-start="{{ $schedule->start_time }}"
+                        data-end="{{ $schedule->end_time }}"
+                        data-priority="{{ $schedule->priority ?? 0 }}"
+                        data-res="{{ $schedule->resolution ?? '1920x1080' }}">
                         <i class="fas fa-edit"></i>
                       </button>
                       {{-- Preview --}}
-                      <button class="btn btn-link text-info p-1 mb-0" title="Pré-visualizar"
-                        onclick="previewSchedule('{{ $schedule->schedulable->name ?? 'N/A' }}', '{{ $type }}', '{{ $schedule->start_time }}', '{{ $schedule->end_time }}', '{{ $schedule->resolution ?? '1920x1080' }}')">
+                      <button class="btn btn-link text-info p-1 mb-0 btn-preview-schedule" title="Pré-visualizar"
+                        data-name="{{ $schedule->schedulable->name ?? 'N/A' }}"
+                        data-type="{{ $type }}"
+                        data-start="{{ $schedule->start_time }}"
+                        data-end="{{ $schedule->end_time }}"
+                        data-res="{{ $schedule->resolution ?? '1920x1080' }}">
                         <i class="fas fa-eye"></i>
                       </button>
                       {{-- Excluir --}}
@@ -348,6 +350,42 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // ---- Listeners para Editar ----
+    document.querySelectorAll('.btn-edit-schedule').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const d = this.dataset;
+            openEditSchedule(
+                d.id, d.player, d.schedulableId, d.schedulableType,
+                JSON.parse(d.days), d.start, d.end, d.priority, d.res
+            );
+        });
+    });
+
+    // ---- Listeners para Preview ----
+    document.querySelectorAll('.btn-preview-schedule').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const d = this.dataset;
+            previewSchedule(d.name, d.type, d.start, d.end, d.res);
+        });
+    });
+
+    // ---- Auto-abrir se vier via GET ----
+    @isset($schedule)
+    openEditSchedule(
+        {{ $schedule->id }},
+        {{ $schedule->player_id }},
+        {{ $schedule->schedulable_id }},
+        '{{ addslashes($schedule->schedulable_type) }}',
+        {{ json_encode($schedule->days ?? []) }},
+        '{{ $schedule->start_time }}',
+        '{{ $schedule->end_time }}',
+        {{ $schedule->priority ?? 0 }},
+        '{{ $schedule->resolution ?? '1920x1080' }}'
+    );
+    @endisset
+});
+
 // ---- Novo agendamento: setar conteúdo via radio ----
 function setContent(value) {
     const [id, type] = value.split('|');
@@ -405,22 +443,5 @@ function previewSchedule(name, type, start, end, res) {
     document.getElementById('preview-res').innerText  = res;
     new bootstrap.Modal(document.getElementById('previewModal')).show();
 }
-
-// ---- Auto-abrir modal de edição se passar o objeto via GET ----
-@isset($schedule)
-document.addEventListener('DOMContentLoaded', () => {
-    openEditSchedule(
-        {{ $schedule->id }},
-        {{ $schedule->player_id }},
-        {{ $schedule->schedulable_id }},
-        '{{ addslashes($schedule->schedulable_type) }}',
-        {{ json_encode($schedule->days ?? []) }},
-        '{{ $schedule->start_time }}',
-        '{{ $schedule->end_time }}',
-        {{ $schedule->priority ?? 0 }},
-        '{{ $schedule->resolution ?? '1920x1080' }}'
-    );
-});
-@endisset
 </script>
 @endsection

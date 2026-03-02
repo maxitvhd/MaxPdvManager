@@ -71,14 +71,16 @@
                   <td class="align-middle">
                     <div class="d-flex gap-1 px-2">
                       {{-- Editar --}}
-                      <button class="btn btn-link text-warning p-1 mb-0" title="Editar"
-                        onclick="openEditPlayer({{ $player->id }}, '{{ addslashes($player->name) }}')">
+                      <button class="btn btn-link text-warning p-1 mb-0 btn-edit-player" title="Editar"
+                        data-id="{{ $player->id }}" 
+                        data-name="{{ $player->name }}">
                         <i class="fas fa-edit"></i>
                       </button>
                       {{-- Visualizar QR/Código --}}
                       @if($player->status === 'pending')
-                      <button class="btn btn-link text-info p-1 mb-0" title="Ver código de pareamento"
-                        onclick="viewPairingCode('{{ $player->pairing_code }}', '{{ $player->name }}')">
+                      <button class="btn btn-link text-info p-1 mb-0 btn-view-pairing" title="Ver código de pareamento"
+                        data-code="{{ $player->pairing_code }}" 
+                        data-name="{{ $player->name }}">
                         <i class="fas fa-qrcode"></i>
                       </button>
                       @endif
@@ -177,6 +179,27 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // ---- Listeners para Editar ----
+    document.querySelectorAll('.btn-edit-player').forEach(btn => {
+        btn.addEventListener('click', function() {
+            openEditPlayer(this.dataset.id, this.dataset.name);
+        });
+    });
+
+    // ---- Listeners para Pareamento ----
+    document.querySelectorAll('.btn-view-pairing').forEach(btn => {
+        btn.addEventListener('click', function() {
+            viewPairingCode(this.dataset.code, this.dataset.name);
+        });
+    });
+
+    // ---- Auto-abrir se vier via GET ----
+    @isset($player)
+    openEditPlayer({{ $player->id }}, '{{ addslashes($player->name) }}');
+    @endisset
+});
+
 function openEditPlayer(id, name) {
     document.getElementById('editPlayerName').value = name;
     document.getElementById('editPlayerForm').action = `/lojista/tvdoor/players/${id}`;
@@ -188,14 +211,5 @@ function viewPairingCode(code, name) {
     document.getElementById('pairingPlayerName').innerText = name;
     new bootstrap.Modal(document.getElementById('pairingModal')).show();
 }
-    new bootstrap.Modal(document.getElementById('pairingModal')).show();
-}
-
-// ---- Auto-abrir modal de edição se passar o objeto via GET ----
-@isset($player)
-document.addEventListener('DOMContentLoaded', () => {
-    openEditPlayer({{ $player->id }}, '{{ addslashes($player->name) }}');
-});
-@endisset
 </script>
 @endsection

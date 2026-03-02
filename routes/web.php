@@ -273,6 +273,7 @@ Route::middleware(['auth'])->group(function () {
             // Schedules
             Route::get('/schedules', [TvDoorController::class, 'schedules'])->name('lojista.tvdoor.schedules.index');
             Route::post('/schedules', [TvDoorController::class, 'storeSchedule'])->name('lojista.tvdoor.schedules.store');
+            Route::get('/schedules/{schedule}', [TvDoorController::class, 'editSchedule'])->name('lojista.tvdoor.schedules.show');
             Route::get('/schedules/{schedule}/edit', [TvDoorController::class, 'editSchedule'])->name('lojista.tvdoor.schedules.edit');
             Route::put('/schedules/{schedule}', [TvDoorController::class, 'updateSchedule'])->name('lojista.tvdoor.schedules.update');
             Route::delete('/schedules/{schedule}', [TvDoorController::class, 'destroySchedule'])->name('lojista.tvdoor.schedules.destroy');
