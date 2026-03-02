@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TvDoor Player</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: black; color: white; font-family: sans-serif; }
+        #screen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+        .content-item { display: none; width: 100%; height: 100%; object-fit: contain; position: absolute; }
+        #pairing { font-size: 3rem; text-align: center; }
+        .layout-container { width: 100%; height: 100%; position: relative; }
+        .layout-element { position: absolute; }
+    </style>
+</head>
+<body>
+    <div id="screen">
+        <div id="pairing">Digite o código: <br> <span id="code">...</span></div>
+    </div>
+
+    <script>
+        let token = localStorage.getItem('tvdoor_token');
+        let playlist = [];
+        let currentIndex = 0;
+
+        async function init() {
+            if (!token) {
+                // Mock: Em um cenário real, geramos um ID único do dispositivo
+                const deviceId = btoa(navigator.userAgent).substring(0, 8);
+                document.getElementById('code').innerText = "Vincule no Painel";
+                // Simulação: o usuário cadastra no painel e o polling busca o token
+                pollPairing(deviceId);
+            } else {
+                startSync();
+            }
+        }
+
+        async function startSync() {
+            try {
+                const res = await fetch('/tvdoor/api/sync', {
+                    headers: { 'X-Device-Token': token }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    playlist = data.playlist;
+                    playNext();
+                }
+            } catch (e) {
+                console.error("Erro na sincronização", e);
+                setTimeout(startSync, 10000);
+            }
+        }
+
+        function playNext() {
+            if (playlist.length === 0) return setTimeout(startSync, 5000);
+
+            const item = playlist[currentIndex];
+            const screen = document.getElementById('screen');
+            screen.innerHTML = '';
+
+            if (item.type.includes('Media')) {
+                if (item.media_type === 'video') {
+                    const video = document.createElement('video');
+                    video.src = item.media_url;
+                    video.autoplay = true;
+                    video.className = 'content-item';
+                    video.style.display = 'block';
+                    video.onended = () => { currentIndex = (currentIndex + 1) % playlist.length; playNext(); };
+                    screen.appendChild(video);
+                } else {
+                    const img = document.createElement('img');
+                    img.src = item.media_url;
+                    img.className = 'content-item';
+                    img.style.display = 'block';
+                    screen.appendChild(img);
+                    setTimeout(() => { currentIndex = (currentIndex + 1) % playlist.length; playNext(); }, item.duration * 1000);
+                }
+            } else if (item.type.includes('Layout')) {
+                const container = document.createElement('div');
+                container.className = 'layout-container';
+                item.layout_content.forEach(el => {
+                    const div = document.createElement('div');
+                    div.className = 'layout-element';
+                    div.style.left = el.x + 'px';
+                    div.style.top = el.y + 'px';
+                    div.style.width = el.w + 'px';
+                    div.style.height = el.h + 'px';
+                    div.innerHTML = el.content;
+                    container.appendChild(div);
+                });
+                screen.appendChild(container);
+                setTimeout(() => { currentIndex = (currentIndex + 1) % playlist.length; playNext(); }, 15000);
+            }
+
+            // Sync periódico a cada ciclo ou a cada N minutos
+            if (currentIndex === 0) startSync();
+        }
+
+        init();
+    </script>
+</body>
+</html>

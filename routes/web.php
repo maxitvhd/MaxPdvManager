@@ -22,6 +22,7 @@ use App\Http\Controllers\MaxDivulgaController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\BancoClienteController;
 use App\Http\Controllers\BancoAtivacaoController;
+use App\Http\Controllers\TvDoorController;
 
 #----- bibliotecas para resetar cache spatie -----
 use Illuminate\Support\Facades\Artisan;
@@ -244,6 +245,34 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/themes/{theme}/builder-save', [MaxDivulgaController::class, 'themeBuilderSave'])->name('lojista.maxdivulga.theme_builder_save');
         });
 
+
+        // Módulo TvDoor
+        Route::prefix('tvdoor')->group(function () {
+            Route::get('/', [TvDoorController::class, 'index'])->name('lojista.tvdoor.index');
+            
+            // Players
+            Route::get('/players', [TvDoorController::class, 'players'])->name('lojista.tvdoor.players.index');
+            Route::post('/players', [TvDoorController::class, 'storePlayer'])->name('lojista.tvdoor.players.store');
+            Route::delete('/players/{player}', [TvDoorController::class, 'destroyPlayer'])->name('lojista.tvdoor.players.destroy');
+            
+            // Media
+            Route::get('/media', [TvDoorController::class, 'media'])->name('lojista.tvdoor.media.index');
+            Route::post('/media', [TvDoorController::class, 'storeMedia'])->name('lojista.tvdoor.media.store');
+            
+            // Layouts
+            Route::get('/layouts', [TvDoorController::class, 'layouts'])->name('lojista.tvdoor.layouts.index');
+            Route::get('/layouts/create', [TvDoorController::class, 'createLayout'])->name('lojista.tvdoor.layouts.create');
+            Route::post('/layouts', [TvDoorController::class, 'storeLayout'])->name('lojista.tvdoor.layouts.store');
+            
+            // Schedules
+            Route::get('/schedules', [TvDoorController::class, 'schedules'])->name('lojista.tvdoor.schedules.index');
+            Route::post('/schedules', [TvDoorController::class, 'storeSchedule'])->name('lojista.tvdoor.schedules.store');
+            Route::delete('/schedules/{schedule}', [TvDoorController::class, 'destroySchedule'])->name('lojista.tvdoor.schedules.destroy');
+            
+            // API de Pareamento e Sincronização (pode ser movida para api.php depois se necessário)
+            Route::get('/api/pair/{code}', [TvDoorController::class, 'checkPairingCode']);
+            Route::get('/api/sync', [TvDoorController::class, 'sync']);
+        });
 
         // Canais Sociais
         Route::prefix('canais')->group(function () {
