@@ -419,7 +419,8 @@ applyBgSolid();
 @php
     $existingName = $layout->name;
     $existingRes  = $layout->resolution ?? '1920x1080';
-    $existingContent = is_array($layout->content) ? json_encode($layout->content) : $layout->content;
+    // O conteúdo já é um array devido ao cast 'array' no modelo
+    $existingContent = $layout->content; 
 @endphp
 (function() {
     document.getElementById('layout-name').value       = @json($existingName);
@@ -433,11 +434,17 @@ applyBgSolid();
     if (rw && rh) setResolution(rw, rh);
 
     // Carregar objetos do canvas
-    const existing = @json($existingContent);
-    if (existing && existing.fabric) {
-        canvas.loadFromJSON(existing.fabric, () => {
-            canvas.renderAll();
-        });
+    const data = @json($existingContent);
+    if (data) {
+        // Se data for uma string (por algum motivo), tenta decodificar
+        const canvasData = typeof data === 'string' ? JSON.parse(data) : data;
+        
+        if (canvasData && canvasData.fabric) {
+            canvas.loadFromJSON(canvasData.fabric, () => {
+                canvas.renderAll();
+                console.log('Layout carregado com sucesso');
+            });
+        }
     }
 })();
 @endisset

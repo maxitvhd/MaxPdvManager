@@ -128,8 +128,13 @@ class TvDoorController extends Controller
             'content' => 'required|string',
         ]);
 
-        // Aceita JSON string (Fabric.js serializado)
-        $content = json_decode($request->content, true) ?? $request->content;
+        // Decodifica o JSON vindo do editor
+        $content = json_decode($request->content, true);
+        
+        // Se falhar a decodificação, usa um array vazio ou tenta salvar o raw se for array
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $content = is_array($request->content) ? $request->content : [];
+        }
 
         TvDoorLayout::create([
             'loja_id'    => $loja->id,
@@ -154,7 +159,12 @@ class TvDoorController extends Controller
             'name'    => 'required|string|max:255',
             'content' => 'required|string',
         ]);
-        $content = json_decode($request->content, true) ?? $request->content;
+        
+        $content = json_decode($request->content, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $content = is_array($request->content) ? $request->content : $layout->content;
+        }
+
         $layout->update([
             'name'       => $request->name,
             'content'    => $content,
