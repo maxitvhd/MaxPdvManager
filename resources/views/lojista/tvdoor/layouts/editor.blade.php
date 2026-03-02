@@ -170,7 +170,12 @@
           <input type="number" id="ch" value="1080" class="res-select" style="width:65px;" placeholder="H">
           <button class="undo-redo-btn" onclick="applyCustomRes()">OK</button>
         </div>
-        <span style="font-size:.72rem;color:#aaa;" id="res-label">1920 × 1080</span>
+        <div class="zoom-controls d-flex align-items-center gap-1 mx-2">
+          <button class="undo-redo-btn" onclick="zoomOut()" title="Diminuir Zoom"><i class="fas fa-search-minus"></i></button>
+          <span id="zoom-label" style="font-size: .72rem; color: #888; min-width: 35px; text-align: center;">100%</span>
+          <button class="undo-redo-btn" onclick="zoomIn()" title="Aumentar Zoom"><i class="fas fa-search-plus"></i></button>
+          <button class="undo-redo-btn" onclick="resetZoom()" title="Ajustar à tela"><i class="fas fa-expand"></i></button>
+        </div>
         <div style="flex:1"></div>
         <button class="undo-redo-btn" title="Desfazer" onclick="undoAction()"><i class="fas fa-undo"></i></button>
         <button class="undo-redo-btn" title="Duplicar" onclick="duplicateSelected()"><i class="fas fa-copy"></i></button>
@@ -304,17 +309,41 @@ const canvas = new fabric.Canvas('main-canvas', {
     preserveObjectStacking: true,
 });
 
+let currentZoom = 1.0;
+let autoScale = 1.0;
+
 // Escala o canvas visualmente via CSS para caber na tela
 function updateCanvasScaling() {
     const wrap = document.querySelector('.canvas-wrap');
     const cw = wrap.clientWidth - 40;
     const ch = wrap.clientHeight - 40;
-    const scale = Math.min(cw / canvasW, ch / canvasH, 0.9); // max 90%
-    
-    const el = canvas.wrapperEl;
-    el.style.transform = `scale(${scale})`;
-    el.style.transformOrigin = 'center';
+    autoScale = Math.min(cw / canvasW, ch / canvasH, 1.0);
+    applyTransform();
 }
+
+function applyTransform() {
+    const el = canvas.wrapperEl;
+    const finalFactor = autoScale * currentZoom;
+    el.style.transform = `scale(${finalFactor})`;
+    el.style.transformOrigin = 'center center';
+    document.getElementById('zoom-label').innerText = Math.round(finalFactor * 100) + '%';
+}
+
+function zoomIn() {
+    currentZoom += 0.1;
+    applyTransform();
+}
+
+function zoomOut() {
+    currentZoom = Math.max(0.1, currentZoom - 0.1);
+    applyTransform();
+}
+
+function resetZoom() {
+    currentZoom = 1.0;
+    updateCanvasScaling();
+}
+
 window.addEventListener('resize', updateCanvasScaling);
 setTimeout(updateCanvasScaling, 500);
 
@@ -354,26 +383,6 @@ canvas.on('object:added',    saveHistory);
 canvas.on('object:modified', saveHistory);
 canvas.on('object:removed',  saveHistory);
 
-// ===== RESOLUÇÃO =====
-function changeResolution() {
-    const val = document.getElementById('res-select').value;
-    document.getElementById('custom-res').style.display = val === 'custom' ? 'flex' : 'none';
-    if (val === 'custom') return;
-    const [w, h] = val.split('x').map(Number);
-    setResolution(w, h);
-}
-function applyCustomRes() {
-    setResolution(parseInt(document.getElementById('cw').value), parseInt(document.getElementById('ch').value));
-}
-function setResolution(w, h) {
-    canvasW = w; canvasH = h;
-    canvas.setWidth(w * SCALE);
-    canvas.setHeight(h * SCALE);
-    canvas.renderAll();
-    document.getElementById('res-label').innerText = `${w} × ${h}`;
-    document.getElementById('layout-resolution').value = `${w}x${h}`;
-}
-
 // ===== FUNDO =====
 function updateBgType() {
     const t = document.getElementById('bg-type').value;
@@ -383,6 +392,7 @@ function updateBgType() {
 }
 
 function applyBgSolid() {
+    canvas.setBackgroundImage(null);
     canvas.setBackgroundColor(document.getElementById('bg-color').value, canvas.renderAll.bind(canvas));
 }
 
@@ -424,6 +434,7 @@ function buildGradPalettes() {
 buildGradPalettes();
 
 function applyBgGradient() {
+    canvas.setBackgroundImage(null);
     const c1  = document.getElementById('grad-c1').value;
     const c2  = document.getElementById('grad-c2').value;
     const c3  = document.getElementById('grad-c3').value;
@@ -449,17 +460,48 @@ function applyBgGradient() {
     }), canvas.renderAll.bind(canvas));
 }
 
-function applyBgImage(input) {
+async function applyBgImage(input) {
     const file = input.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        fabric.Image.fromURL(e.target.result, img => {
-            img.scaleToWidth(canvas.width);
-            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+
+    // Indicador visual no botão (opcional, mas bom ter feedback)
+    const btn = document.querySelector('button[onclick*="bg-img-input"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subindo...';
+    btn.disabled = true;
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('_token', '{{ csrf_token() }}');
+
+        const res = await fetch('{{ route("lojista.tvdoor.layouts.upload_asset") }}', {
+            method: 'POST',
+            body: formData
         });
-    };
-    reader.readAsDataURL(file);
+        const data = await res.json();
+
+        if (data.success) {
+            fabric.Image.fromURL(data.url, img => {
+                // Ajusta para cobrir o canvas
+                img.set({
+                    originX: 'left',
+                    originY: 'top',
+                    scaleX: canvas.width / img.width,
+                    scaleY: canvas.height / img.height
+                });
+                canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+            }, { crossOrigin: 'anonymous' });
+        } else {
+            alert('Erro no upload de fundo: ' + data.message);
+        }
+    } catch (e) {
+        alert('Erro ao enviar imagem de fundo.');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        input.value = '';
+    }
 }
 
 // ===== ELEMENTOS =====
