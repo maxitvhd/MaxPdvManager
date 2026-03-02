@@ -11,7 +11,7 @@ class TvDoorLayout extends Model
 
     protected $table = 'tv_door_layouts';
 
-    protected $fillable = ['loja_id', 'name', 'content', 'preview_path', 'resolution'];
+    protected $fillable = ['loja_id', 'name', 'duration', 'content', 'preview_path', 'resolution'];
 
     protected $casts = [
         'content' => 'array'

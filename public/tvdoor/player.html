@@ -519,8 +519,9 @@
                         const video = document.createElement('video');
                         video.src = d.src;
                         video.autoplay = true;
-                        video.muted = false;
+                        video.muted = true; // Muted é obrigatório para autoplay em muitos navegadores
                         video.loop = true;
+                        video.setAttribute('playsinline', '');
                         video.className = 'media-overlay';
                         video.style.cssText = `
                             position:absolute;
@@ -533,7 +534,9 @@
                             z-index:10;
                         `;
                         wrapper.appendChild(video);
-                        video.play().catch(() => { });
+                        video.play().catch(err => {
+                            console.error("Erro ao dar play no vídeo overlay:", err);
+                        });
                     }
                 });
 

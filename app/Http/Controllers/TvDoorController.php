@@ -143,6 +143,7 @@ class TvDoorController extends Controller
         TvDoorLayout::create([
             'loja_id'    => $loja->id,
             'name'       => $request->name,
+            'duration'   => $request->duration ?? 15,
             'content'    => $content,
             'resolution' => $request->resolution ?? '1920x1080',
         ]);
@@ -204,6 +205,7 @@ class TvDoorController extends Controller
 
         $layout->update([
             'name'       => $request->name,
+            'duration'   => $request->duration ?? 15,
             'content'    => $content,
             'resolution' => $request->resolution ?? $layout->resolution,
         ]);
@@ -439,7 +441,7 @@ class TvDoorController extends Controller
                         // Retorna o JSON completo do Fabric.js para renderização no player
                         $entry['layout_fabric'] = $layout->content;
                         $entry['resolution']    = $layout->resolution ?? '1920x1080';
-                        $entry['duration']      = 15;
+                        $entry['duration']      = $layout->duration ?? 15;
                     }
                 } elseif (str_contains($type, 'MaxDivulgaCampaign')) {
                     $campaign = MaxDivulgaCampaign::find($id);

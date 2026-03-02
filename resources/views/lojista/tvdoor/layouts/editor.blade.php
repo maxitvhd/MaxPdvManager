@@ -61,6 +61,12 @@
   <div class="editor-wrap">
     <!-- ===== PAINEL ESQUERDO ===== -->
     <div class="panel tools-panel">
+      <div class="prop-group" style="padding:12px;background:#f8f9fa;border-bottom:1px solid #e9ecef;">
+        <label>Nome do Layout</label>
+        <input type="text" id="layout-name" value="{{ $layout->name ?? 'Novo Layout' }}">
+        <label class="mt-2">Duração (segundos)</label>
+        <input type="number" id="layout-duration" value="{{ $layout->duration ?? 15 }}" min="5">
+      </div>
 
       <!-- Elementos -->
       <div class="panel-header">Elementos</div>
@@ -283,18 +289,23 @@
 </div>
 
 <!-- Form oculto para salvar layout -->
-@isset($layout)
+  @isset($layout)
   <form id="save-form" action="{{ route('lojista.tvdoor.layouts.update', $layout->id) }}" method="POST" style="display:none">
     @csrf @method('PUT')
-@else
+    <input type="hidden" name="name" id="save-name">
+    <input type="hidden" name="duration" id="save-duration">
+    <input type="hidden" name="content" id="save-content">
+    <input type="hidden" name="resolution" id="save-resolution" value="{{ $layout->resolution ?? '1920x1080' }}">
+  </form>
+  @else
   <form id="save-form" action="{{ route('lojista.tvdoor.layouts.store') }}" method="POST" style="display:none">
     @csrf
-@endisset
-  <input type="hidden" name="name"       id="save-name">
-  <input type="hidden" name="content"    id="save-content">
-  <input type="hidden" name="resolution" id="save-resolution">
-</form>
-
+    <input type="hidden" name="name" id="save-name">
+    <input type="hidden" name="duration" id="save-duration">
+    <input type="hidden" name="content" id="save-content">
+    <input type="hidden" name="resolution" id="save-resolution" value="1920x1080">
+  </form>
+  @endisset
 <!-- Fabric.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 <script>
@@ -728,6 +739,7 @@ canvas.on('object:modified', showProps);
 // ===== SALVAR LAYOUT =====
 function salvarLayout() {
     const name = document.getElementById('layout-name').value.trim();
+    const duration = document.getElementById('layout-duration').value;
     if (!name) { alert('Digite um nome para o layout!'); return; }
 
     const json = canvas.toJSON(['data']);
@@ -739,6 +751,7 @@ function salvarLayout() {
     });
 
     document.getElementById('save-name').value       = name;
+    document.getElementById('save-duration').value   = duration;
     document.getElementById('save-content').value    = content;
     document.getElementById('save-resolution').value = document.getElementById('layout-resolution').value;
     document.getElementById('save-form').submit();
@@ -751,21 +764,21 @@ saveHistory(); // Estado inicial
 // ===== CARREGAR LAYOUT EXISTENTE =====
 @isset($layout)
 (function() {
-    const res = {!! json_encode($layout->resolution ?? '1920x1080') !!};
-    document.getElementById('layout-resolution').value = res;
-    const resSel = document.getElementById('res-select');
-    Array.from(resSel.options).forEach(o => o.selected = (o.value === res));
+    const res = @json($layout->resolution ?? '1920x1080');
     const [rw, rh] = res.split('x').map(Number);
     if (rw && rh) setResolution(rw, rh);
 
-    const data = {!! json_encode($layout->content) !!};
+    const data = @json($layout->content);
     if (data) {
         const canvasData = typeof data === 'string' ? JSON.parse(data) : data;
         const toLoad = canvasData.fabric || canvasData;
         if (toLoad) {
             canvas.loadFromJSON(toLoad, () => {
                 canvas.renderAll();
-                history = [JSON.stringify(canvas.toJSON(['data']))];
+                updateCanvasScaling();
+                // Pequeno delay para garantir que o Fabric carregue tudo
+                setTimeout(updateCanvasScaling, 300);
+                setTimeout(updateCanvasScaling, 1000);
             });
         }
     }
