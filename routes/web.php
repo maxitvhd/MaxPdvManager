@@ -269,9 +269,6 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/schedules', [TvDoorController::class, 'storeSchedule'])->name('lojista.tvdoor.schedules.store');
             Route::delete('/schedules/{schedule}', [TvDoorController::class, 'destroySchedule'])->name('lojista.tvdoor.schedules.destroy');
             
-            // API de Pareamento e Sincronização (pode ser movida para api.php depois se necessário)
-            Route::get('/api/pair/{code}', [TvDoorController::class, 'checkPairingCode']);
-            Route::get('/api/sync', [TvDoorController::class, 'sync']);
         });
 
         // Canais Sociais
@@ -325,6 +322,16 @@ Route::prefix('banco')->group(function () {
         Route::post('/documentos', [BancoClienteController::class, 'uploadDocumentos'])->name('banco.documentos');
         Route::get('/logout', [BancoClienteController::class, 'logout'])->name('banco.logout');
     });
+});
+
+#------------ API PÚBLICA TVDOOR PLAYER (sem auth de sessão, usa X-Device-Token) ------------------
+// As rotas abaixo são acessíveis por qualquer dispositivo (Smart TV, Raspberry Pi, etc.)
+// A autenticação é feita via header X-Device-Token gerado no pareamento.
+Route::prefix('tvdoor/api')->group(function () {
+    // Pareamento: valida o código e retorna o token do dispositivo
+    Route::get('/pair/{code}', [TvDoorController::class, 'checkPairingCode'])->name('tvdoor.api.pair');
+    // Sincronização: retorna a playlist ativa para o player
+    Route::get('/sync', [TvDoorController::class, 'sync'])->name('tvdoor.api.sync');
 });
 
 // Retornos de Pagamento MP
