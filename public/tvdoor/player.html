@@ -1,84 +1,356 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TvDoor Player</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: black; color: white; font-family: sans-serif; }
-        #screen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
-        .content-item { display: none; width: 100%; height: 100%; object-fit: contain; position: absolute; }
-        #pairing { font-size: 3rem; text-align: center; }
-        .layout-container { width: 100%; height: 100%; position: relative; }
-        .layout-element { position: absolute; }
-    </style>
-</head>
-<body>
-    <div id="screen">
-        <div id="pairing">Digite o código: <br> <span id="code">...</span></div>
-    </div>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <script>
-        let token = localStorage.getItem('tvdoor_token');
-        let playlist = [];
-        let currentIndex = 0;
+        body,
+        html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', sans-serif;
+            color: white;
+        }
 
-        async function init() {
-            if (!token) {
-                // Mock: Em um cenário real, geramos um ID único do dispositivo
-                const deviceId = btoa(navigator.userAgent).substring(0, 8);
-                document.getElementById('code').innerText = "Vincule no Painel";
-                // Simulação: o usuário cadastra no painel e o polling busca o token
-                pollPairing(deviceId);
-            } else {
-                startSync();
+        /* ===== TELA PRINCIPAL ===== */
+        #screen {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ===== TELA DE PAREAMENTO ===== */
+        #pairing-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            text-align: center;
+            padding: 40px;
+            animation: fadeIn 1s ease;
+        }
+
+        #pairing-screen .logo {
+            font-size: 3rem;
+            font-weight: 900;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #6c63ff, #48dbfb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #pairing-screen .subtitle {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 50px;
+        }
+
+        #pairing-screen .instruction {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 20px;
+        }
+
+        #pairing-screen .steps {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        #pairing-screen .step {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 15px 20px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-align: left;
+            max-width: 200px;
+        }
+
+        #pairing-screen .step b {
+            color: #6c63ff;
+            font-size: 1.2rem;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #f59e0b;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-dot.online {
+            background: #10b981;
+        }
+
+        /* ===== CONTEÚDO ===== */
+        .media-item {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .layout-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: #111;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .layout-element {
+            position: absolute;
+            color: white;
+        }
+
+        /* ===== BARRA DE STATUS ===== */
+        #status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 15px;
+            background: rgba(0, 0, 0, 0.6);
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        body:hover #status-bar {
+            opacity: 1;
+        }
+
+        /* ===== BARRA DE PROGRESSO ===== */
+        #progress-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #6c63ff, #48dbfb);
+            width: 0%;
+            transition: width linear;
+            z-index: 1000;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
             }
         }
 
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.3);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="screen">
+        <!-- Tela inicial de pareamento -->
+        <div id="pairing-screen">
+            <div class="logo">TvDoor</div>
+            <div class="subtitle">Digital Signage Player</div>
+            <div class="instruction">
+                <span class="status-dot"></span> Aguardando configuração...
+            </div>
+            <div class="steps">
+                <div class="step">
+                    <b>① Painel</b>
+                    Acesse <em>TvDoor → Players</em> e clique em "+ Novo Player".
+                </div>
+                <div class="step">
+                    <b>② Token</b>
+                    Copie o token gerado e cole abaixo, depois pressione <em>Enter</em>.
+                </div>
+                <div class="step">
+                    <b>③ Pronto!</b>
+                    O player sincroniza automaticamente e começa a exibir sua programação.
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input id="token-input" type="text" placeholder="Cole aqui o Device Token..."
+                    style="padding:12px 20px; border-radius:8px; border:1px solid rgba(255,255,255,0.2);
+                           background:rgba(255,255,255,0.1); color:white; font-size:1rem; width:340px; outline:none;" />
+                <button onclick="saveToken()"
+                    style="padding:12px 24px; background:linear-gradient(135deg,#6c63ff,#48dbfb);
+                           border:none; border-radius:8px; color:white; font-weight:700; cursor:pointer; font-size:1rem;">
+                    Conectar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Status -->
+    <div id="status-bar">
+        <span id="status-label"><span class="status-dot"></span> Aguardando...</span>
+        <span id="now-label"></span>
+        <span>TvDoor Player v1.0</span>
+    </div>
+    <div id="progress-bar"></div>
+
+    <script>
+        // ============================================================
+        //  CONFIG — altere a BASE_URL para o seu domínio de produção
+        // ============================================================
+        const BASE_URL = window.location.origin; // Ex: https://meusite.com.br
+
+        let token = localStorage.getItem('tvdoor_token');
+        let playlist = [];
+        let idx = 0;
+        let isPlaying = false;
+
+        // ---- Relógio na barra de status ----
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('now-label').innerText = now.toLocaleTimeString('pt-BR');
+        }, 1000);
+
+        // ---- Salvar token e iniciar ----
+        function saveToken() {
+            const val = document.getElementById('token-input').value.trim();
+            if (!val) return alert('Informe o token!');
+            localStorage.setItem('tvdoor_token', val);
+            token = val;
+            setStatus('Token salvo! Conectando...', false);
+            document.getElementById('pairing-screen').remove();
+            startSync();
+        }
+
+        // ---- Enter no input de token ----
+        document.getElementById('token-input')?.addEventListener('keydown', e => {
+            if (e.key === 'Enter') saveToken();
+        });
+
+        // ---- Init ----
+        function init() {
+            if (token) {
+                document.getElementById('pairing-screen').remove();
+                startSync();
+            }
+            // Caso não haja token, a tela de pareamento já está visível
+        }
+
+        // ---- Sincronizar com o servidor ----
         async function startSync() {
+            setStatus('Sincronizando...', false);
             try {
-                const res = await fetch('/tvdoor/api/sync', {
+                const res = await fetch(`${BASE_URL}/tvdoor/api/sync`, {
                     headers: { 'X-Device-Token': token }
                 });
+
+                if (res.status === 401) {
+                    localStorage.removeItem('tvdoor_token');
+                    location.reload();
+                    return;
+                }
+
                 const data = await res.json();
                 if (data.success) {
                     playlist = data.playlist;
-                    playNext();
+                    setStatus(`Online · ${playlist.length} item(s) na playlist`, true);
+                    if (!isPlaying) {
+                        isPlaying = true;
+                        idx = 0;
+                        playNext();
+                    }
                 }
             } catch (e) {
-                console.error("Erro na sincronização", e);
-                setTimeout(startSync, 10000);
+                setStatus('Sem conexão. Tentando em 30s...', false);
+                console.error(e);
             }
+            // Reagenda sync periódico
+            setTimeout(startSync, 60000);
         }
 
+        // ---- Reproduzir próximo item ----
         function playNext() {
-            if (playlist.length === 0) return setTimeout(startSync, 5000);
+            if (playlist.length === 0) {
+                showIdle();
+                isPlaying = false;
+                return;
+            }
 
-            const item = playlist[currentIndex];
+            const item = playlist[idx % playlist.length];
             const screen = document.getElementById('screen');
             screen.innerHTML = '';
+            animateProgress(0);
 
-            if (item.type.includes('Media')) {
+            // --- Mídia (Imagem ou Vídeo) ---
+            if (item.type && item.type.includes('Media')) {
+                const duration = (item.duration || 10) * 1000;
+
                 if (item.media_type === 'video') {
                     const video = document.createElement('video');
                     video.src = item.media_url;
+                    video.className = 'media-item';
                     video.autoplay = true;
-                    video.className = 'content-item';
-                    video.style.display = 'block';
-                    video.onended = () => { currentIndex = (currentIndex + 1) % playlist.length; playNext(); };
+                    video.muted = false;
+                    video.onended = next;
                     screen.appendChild(video);
+                    animateProgress(video.duration * 1000 || duration);
                 } else {
                     const img = document.createElement('img');
                     img.src = item.media_url;
-                    img.className = 'content-item';
-                    img.style.display = 'block';
+                    img.className = 'media-item';
                     screen.appendChild(img);
-                    setTimeout(() => { currentIndex = (currentIndex + 1) % playlist.length; playNext(); }, item.duration * 1000);
+                    animateProgress(duration);
+                    setTimeout(next, duration);
                 }
-            } else if (item.type.includes('Layout')) {
+
+                // --- Layout Personalizado ---
+            } else if (item.type && item.type.includes('Layout')) {
+                const duration = 15000;
                 const container = document.createElement('div');
                 container.className = 'layout-container';
-                item.layout_content.forEach(el => {
+                (item.layout_content || []).forEach(el => {
                     const div = document.createElement('div');
                     div.className = 'layout-element';
                     div.style.left = el.x + 'px';
@@ -89,14 +361,77 @@
                     container.appendChild(div);
                 });
                 screen.appendChild(container);
-                setTimeout(() => { currentIndex = (currentIndex + 1) % playlist.length; playNext(); }, 15000);
-            }
+                // Ativa relógios dentro do layout
+                activateClocks(screen);
+                animateProgress(duration);
+                setTimeout(next, duration);
 
-            // Sync periódico a cada ciclo ou a cada N minutos
-            if (currentIndex === 0) startSync();
+                // --- Campanha MaxDivulga ---
+            } else if (item.type && item.type.includes('Campaign')) {
+                const duration = 15000;
+                if (item.media_url) {
+                    const img = document.createElement('img');
+                    img.src = item.media_url;
+                    img.className = 'media-item';
+                    screen.appendChild(img);
+                }
+                if (item.audio_url) {
+                    const audio = new Audio(item.audio_url);
+                    audio.play().catch(() => { });
+                }
+                animateProgress(duration);
+                setTimeout(next, duration);
+
+            } else {
+                next();
+            }
         }
 
+        function next() {
+            idx = (idx + 1) % (playlist.length || 1);
+            playNext();
+        }
+
+        // ---- Tela de espera quando não há conteúdo ----
+        function showIdle() {
+            const screen = document.getElementById('screen');
+            screen.innerHTML = `
+                <div style="text-align:center; opacity:0.3;">
+                    <div style="font-size:4rem;">📺</div>
+                    <p style="margin-top:10px; font-size:1.2rem;">Sem programação no momento</p>
+                </div>`;
+            setTimeout(() => { isPlaying = true; startSync(); }, 15000);
+        }
+
+        // ---- Relógio dinâmico dentro de layouts ----
+        function activateClocks(container) {
+            container.querySelectorAll('[data-type="clock"], .clock-widget').forEach(el => {
+                setInterval(() => {
+                    el.innerText = new Date().toLocaleTimeString('pt-BR');
+                }, 1000);
+            });
+        }
+
+        // ---- Barra de progresso ----
+        function animateProgress(durationMs) {
+            const bar = document.getElementById('progress-bar');
+            bar.style.transition = 'none';
+            bar.style.width = '0%';
+            setTimeout(() => {
+                bar.style.transition = `width ${durationMs}ms linear`;
+                bar.style.width = '100%';
+            }, 50);
+        }
+
+        // ---- Status na barra inferior ----
+        function setStatus(msg, online) {
+            const label = document.getElementById('status-label');
+            label.innerHTML = `<span class="status-dot ${online ? 'online' : ''}"></span> ${msg}`;
+        }
+
+        // ---- Inicia ----
         init();
     </script>
 </body>
+
 </html>
