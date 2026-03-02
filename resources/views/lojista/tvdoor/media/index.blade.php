@@ -38,7 +38,21 @@
                                 <div class="card-body p-3 text-center">
                                     <h6 class="mb-0 text-sm truncate-2">{{ $item->name }}</h6>
                                     <p class="text-xs text-secondary mb-3">{{ $item->duration }} segundos</p>
-                                    <button class="btn btn-outline-danger btn-xs mb-0">Excluir</button>
+                                    
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <button class="btn btn-outline-primary btn-xs mb-0" 
+                                                onclick="openEditModal({{ json_encode($item) }})">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </button>
+                                        
+                                        <form action="{{ route('lojista.tvdoor.media.destroy', $item->id) }}" method="POST" 
+                                              onsubmit="return confirm('Tem certeza que deseja excluir esta mídia?')">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="btn btn-outline-danger btn-xs mb-0">
+                                                <i class="fas fa-trash"></i> Excluir
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -90,4 +104,58 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Editar Mídia -->
+<div class="modal fade" id="editMediaModal" tabindex="-1" role="dialog" aria-labelledby="editMediaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-radius-xl">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editMediaModalLabel">Editar Mídia</h5>
+                <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editMediaForm" method="POST">
+                @csrf @method('PUT')
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Nome da Mídia</label>
+                        <input type="text" name="name" id="edit-media-name" class="form-control" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Duração de Exibição (segundos)</label>
+                        <input type="number" name="duration" id="edit-media-duration" class="form-control" min="1" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="submit" class="btn bg-gradient-success">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openEditModal(item) {
+        document.getElementById('edit-media-name').value = item.name;
+        document.getElementById('edit-media-duration').value = item.duration;
+        
+        // Ajusta a action do form dinamicamente
+        const form = document.getElementById('editMediaForm');
+        form.action = `/lojista/tvdoor/media/${item.id}`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('editMediaModal'));
+        modal.show();
+    }
+</script>
+
+<style>
+.truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
 @endsection

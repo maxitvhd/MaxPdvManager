@@ -283,6 +283,21 @@ class TvDoorController extends Controller
         return redirect()->route('lojista.tvdoor.media.index')->with('success', 'Mídia excluída.');
     }
 
+    public function updateMedia(Request $request, TvDoorMedia $media)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'duration' => 'required|integer|min:1',
+        ]);
+
+        $media->update([
+            'name' => $request->name,
+            'duration' => $request->duration,
+        ]);
+
+        return redirect()->route('lojista.tvdoor.media.index')->with('success', 'Mídia atualizada com sucesso.');
+    }
+
     // --- Schedule Management ---
     public function schedules()
     {

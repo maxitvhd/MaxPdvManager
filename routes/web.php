@@ -271,6 +271,7 @@ Route::middleware(['auth'])->group(function () {
         // Media
         Route::get('/media', [TvDoorController::class, 'media'])->name('lojista.tvdoor.media.index');
         Route::post('/media', [TvDoorController::class, 'storeMedia'])->name('lojista.tvdoor.media.store');
+        Route::put('/media/{media}', [TvDoorController::class, 'updateMedia'])->name('lojista.tvdoor.media.update');
         Route::delete('/media/{media}', [TvDoorController::class, 'destroyMedia'])->name('lojista.tvdoor.media.destroy');
 
         // Layouts
