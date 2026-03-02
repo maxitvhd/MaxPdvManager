@@ -306,17 +306,26 @@ class TvDoorController extends Controller
         $media = TvDoorMedia::where('loja_id', $loja->id)->get();
         $layouts = TvDoorLayout::where('loja_id', $loja->id)->get();
         $campaigns = MaxDivulgaCampaign::where('loja_id', $loja->id)->where('is_active', true)->get();
+        
+        // Busca agendamentos vinculados a qualquer player da loja
         $schedules = TvDoorSchedule::whereIn('player_id', $players->pluck('id'))
+            ->orWhere(function($q) use ($players) {
+                foreach($players as $p) {
+                    $q->orWhereJsonContains('player_ids', $p->id);
+                }
+            })
             ->with(['player'])
             ->orderBy('priority', 'desc')
             ->get();
+            
         return view('lojista.tvdoor.schedules.index', compact('players', 'media', 'layouts', 'campaigns', 'schedules', 'loja'));
     }
 
     public function storeSchedule(Request $request)
     {
         $request->validate([
-            'player_id'     => 'required|exists:tv_door_players,id',
+            'player_ids'    => 'required|array',
+            'player_ids.*'  => 'exists:tv_door_players,id',
             'content_items' => 'required|string',
             'time_slots'    => 'required|string',
             'priority'      => 'nullable|integer',
@@ -325,9 +334,11 @@ class TvDoorController extends Controller
 
         $contentItems = json_decode($request->content_items, true) ?: [];
         $timeSlots    = json_decode($request->time_slots, true) ?: [];
+        $playerIds    = array_map('intval', $request->player_ids);
 
         TvDoorSchedule::create([
-            'player_id'        => $request->player_id,
+            'player_id'        => $playerIds[0] ?? null,
+            'player_ids'       => $playerIds,
             'content_items'    => $contentItems,
             'time_slots'       => $timeSlots,
             'schedulable_id'   => $contentItems[0]['id'] ?? null,
@@ -359,7 +370,8 @@ class TvDoorController extends Controller
     public function updateSchedule(Request $request, TvDoorSchedule $schedule)
     {
         $request->validate([
-            'player_id'     => 'required|exists:tv_door_players,id',
+            'player_ids'    => 'required|array',
+            'player_ids.*'  => 'exists:tv_door_players,id',
             'content_items' => 'required|string',
             'time_slots'    => 'required|string',
             'priority'      => 'nullable|integer',
@@ -368,9 +380,11 @@ class TvDoorController extends Controller
 
         $contentItems = json_decode($request->content_items, true) ?: [];
         $timeSlots    = json_decode($request->time_slots, true) ?: [];
+        $playerIds    = array_map('intval', $request->player_ids);
 
         $schedule->update([
-            'player_id'        => $request->player_id,
+            'player_id'        => $playerIds[0] ?? $schedule->player_id,
+            'player_ids'       => $playerIds,
             'content_items'    => $contentItems,
             'time_slots'       => $timeSlots,
             'schedulable_id'   => $contentItems[0]['id'] ?? $schedule->schedulable_id,
@@ -433,9 +447,12 @@ class TvDoorController extends Controller
         $now = now()->toTimeString();
         $day = strtolower(now()->format('D')); // mon, tue, ...
 
-        // Busca todos os agendamentos ativos do player
-        $schedules = TvDoorSchedule::where('player_id', $player->id)
-            ->where('is_active', true)
+        // Busca todos os agendamentos ativos do player (suporta novo player_ids e legado player_id)
+        $schedules = TvDoorSchedule::where('is_active', true)
+            ->where(function($q) use ($player) {
+                $q->where('player_id', $player->id)
+                  ->orWhereJsonContains('player_ids', $player->id);
+            })
             ->get()
             ->filter(function ($s) use ($day, $now) {
                 // Novo sistema: verifica time_slots

@@ -128,6 +128,25 @@
     </script>
   @endif
 
+  <script>
+    function confirmDelete(formId, message = 'Tem certeza que deseja excluir este item?') {
+        Swal.fire({
+            title: 'Confirmar Exclusão',
+            text: message,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sim, excluir!',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById(formId).submit();
+            }
+        });
+        return false;
+    }
+  </script>
 </body>
 
 </html>

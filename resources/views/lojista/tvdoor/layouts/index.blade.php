@@ -45,9 +45,9 @@
                                         <a href="{{ route('lojista.tvdoor.schedules.index') }}" class="btn btn-sm bg-gradient-success mb-0">
                                             <i class="fas fa-calendar-alt me-1"></i> Agendar
                                         </a>
-                                        <form action="{{ route('lojista.tvdoor.layouts.destroy', $layout->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Excluir este layout?')">
+                                        <form action="{{ route('lojista.tvdoor.layouts.destroy', $layout->id) }}" method="POST" class="d-inline" id="delete-layout-{{ $layout->id }}">
                                             @csrf @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger mb-0">
+                                            <button type="button" class="btn btn-sm btn-outline-danger mb-0" onclick="confirmDelete('delete-layout-{{ $layout->id }}')">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>

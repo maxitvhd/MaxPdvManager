@@ -13,6 +13,7 @@ class TvDoorSchedule extends Model
 
     protected $fillable = [
         'player_id',
+        'player_ids',
         'schedulable_id',
         'schedulable_type',
         'content_items',
@@ -27,6 +28,7 @@ class TvDoorSchedule extends Model
 
     protected $casts = [
         'days' => 'array',
+        'player_ids' => 'array',
         'content_items' => 'array',
         'time_slots' => 'array',
         'is_active' => 'boolean'

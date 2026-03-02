@@ -46,9 +46,10 @@
                                         </button>
                                         
                                         <form action="{{ route('lojista.tvdoor.media.destroy', $item->id) }}" method="POST" 
-                                              onsubmit="return confirm('Tem certeza que deseja excluir esta mídia?')">
+                                              id="delete-media-{{ $item->id }}">
                                             @csrf @method('DELETE')
-                                            <button type="submit" class="btn btn-outline-danger btn-xs mb-0">
+                                            <button type="button" class="btn btn-outline-danger btn-xs mb-0" 
+                                                    onclick="confirmDelete('delete-media-{{ $item->id }}')">
                                                 <i class="fas fa-trash"></i> Excluir
                                             </button>
                                         </form>

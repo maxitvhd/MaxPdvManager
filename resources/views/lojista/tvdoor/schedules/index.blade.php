@@ -27,7 +27,7 @@
             <table class="table align-items-center mb-0">
               <thead>
                 <tr>
-                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Player</th>
+                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Player(s)</th>
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Conteúdo (Playlist)</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Horários</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Resolução</th>
@@ -39,9 +39,17 @@
                 @forelse($schedules as $sched)
                 <tr>
                   <td>
-                    <div class="d-flex px-3 py-1 align-items-center gap-2">
-                      <i class="fas fa-desktop text-primary"></i>
-                      <span class="text-sm font-weight-bold">{{ $sched->player->name ?? 'N/A' }}</span>
+                    <div class="px-3 py-1">
+                      @php 
+                        $pIds = $sched->player_ids ?? [$sched->player_id];
+                        $schedPlayers = $players->whereIn('id', $pIds);
+                      @endphp
+                      @foreach($schedPlayers as $p)
+                        <div class="d-flex align-items-center gap-1 mb-1">
+                          <i class="fas fa-desktop text-primary text-xs"></i>
+                          <span class="text-xs font-weight-bold text-dark">{{ $p->name }}</span>
+                        </div>
+                      @endforeach
                     </div>
                   </td>
                   <td>
@@ -98,13 +106,14 @@
                         data-content-items="{{ json_encode($sched->content_items ?? []) }}"
                         data-time-slots="{{ json_encode($sched->time_slots ?? []) }}"
                         data-priority="{{ $sched->priority ?? 0 }}"
-                        data-res="{{ $sched->resolution ?? '1920x1080' }}">
+                        data-res="{{ $sched->resolution ?? '1920x1080' }}"
+                        data-players="{{ json_encode($sched->player_ids ?? [$sched->player_id]) }}">
                         <i class="fas fa-edit"></i>
                       </button>
                       {{-- Excluir --}}
-                      <form action="{{ route('lojista.tvdoor.schedules.destroy', $sched->id) }}" method="POST">
+                      <form action="{{ route('lojista.tvdoor.schedules.destroy', $sched->id) }}" method="POST" id="delete-sched-{{ $sched->id }}">
                         @csrf @method('DELETE')
-                        <button type="submit" class="btn btn-link text-danger p-1 mb-0" onclick="return confirm('Excluir esta programação?')">
+                        <button type="button" class="btn btn-link text-danger p-1 mb-0" onclick="confirmDelete('delete-sched-{{ $sched->id }}')">
                           <i class="fas fa-trash"></i>
                         </button>
                       </form>
@@ -138,12 +147,15 @@
             {{-- Coluna 1: Configurações --}}
             <div class="col-md-4">
               <div class="form-group mb-3">
-                <label class="form-label fw-bold">Player</label>
-                <select name="player_id" class="form-control" required>
+                <label class="form-label fw-bold">Player(s) Alvo</label>
+                <div class="border rounded p-2 bg-light" style="max-height:150px; overflow-y:auto;">
                   @foreach($players as $p)
-                    <option value="{{ $p->id }}">{{ $p->name }}</option>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="player_ids[]" value="{{ $p->id }}" id="add_p_{{ $p->id }}">
+                      <label class="form-check-label text-sm" for="add_p_{{ $p->id }}">{{ $p->name }}</label>
+                    </div>
                   @endforeach
-                </select>
+                </div>
               </div>
               <div class="form-group mb-3">
                 <label class="form-label fw-bold">Resolução</label>
@@ -232,12 +244,15 @@
             {{-- Coluna 1: Configurações --}}
             <div class="col-md-4">
               <div class="form-group mb-3">
-                <label class="form-label fw-bold">Player</label>
-                <select name="player_id" id="edit_player_id" class="form-control" required>
+                <label class="form-label fw-bold">Player(s) Alvo</label>
+                <div class="border rounded p-2 bg-light" style="max-height:150px; overflow-y:auto;">
                   @foreach($players as $p)
-                    <option value="{{ $p->id }}">{{ $p->name }}</option>
+                    <div class="form-check">
+                      <input class="form-check-input edit-player-check" type="checkbox" name="player_ids[]" value="{{ $p->id }}" id="edit_p_{{ $p->id }}">
+                      <label class="form-check-label text-sm" for="edit_p_{{ $p->id }}">{{ $p->name }}</label>
+                    </div>
                   @endforeach
-                </select>
+                </div>
               </div>
               <div class="form-group mb-3">
                 <label class="form-label fw-bold">Resolução</label>
@@ -437,22 +452,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 JSON.parse(d.contentItems || '[]'),
                 JSON.parse(d.timeSlots || '[]'),
                 parseInt(d.priority) || 0,
-                d.res
+                d.res,
+                JSON.parse(d.players || '[]')
             );
         });
     });
 });
 
-function openEditSchedule(id, playerId, contentItems, timeSlots, priority, resolution) {
+function openEditSchedule(id, playerId, contentItems, timeSlots, priority, resolution, playerIds = []) {
     // Limpar
     document.getElementById('edit-slots-container').innerHTML = '';
     document.querySelectorAll('.edit-content-check').forEach(c => c.checked = false);
+    document.querySelectorAll('.edit-player-check').forEach(c => c.checked = false);
 
     // Action do form
     document.getElementById('editScheduleForm').action = `/lojista/tvdoor/schedules/${id}`;
 
-    // Player
-    document.getElementById('edit_player_id').value = playerId;
+    // Players (suporta múltiplos)
+    const pIds = Array.isArray(playerIds) ? playerIds : [playerId];
+    pIds.forEach(pid => {
+        const cb = document.getElementById(`edit_p_${pid}`);
+        if(cb) cb.checked = true;
+    });
 
     // Resolução
     const resEl = document.getElementById('edit_resolution');
@@ -491,6 +512,12 @@ function validateScheduleForm(mode) {
     const items = JSON.parse(document.getElementById(`${prefix}_content_items`).value || '[]');
     const slots = JSON.parse(document.getElementById(`${prefix}_time_slots`).value || '[]');
 
+    const players = document.querySelectorAll(`input[name="player_ids[]"]${mode==='add'?'':'.edit-player-check'}:checked`);
+
+    if (players.length === 0) {
+        alert('Selecione pelo menos um player destino.');
+        return false;
+    }
     if (items.length === 0) {
         alert('Selecione pelo menos um item de conteúdo para a playlist.');
         return false;

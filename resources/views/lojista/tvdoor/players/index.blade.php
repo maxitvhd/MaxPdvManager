@@ -85,9 +85,9 @@
                       </button>
                       @endif
                       {{-- Excluir --}}
-                      <form action="{{ route('lojista.tvdoor.players.destroy', $player->id) }}" method="POST">
+                      <form action="{{ route('lojista.tvdoor.players.destroy', $player->id) }}" method="POST" id="delete-player-{{ $player->id }}">
                         @csrf @method('DELETE')
-                        <button type="submit" class="btn btn-link text-danger p-1 mb-0" onclick="return confirm('Excluir este player?')">
+                        <button type="button" class="btn btn-link text-danger p-1 mb-0" onclick="confirmDelete('delete-player-{{ $player->id }}', 'Deseja excluir este player? Ele deixará de sincronizar imediatamente.')">
                           <i class="fas fa-trash"></i>
                         </button>
                       </form>
