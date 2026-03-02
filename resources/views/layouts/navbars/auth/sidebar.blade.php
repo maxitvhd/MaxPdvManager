@@ -208,6 +208,64 @@
         </div>
       </li>
 
+      <!-- ================= TvDoor ================= -->
+      <li class="nav-item mt-3">
+        <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6 sidenav-heading">TvDoor</h6>
+      </li>
+      <li class="nav-item">
+        <a data-bs-toggle="collapse" href="#tvdoorExamples"
+          class="nav-link {{ Request::is('lojista/tvdoor*') ? 'active' : '' }}" aria-controls="tvdoorExamples"
+          role="button" aria-expanded="{{ Request::is('lojista/tvdoor*') ? 'true' : 'false' }}">
+          <div
+            class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center d-flex align-items-center justify-content-center me-2">
+            <i
+              class="fas fa-tv {{ Request::is('lojista/tvdoor*') ? 'text-white' : 'text-dark' }} text-lg"></i>
+          </div>
+          <span class="nav-link-text ms-1">TvDoor</span>
+        </a>
+        <div class="collapse {{ Request::is('lojista/tvdoor*') ? 'show' : '' }}" id="tvdoorExamples">
+          <ul class="nav ms-4">
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('lojista/tvdoor') ? 'active' : '' }}"
+                href="{{ route('lojista.tvdoor.index') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i
+                    class="fas fa-columns"></i></span>
+                <span class="sidenav-normal">Dashboard</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('lojista/tvdoor/players*') ? 'active' : '' }}"
+                href="{{ route('lojista.tvdoor.players.index') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i
+                    class="fas fa-desktop"></i></span>
+                <span class="sidenav-normal">Players</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('lojista/tvdoor/media*') ? 'active' : '' }}"
+                href="{{ route('lojista.tvdoor.media.index') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i class="fas fa-photo-video"></i></span>
+                <span class="sidenav-normal">Mídias</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('lojista/tvdoor/layouts*') ? 'active' : '' }}"
+                href="{{ route('lojista.tvdoor.layouts.index') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i class="fas fa-th-large"></i></span>
+                <span class="sidenav-normal">Layouts</span>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ Request::is('lojista/tvdoor/schedules*') ? 'active' : '' }}"
+                href="{{ route('lojista.tvdoor.schedules.index') }}">
+                <span class="sidenav-mini-icon text-xs text-center w-auto me-2"><i class="fas fa-calendar-alt"></i></span>
+                <span class="sidenav-normal">Agendamentos</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </li>
+
       <!-- ================= Admin Section ================= -->
       @hasanyrole('admin|super-admin')
       <li class="nav-item mt-3">
