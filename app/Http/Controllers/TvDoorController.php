@@ -216,6 +216,30 @@ class TvDoorController extends Controller
         return redirect()->route('lojista.tvdoor.layouts.index')->with('success', 'Layout excluído.');
     }
 
+    public function uploadLayoutAsset(Request $request)
+    {
+        $loja = $this->resolverLoja();
+        $request->validate([
+            'file' => 'required|file|max:20480', // 20MB max
+        ]);
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $extension = $file->getClientOriginalExtension();
+            $filename = 'asset_' . time() . '_' . Str::random(5) . '.' . $extension;
+            
+            // Salva em storage/app/public/tvdoor/layout_assets/{loja_id}/
+            $path = $file->storeAs('tvdoor/layout_assets/' . $loja->id, $filename, 'public');
+            
+            return response()->json([
+                'success' => true,
+                'url' => asset('storage/' . $path)
+            ]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Nenhum arquivo enviado.'], 400);
+    }
+
     public function destroyMedia(TvDoorMedia $media)
     {
         Storage::disk('public')->delete($media->file_path);

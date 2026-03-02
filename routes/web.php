@@ -278,6 +278,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/layouts/create', [TvDoorController::class, 'createLayout'])->name('lojista.tvdoor.layouts.create');
         Route::post('/layouts', [TvDoorController::class, 'storeLayout'])->name('lojista.tvdoor.layouts.store');
         Route::get('/layouts/{layout}/edit', [TvDoorController::class, 'editLayout'])->name('lojista.tvdoor.layouts.edit');
+        Route::post('/layouts/upload-asset', [TvDoorController::class, 'uploadLayoutAsset'])->name('lojista.tvdoor.layouts.upload_asset');
         Route::put('/layouts/{layout}', [TvDoorController::class, 'updateLayout'])->name('lojista.tvdoor.layouts.update');
         Route::delete('/layouts/{layout}', [TvDoorController::class, 'destroyLayout'])->name('lojista.tvdoor.layouts.destroy');
 

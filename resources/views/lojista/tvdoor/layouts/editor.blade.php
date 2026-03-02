@@ -294,15 +294,50 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 <script>
 let canvasW = 1920, canvasH = 1080;
-const SCALE = 0.42;
 let history = [];
 
 // ===== CANVAS =====
+// Inicializa no tamanho real, o CSS vai escalar o container
 const canvas = new fabric.Canvas('main-canvas', {
-    width:  canvasW * SCALE,
-    height: canvasH * SCALE,
+    width:  canvasW,
+    height: canvasH,
     preserveObjectStacking: true,
 });
+
+// Escala o canvas visualmente via CSS para caber na tela
+function updateCanvasScaling() {
+    const wrap = document.querySelector('.canvas-wrap');
+    const cw = wrap.clientWidth - 40;
+    const ch = wrap.clientHeight - 40;
+    const scale = Math.min(cw / canvasW, ch / canvasH, 0.9); // max 90%
+    
+    const el = canvas.wrapperEl;
+    el.style.transform = `scale(${scale})`;
+    el.style.transformOrigin = 'center';
+}
+window.addEventListener('resize', updateCanvasScaling);
+setTimeout(updateCanvasScaling, 500);
+
+// ===== RESOLUÇÃO =====
+function changeResolution() {
+    const val = document.getElementById('res-select').value;
+    document.getElementById('custom-res').style.display = val === 'custom' ? 'flex' : 'none';
+    if (val === 'custom') return;
+    const [w, h] = val.split('x').map(Number);
+    setResolution(w, h);
+}
+function applyCustomRes() {
+    setResolution(parseInt(document.getElementById('cw').value), parseInt(document.getElementById('ch').value));
+}
+function setResolution(w, h) {
+    canvasW = w; canvasH = h;
+    canvas.setWidth(w);
+    canvas.setHeight(h);
+    canvas.renderAll();
+    updateCanvasScaling();
+    document.getElementById('res-label').innerText = `${w} × ${h}`;
+    document.getElementById('layout-resolution').value = `${w}x${h}`;
+}
 
 // Salva estado para undo
 function saveHistory() {
@@ -478,43 +513,89 @@ function addImage(input) {
     input.value = '';
 }
 
-function addGif(input) {
+async function addGif(input) {
     const file = input.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        // GIFs são tratados como imagens estáticas no Fabric.js (sem animação no editor)
-        // No player eles animam normalmente
-        fabric.Image.fromURL(e.target.result, img => {
-            img.scaleToWidth(300);
-            img.set({ left: 100, top: 100, data: { type: 'gif', src: e.target.result } });
-            canvas.add(img); canvas.setActiveObject(img); canvas.renderAll();
+
+    // Indicador visual simples
+    const btn = document.querySelector('button[onclick*="gif-upload"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subindo...';
+    btn.disabled = true;
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('_token', '{{ csrf_token() }}');
+
+        const res = await fetch('{{ route("lojista.tvdoor.layouts.upload_asset") }}', {
+            method: 'POST',
+            body: formData
         });
-        alert('GIF adicionado. No editor aparece estático, mas no player animará.');
-    };
-    reader.readAsDataURL(file);
-    input.value = '';
+        const data = await res.json();
+
+        if (data.success) {
+            fabric.Image.fromURL(data.url, img => {
+                img.scaleToWidth(300);
+                img.set({ left: 100, top: 100, data: { type: 'gif', src: data.url } });
+                canvas.add(img); canvas.setActiveObject(img); canvas.renderAll();
+            });
+        } else {
+            alert('Erro no upload: ' + data.message);
+        }
+    } catch (e) {
+        alert('Erro ao enviar GIF.');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        input.value = '';
+    }
 }
 
-function addVideo(input) {
+async function addVideo(input) {
     const file = input.files[0];
     if (!file) return;
-    const videoUrl = URL.createObjectURL(file);
-    // Representa o vídeo como um retângulo placeholder no canvas
-    const rect = new fabric.Rect({
-        left: 100, top: 100, width: 400, height: 225,
-        fill: '#000', stroke: '#6c63ff', strokeWidth: 3,
-        rx: 8, ry: 8,
-        data: { type: 'video', src: videoUrl, filename: file.name }
-    });
-    const label = new fabric.Text('▶ ' + file.name, {
-        left: 110, top: 195, fontSize: 16, fill: '#6c63ff',
-        fontFamily: 'Segoe UI, sans-serif', selectable: false
-    });
-    const group = new fabric.Group([rect, label], { left: 100, top: 100 });
-    canvas.add(group); canvas.setActiveObject(group); canvas.renderAll();
-    input.value = '';
-    alert('Vídeo representado no canvas. No player será exibido em tela cheia.');
+
+    const btn = document.querySelector('button[onclick*="video-upload"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subindo...';
+    btn.disabled = true;
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('_token', '{{ csrf_token() }}');
+
+        const res = await fetch('{{ route("lojista.tvdoor.layouts.upload_asset") }}', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            // Representa o vídeo como um retângulo placeholder no canvas
+            const rect = new fabric.Rect({
+                left: 100, top: 100, width: 400, height: 225,
+                fill: '#000', stroke: '#6c63ff', strokeWidth: 3,
+                rx: 8, ry: 8,
+                data: { type: 'video', src: data.url, filename: file.name }
+            });
+            const label = new fabric.Text('▶ ' + file.name, {
+                left: 110, top: 195, fontSize: 16, fill: '#6c63ff',
+                fontFamily: 'Segoe UI, sans-serif', selectable: false
+            });
+            const group = new fabric.Group([rect, label], { left: 100, top: 100 });
+            canvas.add(group); canvas.setActiveObject(group); canvas.renderAll();
+        } else {
+            alert('Erro no upload: ' + data.message);
+        }
+    } catch (e) {
+        alert('Erro ao enviar vídeo.');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        input.value = '';
+    }
 }
 
 function addProduct(name, price, imgUrl) {
