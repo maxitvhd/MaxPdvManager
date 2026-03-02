@@ -373,15 +373,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- Auto-abrir se vier via GET ----
     @isset($schedule)
     openEditSchedule(
-        {{ $schedule->id }},
-        {{ $schedule->player_id }},
-        {{ $schedule->schedulable_id }},
-        '{{ addslashes($schedule->schedulable_type) }}',
-        {{ json_encode($schedule->days ?? []) }},
-        '{{ $schedule->start_time }}',
-        '{{ $schedule->end_time }}',
-        {{ $schedule->priority ?? 0 }},
-        '{{ $schedule->resolution ?? '1920x1080' }}'
+        {!! $schedule->id !!},
+        {!! $schedule->player_id !!},
+        {!! $schedule->schedulable_id !!},
+        {!! json_encode($schedule->schedulable_type) !!},
+        {!! json_encode($schedule->days ?? []) !!},
+        {!! json_encode($schedule->start_time) !!},
+        {!! json_encode($schedule->end_time) !!},
+        {!! $schedule->priority ?? 0 !!},
+        {!! json_encode($schedule->resolution ?? '1920x1080') !!}
     );
     @endisset
 });
