@@ -158,21 +158,22 @@
       </li>
 
       <!-- ================= MaxPublica (todos lojistas) ================= -->
+      @php $maxpublicaActive = Request::is('lojista/maxdivulga*') && !Request::is('lojista/tvdoor*'); @endphp
       <li class="nav-item mt-3">
         <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6 sidenav-heading">MaxPublica</h6>
       </li>
       <li class="nav-item">
         <a data-bs-toggle="collapse" href="#maxpublicaExamples"
-          class="nav-link {{ Request::is('lojista/maxdivulga*') ? 'active' : '' }}" aria-controls="maxpublicaExamples"
-          role="button" aria-expanded="{{ Request::is('lojista/maxdivulga*') ? 'true' : 'false' }}">
+          class="nav-link {{ $maxpublicaActive ? 'active' : '' }}" aria-controls="maxpublicaExamples"
+          role="button" aria-expanded="{{ $maxpublicaActive ? 'true' : 'false' }}">
           <div
             class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center d-flex align-items-center justify-content-center me-2">
             <i
-              class="fas fa-bullhorn {{ Request::is('lojista/maxdivulga*') ? 'text-white' : 'text-dark' }} text-lg"></i>
+              class="fas fa-bullhorn {{ $maxpublicaActive ? 'text-white' : 'text-dark' }} text-lg"></i>
           </div>
           <span class="nav-link-text ms-1">MaxPublica</span>
         </a>
-        <div class="collapse {{ Request::is('lojista/maxdivulga*') ? 'show' : '' }}" id="maxpublicaExamples">
+        <div class="collapse {{ $maxpublicaActive ? 'show' : '' }}" id="maxpublicaExamples">
           <ul class="nav ms-4">
             <li class="nav-item">
               <a class="nav-link {{ Request::is('lojista/maxdivulga') ? 'active' : '' }}"

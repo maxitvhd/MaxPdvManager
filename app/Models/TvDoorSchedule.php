@@ -19,7 +19,8 @@ class TvDoorSchedule extends Model
         'start_time',
         'end_time',
         'priority',
-        'is_active'
+        'is_active',
+        'resolution'
     ];
 
     protected $casts = [

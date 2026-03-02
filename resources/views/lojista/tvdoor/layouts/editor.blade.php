@@ -1,200 +1,412 @@
 @extends('layouts.user_type.auth')
 
 @section('content')
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-lg-3">
-            <div class="card h-100">
-                <div class="card-header pb-0">
-                    <h6>Elementos</h6>
-                </div>
-                <div class="card-body p-3">
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary btn-sm add-element" data-type="text">
-                            <i class="fas fa-font me-2"></i> Texto
-                        </button>
-                        <button class="btn btn-outline-primary btn-sm add-element" data-type="clock">
-                            <i class="fas fa-clock me-2"></i> Relógio
-                        </button>
-                        <button class="btn btn-outline-primary btn-sm" id="btn-show-products">
-                            <i class="fas fa-tag me-2"></i> Produto do Catálogo
-                        </button>
-                    </div>
-
-                    <hr class="horizontal dark mt-4 mb-3">
-                    
-                    <h6>Salvar Layout</h6>
-                    <form action="{{ route('lojista.tvdoor.layouts.store') }}" method="POST" id="form-layout">
-                        @csrf
-                        <div class="form-group mb-3">
-                            <label class="form-label text-xs">Nome do Layout</label>
-                            <input type="text" name="name" class="form-control form-control-sm" placeholder="Ex: Promoção de Verão" required>
-                        </div>
-                        <input type="hidden" name="content" id="layout-content">
-                        <button type="submit" class="btn bg-gradient-success btn-sm w-100 mb-0">Salvar Layout</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-9">
-            <div class="card bg-gray-200" style="min-height: 500px; position: relative; overflow: hidden;" id="canvas">
-                <!-- Elementos serão adicionados aqui via JS -->
-                <div class="text-center mt-5 text-secondary opacity-5" id="canvas-placeholder">
-                    <i class="ni ni-palette fa-5x"></i>
-                    <p>Arraste elementos para começar a criar seu layout</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Produtos -->
-<div class="modal fade" id="productModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Selecionar Produto</h5>
-                <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    @forelse($produtos as $prod)
-                    <div class="col-md-4 mb-3">
-                        <div class="card product-card cursor-pointer border" data-name="{{ $prod->nome }}" data-price="{{ $prod->preco_venda }}" data-image="{{ $prod->imagem ? asset('storage/'.$prod->imagem) : 'https://via.placeholder.com/150' }}">
-                            <div class="card-body p-2 text-center">
-                                <img src="{{ $prod->imagem ? asset('storage/'.$prod->imagem) : 'https://via.placeholder.com/150' }}" class="img-fluid rounded border mb-2" style="height: 100px; object-fit: cover;">
-                                <p class="text-sm font-weight-bold mb-0">{{ $prod->nome }}</p>
-                                <p class="text-xs text-secondary">R$ {{ number_format($prod->preco_venda, 2, ',', '.') }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    @empty
-                    <div class="col-12 text-center">Catálogo vazio.</div>
-                    @endforelse
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- CSS Adicional -->
 <style>
-    .draggable-element {
-        position: absolute;
-        cursor: move;
-        background: white;
-        padding: 5px 10px;
-        border: 1px dashed #ccc;
-        border-radius: 4px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .draggable-element:hover {
-        border-color: #5e72e4;
-    }
-    .resizer {
-        width: 10px; height: 10px;
-        background: #5e72e4;
-        position: absolute;
-        right: -5px; bottom: -5px;
-        cursor: nwse-resize;
-    }
-    .delete-btn {
-        position: absolute;
-        top: -10px; right: -10px;
-        background: red; color: white;
-        border-radius: 50%; width: 20px; height: 20px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 10px; cursor: pointer; display: none;
-    }
-    .draggable-element:hover .delete-btn {
-        display: flex;
-    }
+.editor-wrap { display:flex; gap:12px; height: calc(100vh - 120px); }
+.panel { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08); overflow:hidden; }
+.panel-header { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05rem; padding:10px 14px; background:#f8f9fa; border-bottom:1px solid #e9ecef; color:#495057; }
+.tools-panel { width:200px; flex-shrink:0; display:flex; flex-direction:column; }
+.tool-btn { display:flex; align-items:center; gap:8px; padding:8px 14px; font-size:.8rem; cursor:pointer; border:none; background:none; width:100%; text-align:left; transition:background .15s; color:#344767; }
+.tool-btn:hover { background:#f0f2ff; color:#5e72e4; }
+.tool-btn i { width:16px; text-align:center; color:#7c8db5; }
+.bg-panel { border-top:1px solid #e9ecef; }
+.canvas-panel { flex:1; position:relative; display:flex; flex-direction:column; }
+.canvas-toolbar { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid #e9ecef; flex-wrap:wrap; }
+.canvas-wrap { flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; background:#e9ecef; padding:20px; }
+#main-canvas { box-shadow:0 4px 24px rgba(0,0,0,.25); }
+.props-panel { width:210px; flex-shrink:0; display:flex; flex-direction:column; overflow-y:auto; }
+.prop-group { padding:10px 14px; border-bottom:1px solid #f0f0f0; }
+.prop-group label { font-size:.72rem; font-weight:600; color:#7c8db5; display:block; margin-bottom:4px; }
+.prop-group input, .prop-group select { width:100%; font-size:.8rem; padding:5px 8px; border:1px solid #dee2e6; border-radius:6px; color:#344767; }
+.grad-stop { display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+.undo-redo-btn { background:#f0f2ff; border:none; border-radius:6px; padding:5px 10px; font-size:.8rem; cursor:pointer; color:#5e72e4; }
+.undo-redo-btn:hover { background:#5e72e4; color:#fff; }
+.save-btn { background:linear-gradient(135deg,#43e97b,#38f9d7); border:none; border-radius:6px; padding:6px 16px; font-size:.8rem; font-weight:700; color:#fff; cursor:pointer; }
+.res-select { font-size:.8rem; padding:4px 8px; border:1px solid #dee2e6; border-radius:6px; }
 </style>
 
-<!-- JS para o Editor -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-<script>
-$(function() {
-    const $canvas = $("#canvas");
-    const $placeholder = $("#canvas-placeholder");
-    const elements = [];
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="mb-0">Editor de Layout TvDoor</h6>
+    <div class="d-flex gap-2">
+      <a href="{{ route('lojista.tvdoor.layouts.index') }}" class="btn btn-sm btn-outline-secondary">← Voltar</a>
+      <button class="save-btn" onclick="salvarLayout()"><i class="fas fa-save me-1"></i> Salvar Layout</button>
+    </div>
+  </div>
 
-    // Mostrar Modal de Produtos
-    $("#btn-show-products").click(() => {
-        $("#productModal").modal('show');
-    });
+  <div class="editor-wrap">
+    <!-- ========== Painel Esquerdo: Elementos ========== -->
+    <div class="panel tools-panel">
+      <div class="panel-header">Elementos</div>
+      <button class="tool-btn" onclick="addText()"><i class="fas fa-font"></i> Texto</button>
+      <button class="tool-btn" onclick="addClock()"><i class="fas fa-clock"></i> Relógio</button>
+      <button class="tool-btn" onclick="addRect()"><i class="fas fa-square"></i> Retângulo</button>
+      <button class="tool-btn" onclick="addCircle()"><i class="far fa-circle"></i> Círculo</button>
+      <button class="tool-btn" onclick="addLine()"><i class="fas fa-minus"></i> Linha</button>
+      <button class="tool-btn" onclick="document.getElementById('img-upload').click()"><i class="fas fa-image"></i> Imagem</button>
+      <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="addImage(this)">
 
-    // Adicionar Elemento de Texto ou Relógio
-    $(".add-element").click(function() {
-        const type = $(this).data('type');
-        addElement({ type: type, content: type === 'clock' ? '00:00:00' : 'Novo Texto', x: 50, y: 50 });
-    });
+      <div class="bg-panel">
+        <div class="panel-header">Fundo do Canvas</div>
+        <div style="padding:10px 14px;">
+          <label style="font-size:.72rem; font-weight:600; color:#7c8db5; display:block; margin-bottom:6px;">Tipo</label>
+          <select id="bg-type" class="res-select w-100 mb-2" onchange="updateBgType()">
+            <option value="solid">Cor Sólida</option>
+            <option value="gradient">Gradiente</option>
+            <option value="image">Imagem</option>
+          </select>
 
-    // Adicionar Produto
-    $(".product-card").click(function() {
-        const name = $(this).data('name');
-        const price = $(this).data('price');
-        const image = $(this).data('image');
-        
-        const html = `
-            <div class="text-center" style="width: 200px;">
-                <img src="${image}" class="img-fluid rounded mb-1" style="max-height: 120px;">
-                <h6 class="mb-0 text-sm">${name}</h6>
-                <p class="text-primary font-weight-bold">R$ ${price}</p>
+          <div id="bg-solid">
+            <input type="color" id="bg-color" value="#1a1a2e" class="w-100" style="height:36px;border-radius:6px;border:1px solid #dee2e6;cursor:pointer;" onchange="applyBgSolid()">
+          </div>
+
+          <div id="bg-gradient" style="display:none">
+            <div class="grad-stop">
+              <input type="color" id="grad-c1" value="#0f0c29" onchange="applyBgGradient()">
+              <input type="color" id="grad-c2" value="#302b63" onchange="applyBgGradient()">
             </div>
-        `;
-        
-        addElement({ type: 'product', content: html, x: 100, y: 100 });
-        $("#productModal").modal('hide');
-    });
+            <select id="grad-dir" class="res-select w-100" onchange="applyBgGradient()">
+              <option value="h">Horizontal</option>
+              <option value="v">Vertical</option>
+              <option value="d">Diagonal</option>
+            </select>
+          </div>
 
-    function addElement(config) {
-        $placeholder.hide();
-        const $el = $(`<div class="draggable-element" style="left: ${config.x}px; top: ${config.y}px;">
-                        <div class="content">${config.content}</div>
-                        <div class="resizer"></div>
-                        <div class="delete-btn"><i class="fas fa-times"></i></div>
-                    </div>`);
-        
-        $el.draggable({
-            containment: "#canvas",
-            stop: updateContent
-        }).resizable({
-            stop: updateContent
-        });
+          <div id="bg-image-sec" style="display:none">
+            <button class="tool-btn w-100 mt-1" onclick="document.getElementById('bg-img-input').click()" style="border:1px dashed #dee2e6;border-radius:6px;justify-content:center;">
+              <i class="fas fa-upload me-1"></i> Carregar Fundo
+            </button>
+            <input type="file" id="bg-img-input" accept="image/*" style="display:none" onchange="applyBgImage(this)">
+          </div>
+        </div>
+      </div>
 
-        $el.find(".delete-btn").click(function() {
-            $el.remove();
-            updateContent();
-            if ($canvas.find(".draggable-element").length === 0) $placeholder.show();
-        });
+      <div class="bg-panel">
+        <div class="panel-header">Produtos</div>
+        <div style="padding:10px 14px; max-height:200px; overflow-y:auto;">
+          @forelse($produtos as $prod)
+          <div onclick="addProduct('{{ addslashes($prod->nome) }}', '{{ number_format($prod->preco_venda, 2, ',', '.') }}', '{{ $prod->imagem ? asset('storage/'.$prod->imagem) : '' }}')"
+               style="display:flex;align-items:center;gap:8px;padding:6px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid #f0f0f0;">
+            <img src="{{ $prod->imagem ? asset('storage/'.$prod->imagem) : 'https://via.placeholder.com/40' }}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;">
+            <div>
+              <div style="font-size:.75rem;font-weight:700;color:#344767;">{{ Str::limit($prod->nome, 18) }}</div>
+              <div style="font-size:.7rem;color:#43e97b;font-weight:700;">R$ {{ number_format($prod->preco_venda, 2, ',', '.') }}</div>
+            </div>
+          </div>
+          @empty
+          <p style="font-size:.75rem;color:#999;">Catálogo vazio.</p>
+          @endforelse
+        </div>
+      </div>
+    </div>
 
-        $canvas.append($el);
-        updateContent();
-    }
+    <!-- ========== Canvas Central ========== -->
+    <div class="panel canvas-panel">
+      <div class="canvas-toolbar">
+        <select class="res-select" id="res-select" onchange="changeResolution()">
+          <option value="1920x1080">Full HD (1920×1080)</option>
+          <option value="1280x720">HD (1280×720)</option>
+          <option value="1080x1920">Vertical 9:16 (1080×1920)</option>
+          <option value="1080x1080">Quadrado (1080×1080)</option>
+          <option value="3840x2160">4K (3840×2160)</option>
+          <option value="custom">Personalizado...</option>
+        </select>
+        <div id="custom-res" style="display:none;gap:4px;align-items:center;" class="d-flex">
+          <input type="number" id="cw" value="1920" class="res-select" style="width:70px;" placeholder="W">
+          <span>×</span>
+          <input type="number" id="ch" value="1080" class="res-select" style="width:70px;" placeholder="H">
+          <button class="undo-redo-btn" onclick="applyCustomRes()">OK</button>
+        </div>
+        <span style="font-size:.75rem;color:#aaa;" id="res-label">1920 × 1080</span>
+        <div style="flex:1"></div>
+        <button class="undo-redo-btn" onclick="canvas.undo ? canvas.undo() : null"><i class="fas fa-undo"></i></button>
+        <button class="undo-redo-btn" onclick="deleteSelected()"><i class="fas fa-trash"></i></button>
+        <button class="undo-redo-btn" onclick="canvas.setActiveObject(null);canvas.renderAll()"><i class="fas fa-mouse-pointer"></i> Deselect</button>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="main-canvas"></canvas>
+      </div>
+    </div>
 
-    function updateContent() {
-        const layout = [];
-        $canvas.find(".draggable-element").each(function() {
-            const $this = $(this);
-            layout.push({
-                content: $this.find(".content").html(),
-                x: parseInt($this.css("left")),
-                y: parseInt($this.css("top")),
-                w: $this.width(),
-                h: $this.height()
-            });
-        });
-        $("#layout-content").val(JSON.stringify(layout));
-    }
+    <!-- ========== Painel Direito: Propriedades ========== -->
+    <div class="panel props-panel">
+      <div class="panel-header">Propriedades</div>
+      <div id="no-selection" style="padding:20px;font-size:.8rem;color:#999;text-align:center;">
+        Selecione um elemento para editar.
+      </div>
+      <div id="obj-props" style="display:none;">
+        <div class="prop-group">
+          <label>Texto</label>
+          <input type="text" id="prop-text" oninput="setProp('text', this.value)">
+        </div>
+        <div class="prop-group">
+          <label>Cor do Texto</label>
+          <input type="color" id="prop-fill" onchange="setProp('fill', this.value)" style="height:32px;cursor:pointer;">
+        </div>
+        <div class="prop-group">
+          <label>Tamanho da Fonte</label>
+          <input type="number" id="prop-fontsize" oninput="setPropNum('fontSize', this.value)" min="8" max="300">
+        </div>
+        <div class="prop-group">
+          <label>Negrito</label>
+          <select id="prop-bold" onchange="setProp('fontWeight', this.value)">
+            <option value="normal">Normal</option>
+            <option value="bold">Negrito</option>
+          </select>
+        </div>
+        <div class="prop-group">
+          <label>Fundo do Objeto</label>
+          <input type="color" id="prop-bg" onchange="setProp('backgroundColor', this.value)" style="height:32px;cursor:pointer;">
+        </div>
+        <div class="prop-group">
+          <label>Opacidade</label>
+          <input type="range" id="prop-opacity" min="0" max="1" step="0.05" value="1" oninput="setPropNum('opacity', this.value)">
+        </div>
+        <div class="prop-group">
+          <label>X</label>
+          <input type="number" id="prop-x" oninput="setPropNum('left', this.value)">
+        </div>
+        <div class="prop-group">
+          <label>Y</label>
+          <input type="number" id="prop-y" oninput="setPropNum('top', this.value)">
+        </div>
+      </div>
 
-    // Salvar
-    $("#form-layout").submit(function() {
-        updateContent();
-        return true;
-    });
+      <div class="panel-header mt-2">Salvar</div>
+      <div class="prop-group">
+        <label>Nome do Layout</label>
+        <input type="text" id="layout-name" placeholder="Ex: Promoção de Verão">
+      </div>
+      <div class="prop-group">
+        <label>Resolução Alvo</label>
+        <input type="text" id="layout-resolution" value="1920x1080" readonly style="color:#aaa;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Form oculto para salvar layout via POST -->
+<form id="save-form" action="{{ route('lojista.tvdoor.layouts.store') }}" method="POST" style="display:none">
+  @csrf
+  <input type="hidden" name="name" id="save-name">
+  <input type="hidden" name="content" id="save-content">
+  <input type="hidden" name="resolution" id="save-resolution">
+</form>
+
+<!-- Fabric.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<script>
+let canvasW = 1920, canvasH = 1080;
+const SCALE = 0.45; // escala de exibição para caber na tela
+
+// Inicializar Fabric Canvas
+const canvas = new fabric.Canvas('main-canvas', {
+    width: canvasW * SCALE,
+    height: canvasH * SCALE,
+    backgroundColor: '#1a1a2e',
+    preserveObjectStacking: true,
 });
+
+// ===== Funções de Resolução =====
+function changeResolution() {
+    const val = document.getElementById('res-select').value;
+    document.getElementById('custom-res').style.display = val === 'custom' ? 'flex' : 'none';
+    if (val === 'custom') return;
+    const [w, h] = val.split('x').map(Number);
+    setResolution(w, h);
+}
+
+function applyCustomRes() {
+    const w = parseInt(document.getElementById('cw').value);
+    const h = parseInt(document.getElementById('ch').value);
+    setResolution(w, h);
+}
+
+function setResolution(w, h) {
+    canvasW = w; canvasH = h;
+    canvas.setWidth(w * SCALE);
+    canvas.setHeight(h * SCALE);
+    canvas.renderAll();
+    document.getElementById('res-label').innerText = `${w} × ${h}`;
+    document.getElementById('layout-resolution').value = `${w}x${h}`;
+}
+
+// ===== Funções de Fundo =====
+function updateBgType() {
+    const t = document.getElementById('bg-type').value;
+    document.getElementById('bg-solid').style.display       = t === 'solid'    ? '' : 'none';
+    document.getElementById('bg-gradient').style.display   = t === 'gradient'  ? '' : 'none';
+    document.getElementById('bg-image-sec').style.display  = t === 'image'     ? '' : 'none';
+}
+
+function applyBgSolid() {
+    canvas.setBackgroundColor(document.getElementById('bg-color').value, canvas.renderAll.bind(canvas));
+}
+
+function applyBgGradient() {
+    const c1 = document.getElementById('grad-c1').value;
+    const c2 = document.getElementById('grad-c2').value;
+    const dir = document.getElementById('grad-dir').value;
+    const coords = dir === 'h' ? {x1:0,y1:0,x2:1,y2:0} : dir === 'v' ? {x1:0,y1:0,x2:0,y2:1} : {x1:0,y1:0,x2:1,y2:1};
+    canvas.setBackgroundColor(new fabric.Gradient({
+        type: 'linear',
+        gradientUnits: 'percentage',
+        coords: coords,
+        colorStops: [{offset:0, color:c1}, {offset:1, color:c2}]
+    }), canvas.renderAll.bind(canvas));
+}
+
+function applyBgImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        fabric.Image.fromURL(e.target.result, img => {
+            img.scaleToWidth(canvas.width);
+            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+        });
+    };
+    reader.readAsDataURL(file);
+}
+
+// ===== Adicionar Elementos =====
+function addText() {
+    const t = new fabric.IText('Clique para editar', {
+        left: 50, top: 50, fontSize: 40, fill: '#ffffff',
+        fontFamily: 'Segoe UI, sans-serif',
+    });
+    canvas.add(t); canvas.setActiveObject(t); canvas.renderAll();
+}
+
+let clockObj = null;
+function addClock() {
+    const t = new fabric.Text(new Date().toLocaleTimeString('pt-BR'), {
+        left: 60, top: 60, fontSize: 80, fill: '#ffffff',
+        fontFamily: 'Segoe UI, sans-serif',
+        fontWeight: 'bold',
+        data: { type: 'clock' }
+    });
+    canvas.add(t); canvas.setActiveObject(t); canvas.renderAll();
+    // Atualiza o relógio a cada segundo
+    setInterval(() => {
+        t.set('text', new Date().toLocaleTimeString('pt-BR'));
+        canvas.renderAll();
+    }, 1000);
+}
+
+function addRect() {
+    canvas.add(new fabric.Rect({ left:100, top:100, width:200*SCALE*2, height:120*SCALE*2, fill:'rgba(108,99,255,0.7)', rx:8, ry:8 }));
+    canvas.renderAll();
+}
+
+function addCircle() {
+    canvas.add(new fabric.Circle({ left:150, top:150, radius:60, fill:'rgba(72,219,251,0.7)' }));
+    canvas.renderAll();
+}
+
+function addLine() {
+    canvas.add(new fabric.Line([50, 50, 400, 50], { stroke:'#fff', strokeWidth:3, left:50, top:150 }));
+    canvas.renderAll();
+}
+
+function addImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        fabric.Image.fromURL(e.target.result, img => {
+            img.scaleToWidth(200);
+            img.set({ left: 100, top: 100 });
+            canvas.add(img); canvas.setActiveObject(img); canvas.renderAll();
+        });
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+
+function addProduct(name, price, imgUrl) {
+    const group = [];
+    const rect = new fabric.Rect({ width:220, height:260, fill:'rgba(255,255,255,0.1)', rx:12, ry:12, stroke:'rgba(255,255,255,0.2)', strokeWidth:1 });
+    const nameText = new fabric.Text(name, { top:150, left:10, width:200, fontSize:18, fill:'#fff', fontWeight:'bold', fontFamily:'Segoe UI', textAlign:'center' });
+    const priceText = new fabric.Text('R$ ' + price, { top:185, left:10, width:200, fontSize:22, fill:'#43e97b', fontWeight:'bold', fontFamily:'Segoe UI', textAlign:'center' });
+
+    const createGroup = (imgObj) => {
+        const objs = imgObj ? [rect, imgObj, nameText, priceText] : [rect, nameText, priceText];
+        const g = new fabric.Group(objs, { left:100, top:100 });
+        canvas.add(g); canvas.setActiveObject(g); canvas.renderAll();
+    };
+
+    if (imgUrl) {
+        fabric.Image.fromURL(imgUrl, img => {
+            img.scaleToWidth(160);
+            img.set({ top:10, left:30 });
+            createGroup(img);
+        }, { crossOrigin: 'anonymous' });
+    } else {
+        createGroup(null);
+    }
+}
+
+function deleteSelected() {
+    const obj = canvas.getActiveObject();
+    if (obj) { canvas.remove(obj); canvas.discardActiveObject(); canvas.renderAll(); }
+}
+
+// ===== Propriedades do Objeto Selecionado =====
+canvas.on('selection:created', showProps);
+canvas.on('selection:updated', showProps);
+canvas.on('selection:cleared', () => {
+    document.getElementById('no-selection').style.display = '';
+    document.getElementById('obj-props').style.display = 'none';
+});
+
+function showProps() {
+    const obj = canvas.getActiveObject();
+    if (!obj) return;
+    document.getElementById('no-selection').style.display = 'none';
+    document.getElementById('obj-props').style.display = '';
+    document.getElementById('prop-text').value = obj.text || '';
+    document.getElementById('prop-fill').value = obj.fill || '#ffffff';
+    document.getElementById('prop-fontsize').value = obj.fontSize || 20;
+    document.getElementById('prop-bold').value = obj.fontWeight || 'normal';
+    document.getElementById('prop-bg').value = obj.backgroundColor || '#000000';
+    document.getElementById('prop-opacity').value = obj.opacity || 1;
+    document.getElementById('prop-x').value = Math.round(obj.left || 0);
+    document.getElementById('prop-y').value = Math.round(obj.top || 0);
+}
+
+function setProp(prop, val) {
+    const obj = canvas.getActiveObject();
+    if (obj) { obj.set(prop, val); canvas.renderAll(); }
+}
+
+function setPropNum(prop, val) {
+    setProp(prop, parseFloat(val));
+}
+
+canvas.on('object:modified', showProps);
+
+// ===== Salvar Layout =====
+function salvarLayout() {
+    const name = document.getElementById('layout-name').value.trim();
+    if (!name) { alert('Digite um nome para o layout!'); return; }
+
+    // Serializar canvas como JSON (FabricJS format)
+    const json = canvas.toJSON(['data']);
+    const content = JSON.stringify({
+        fabric: json,
+        width: canvasW,
+        height: canvasH,
+        resolution: document.getElementById('layout-resolution').value,
+    });
+
+    document.getElementById('save-name').value = name;
+    document.getElementById('save-content').value = content;
+    document.getElementById('save-resolution').value = document.getElementById('layout-resolution').value;
+    document.getElementById('save-form').submit();
+}
+
+// Inicializar fundo padrão
+applyBgSolid();
 </script>
 @endsection

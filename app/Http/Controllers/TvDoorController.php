@@ -113,13 +113,17 @@ class TvDoorController extends Controller
         $loja = $this->resolverLoja();
         $request->validate([
             'name' => 'required|string|max:255',
-            'content' => 'required|json',
+            'content' => 'required|string',
         ]);
 
+        // Aceita JSON string (Fabric.js serializado)
+        $content = json_decode($request->content, true) ?? $request->content;
+
         TvDoorLayout::create([
-            'loja_id' => $loja->id,
-            'name' => $request->name,
-            'content' => json_decode($request->content, true),
+            'loja_id'    => $loja->id,
+            'name'       => $request->name,
+            'content'    => $content,
+            'resolution' => $request->resolution ?? '1920x1080',
         ]);
 
         return redirect()->route('lojista.tvdoor.layouts.index')->with('success', 'Layout salvo com sucesso.');
@@ -144,16 +148,20 @@ class TvDoorController extends Controller
     public function storeSchedule(Request $request)
     {
         $request->validate([
-            'player_id' => 'required|exists:tv_door_players,id',
-            'schedulable_id' => 'required|integer',
-            'schedulable_type' => 'required|string',
-            'days' => 'required|array',
-            'start_time' => 'required',
-            'end_time' => 'required',
-            'priority' => 'nullable|integer',
+            'player_id'       => 'required|exists:tv_door_players,id',
+            'schedulable_id'  => 'required|integer',
+            'schedulable_type'=> 'required|string',
+            'days'            => 'required|array',
+            'start_time'      => 'required',
+            'end_time'        => 'required',
+            'priority'        => 'nullable|integer',
+            'resolution'      => 'nullable|string',
         ]);
 
-        TvDoorSchedule::create($request->all());
+        TvDoorSchedule::create($request->only([
+            'player_id','schedulable_id','schedulable_type',
+            'days','start_time','end_time','priority','is_active','resolution'
+        ]));
 
         return redirect()->route('lojista.tvdoor.schedules.index')->with('success', 'Agendamento criado!');
     }
