@@ -583,7 +583,7 @@
             } else {
                 screen.innerHTML = '<div style="text-align:center;opacity:0.5;font-size:2rem;padding:40px;">📢 Campanha em exibição</div>';
             }
-            if (item.audio_url) { new Audio(item.audio_url).play().catch(() => { }); }
+            if (!item.mute && item.audio_url) { new Audio(item.audio_url).play().catch(() => { }); }
             animateProgress(dur);
             setTimeout(next, dur);
         }

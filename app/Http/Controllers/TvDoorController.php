@@ -149,10 +149,6 @@ class TvDoorController extends Controller
     public function editLayout(TvDoorLayout $layout)
     {
         $loja = $this->resolverLoja();
-        $produtos = Produto::where('loja_id', $loja->id)->get()->map(function($p) use ($loja) {
-            $p->imagem_url = $this->resolveProductImageUrl($p, $loja);
-            return $p;
-        });
         return view('lojista.tvdoor.layouts.editor', compact('loja', 'layout'));
     }
 
@@ -460,7 +456,12 @@ class TvDoorController extends Controller
                 $id   = $ci['id'] ?? null;
                 if (!$id) continue;
 
-                $entry = ['type' => $type, 'duration' => 15, 'schedule_id' => $s->id];
+                $entry = [
+                    'type' => $type,
+                    'duration' => 15,
+                    'schedule_id' => $s->id,
+                    'mute' => $ci['mute'] ?? false
+                ];
 
                 if (str_contains($type, 'TvDoorMedia')) {
                     $media = TvDoorMedia::find($id);

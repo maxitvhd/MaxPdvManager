@@ -184,6 +184,10 @@
         <div style="flex:1"></div>
         <button class="undo-redo-btn" title="Desfazer" onclick="undoAction()"><i class="fas fa-undo"></i></button>
         <button class="undo-redo-btn" title="Duplicar" onclick="duplicateSelected()"><i class="fas fa-copy"></i></button>
+        <div style="border-left:1px solid #ddd; height:20px; margin:0 5px;"></div>
+        <button class="undo-redo-btn" title="Agrupar" onclick="groupObjects()"><i class="fas fa-object-group"></i></button>
+        <button class="undo-redo-btn" title="Desagrupar" onclick="ungroupObjects()"><i class="fas fa-object-ungroup"></i></button>
+        <div style="border-left:1px solid #ddd; height:20px; margin:0 5px;"></div>
         <button class="undo-redo-btn" title="Trazer para frente" onclick="bringForward()"><i class="fas fa-layer-group"></i></button>
         <button class="undo-redo-btn" title="Enviar para trás" onclick="sendBackward()"><i class="fas fa-arrow-down"></i></button>
         <button class="undo-redo-btn text-danger" title="Excluir selecionado" onclick="deleteSelected()"><i class="fas fa-trash"></i></button>
@@ -231,6 +235,14 @@
             <button class="undo-redo-btn" onclick="toggleItalic()"><i class="fas fa-italic"></i></button>
             <button class="undo-redo-btn" onclick="toggleUnderline()"><i class="fas fa-underline"></i></button>
           </div>
+        </div>
+        <div class="prop-group">
+          <label>Altura da Linha (<span id="lineheight-val">1.16</span>)</label>
+          <input type="range" id="prop-lineheight" min="0.5" max="3" step="0.05" oninput="setPropNum('lineHeight', this.value); document.getElementById('lineheight-val').innerText = this.value">
+        </div>
+        <div class="prop-group">
+          <label>Espaçamento Letras (<span id="charspacing-val">0</span>)</label>
+          <input type="range" id="prop-charspacing" min="-100" max="1000" step="1" oninput="setPropNum('charSpacing', this.value); document.getElementById('charspacing-val').innerText = this.value">
         </div>
         <div class="prop-group">
           <label>Cor de Fundo (objeto)</label>
@@ -651,24 +663,59 @@ async function addVideo(input) {
 }
 
 function addProduct(name, price, imgUrl) {
-    const rect = new fabric.Rect({ width:240, height:280, fill:'rgba(15,12,41,0.85)', rx:14, ry:14, stroke:'rgba(108,99,255,0.6)', strokeWidth:2 });
-    const nameText  = new fabric.Text(name,         { top:165, left:10, width:220, fontSize:20, fill:'#ffffff', fontWeight:'bold', fontFamily:'Segoe UI', textAlign:'center' });
-    const priceText = new fabric.Text('R$ ' + price, { top:198, left:10, width:220, fontSize:26, fill:'#43e97b', fontWeight:'bold', fontFamily:'Segoe UI', textAlign:'center' });
+    const groupPadding = 15;
+    const cardW = 260;
+    const cardH = 320;
 
-    const createGroup = (imgObj) => {
-        const objs = imgObj ? [rect, imgObj, nameText, priceText] : [rect, nameText, priceText];
-        const g = new fabric.Group(objs, { left:120, top:120 });
-        canvas.add(g); canvas.setActiveObject(g); canvas.renderAll();
+    // Fundo do Card
+    const rect = new fabric.Rect({
+        width: cardW, height: cardH,
+        fill: 'rgba(20, 20, 45, 0.9)',
+        rx: 18, ry: 18,
+        stroke: '#4a4ae2', strokeWidth: 2,
+        shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.5)', blur: 15, offsetX: 5, offsetY: 5 })
+    });
+
+    // Nome (IText permite edição direta)
+    const nameText = new fabric.IText(name, {
+        top: 200, left: 15, width: 230,
+        fontSize: 20, fill: '#ffffff',
+        fontWeight: 'bold', fontFamily: 'Segoe UI, sans-serif',
+        textAlign: 'center', splitByGrapheme: true,
+        lineHeight: 1.1, charSpacing: 10
+    });
+
+    // Preço
+    const priceText = new fabric.IText('R$ ' + price, {
+        top: 250, left: 15, width: 230,
+        fontSize: 28, fill: '#43e97b',
+        fontWeight: 'bold', fontFamily: 'Segoe UI, sans-serif',
+        textAlign: 'center'
+    });
+
+    const finishAdd = (imgObj) => {
+        const elements = [rect];
+        if (imgObj) elements.push(imgObj);
+        elements.push(nameText, priceText);
+
+        const group = new fabric.Group(elements, {
+            left: 150, top: 150,
+            subTargetCheck: true // Permite interagir com sub-objetos se necessário
+        });
+
+        canvas.add(group);
+        canvas.setActiveObject(group);
+        canvas.renderAll();
     };
 
     if (imgUrl) {
         fabric.Image.fromURL(imgUrl, img => {
-            img.scaleToWidth(170);
-            img.set({ top:8, left:35 });
-            createGroup(img);
+            img.scaleToWidth(200);
+            img.set({ top: 20, left: 30, shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.3)', blur: 10 }) });
+            finishAdd(img);
         }, { crossOrigin: 'anonymous' });
     } else {
-        createGroup(null);
+        finishAdd(null);
     }
 }
 
@@ -760,6 +807,20 @@ function toggleBold()    { const o = canvas.getActiveObject(); if(o){ o.set('fon
 function toggleItalic()  { const o = canvas.getActiveObject(); if(o){ o.set('fontStyle', o.fontStyle === 'italic' ? 'normal' : 'italic'); canvas.renderAll(); } }
 function toggleUnderline(){ const o = canvas.getActiveObject(); if(o){ o.set('underline', !o.underline); canvas.renderAll(); } }
 
+function groupObjects() {
+    if (!canvas.getActiveObject()) return;
+    if (canvas.getActiveObject().type !== 'activeSelection') return;
+    canvas.getActiveObject().toGroup();
+    canvas.requestRenderAll();
+}
+
+function ungroupObjects() {
+    if (!canvas.getActiveObject()) return;
+    if (canvas.getActiveObject().type !== 'group') return;
+    canvas.getActiveObject().toActiveSelection();
+    canvas.requestRenderAll();
+}
+
 // ===== PROPRIEDADES =====
 canvas.on('selection:created', showProps);
 canvas.on('selection:updated', showProps);
@@ -769,28 +830,73 @@ canvas.on('selection:cleared', () => {
 });
 
 function showProps() {
-    const obj = canvas.getActiveObject();
+    let obj = canvas.getActiveObject();
     if (!obj) return;
+
+    // Se for seleção múltipla, pegamos as propriedades do primeiro objeto para visualização
+    let displayObj = obj;
+    if (obj.type === 'activeSelection') {
+        const objects = obj.getObjects();
+        displayObj = objects[0] || obj;
+    }
+
     document.getElementById('no-selection').style.display = 'none';
     document.getElementById('obj-props').style.display = '';
-    document.getElementById('prop-text').value       = obj.text || '';
-    document.getElementById('prop-fill').value       = (typeof obj.fill === 'string' && obj.fill.startsWith('#')) ? obj.fill : '#ffffff';
-    document.getElementById('prop-fontsize').value   = obj.fontSize || 20;
-    document.getElementById('prop-fontfamily').value = obj.fontFamily || 'Segoe UI, sans-serif';
-    document.getElementById('prop-bg').value         = obj.backgroundColor || '#000000';
-    document.getElementById('prop-opacity').value    = obj.opacity ?? 1;
-    document.getElementById('opacity-val').innerText = Math.round((obj.opacity ?? 1) * 100);
-    document.getElementById('prop-x').value          = Math.round(obj.left || 0);
+
+    // Campos básicos
+    document.getElementById('prop-text').value       = displayObj.text || '';
+    document.getElementById('prop-fill').value       = (typeof displayObj.fill === 'string' && displayObj.fill.startsWith('#')) ? displayObj.fill : '#ffffff';
+    document.getElementById('prop-fontsize').value   = displayObj.fontSize || 20;
+    document.getElementById('prop-fontfamily').value = displayObj.fontFamily || 'Segoe UI, sans-serif';
+    document.getElementById('prop-bg').value         = displayObj.backgroundColor || (displayObj.type === 'rect' ? displayObj.fill : '#000000');
+    document.getElementById('prop-opacity').value    = displayObj.opacity ?? 1;
+    document.getElementById('opacity-val').innerText = Math.round((displayObj.opacity ?? 1) * 100);
+    document.getElementById('prop-x').value          = Math.round(obj.left || 0); // Posição do grupo/objeto atual
     document.getElementById('prop-y').value          = Math.round(obj.top  || 0);
-    document.getElementById('prop-w').value          = Math.round(obj.width  || 0);
-    document.getElementById('prop-h').value          = Math.round(obj.height || 0);
+    document.getElementById('prop-w').value          = Math.round(obj.getScaledWidth()  || 0);
+    document.getElementById('prop-h').value          = Math.round(obj.getScaledHeight() || 0);
     document.getElementById('prop-angle').value      = Math.round(obj.angle || 0);
+
+    // Propriedades avançadas de texto
+    const propLineHeight = document.getElementById('prop-lineheight');
+    const propCharSpacing = document.getElementById('prop-charspacing');
+
+    if (displayObj.lineHeight !== undefined) {
+        propLineHeight.value = displayObj.lineHeight;
+        document.getElementById('lineheight-val').innerText = displayObj.lineHeight.toFixed(2);
+        propLineHeight.parentElement.style.display = 'block';
+    } else {
+        propLineHeight.parentElement.style.display = 'none';
+    }
+
+    if (displayObj.charSpacing !== undefined) {
+        propCharSpacing.value = displayObj.charSpacing;
+        document.getElementById('charspacing-val').innerText = displayObj.charSpacing;
+        propCharSpacing.parentElement.style.display = 'block';
+    } else {
+        propCharSpacing.parentElement.style.display = 'none';
+    }
 }
 function setOpacity(val) {
     setPropNum('opacity', val);
     document.getElementById('opacity-val').innerText = Math.round(val * 100);
 }
-function setProp(prop, val) { const o = canvas.getActiveObject(); if(o){ o.set(prop, val); canvas.renderAll(); } }
+function setProp(prop, val) {
+    const o = canvas.getActiveObject();
+    if (!o) return;
+
+    if (o.type === 'activeSelection') {
+        o.forEachObject(obj => {
+            // Só aplica certas propriedades se o objeto suportar (ex: text props em imagens/rects)
+            if (['lineHeight', 'charSpacing', 'text', 'fontFamily', 'textAlign'].includes(prop) && !obj.text) return;
+            obj.set(prop, val);
+        });
+    } else {
+        o.set(prop, val);
+    }
+    canvas.renderAll();
+    canvas.fire('object:modified'); // Notifica para salvar estado se necessário
+}
 function setPropNum(prop, val) { setProp(prop, parseFloat(val)); }
 canvas.on('object:modified', showProps);
 

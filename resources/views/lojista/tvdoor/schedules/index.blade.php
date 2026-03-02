@@ -362,36 +362,63 @@ function serializeSlots(containerId, hiddenId) {
 // ============================================================
 // PLAYLIST (Conteúdo)
 // ============================================================
+// Objeto global para armazenar preferências extras dos itens da playlist (ex: mute)
+let playlistExtraData = {}; 
+
 function updatePlaylist(mode) {
     const prefix = mode === 'add' ? 'add' : 'edit';
     const checks = document.querySelectorAll(`.${prefix}-content-check:checked`);
+    
     const items = Array.from(checks).map(c => {
         const [id, type] = c.value.split('|');
         const label = c.parentElement.querySelector('label').textContent.trim();
-        return {id: parseInt(id), type, label};
+        const key = `${type}:${id}`;
+        
+        // Se for campanha, verifica se já temos preferência de som salva, senão assume mute=false (com som)
+        let mute = false;
+        if (type.includes('Campaign')) {
+            mute = playlistExtraData[key]?.mute || false;
+        }
+
+        return {id: parseInt(id), type, label, mute};
     });
 
-    // Atualiza o hidden input
+    // Atualiza o hidden input com o campo 'mute'
     document.getElementById(`${prefix}_content_items`).value = JSON.stringify(
-        items.map(i => ({id: i.id, type: i.type}))
+        items.map(i => ({id: i.id, type: i.type, mute: i.mute}))
     );
 
     // Atualiza a visualização de selecionados
     const display = document.getElementById(`${prefix}-playlist-selected`);
-    const emptyMsg = document.getElementById(`${prefix}-playlist-empty-msg`);
     display.innerHTML = '';
+    
     if (items.length === 0) {
-        const span = document.createElement('span');
-        span.className = 'text-secondary text-xs';
-        span.id = `${prefix}-playlist-empty-msg`;
-        span.textContent = 'Nenhum item selecionado.';
-        display.appendChild(span);
+        display.innerHTML = '<span class="text-secondary text-xs" id="' + prefix + '-playlist-empty-msg">Nenhum item selecionado.</span>';
     } else {
         items.forEach((item, idx) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'd-flex align-items-center gap-2 p-1 border rounded bg-white mb-1';
+            
             const badge = document.createElement('span');
-            badge.className = 'badge bg-gradient-primary';
+            badge.className = 'badge badge-sm bg-gradient-' + (item.type.includes('Layout') ? 'info' : (item.type.includes('Media') ? 'success' : 'primary'));
             badge.textContent = `${idx+1}. ${item.label}`;
-            display.appendChild(badge);
+            wrapper.appendChild(badge);
+
+            // Se for campanha, adiciona o toggle de som
+            if (item.type.includes('Campaign')) {
+                const key = `${item.type}:${item.id}`;
+                const soundToggle = document.createElement('span');
+                soundToggle.style.cursor = 'pointer';
+                soundToggle.className = 'ms-auto text-xs font-weight-bold ' + (item.mute ? 'text-danger' : 'text-success');
+                soundToggle.innerHTML = item.mute ? '<i class="fas fa-volume-mute me-1"></i>Mudo' : '<i class="fas fa-volume-up me-1"></i>Com Som';
+                soundToggle.onclick = () => {
+                    playlistExtraData[key] = { mute: !item.mute };
+                    updatePlaylist(mode);
+                };
+                wrapper.appendChild(soundToggle);
+            }
+
+            display.appendChild(wrapper);
         });
     }
 }
@@ -440,10 +467,16 @@ function openEditSchedule(id, playerId, contentItems, timeSlots, priority, resol
         addSlot('edit-slots-container', 'edit_time_slots');
     }
 
-    // Conteúdo (checar os checkboxes correspondentes)
+    // Conteúdo (checar os checkboxes correspondentes e restaurar dados extras)
+    playlistExtraData = {}; 
     (contentItems || []).forEach(ci => {
         const cb = document.querySelector(`.edit-content-check[value="${ci.id}|${ci.type}"]`);
-        if (cb) cb.checked = true;
+        if (cb) {
+            cb.checked = true;
+            if (ci.mute !== undefined) {
+                playlistExtraData[`${ci.type}:${ci.id}`] = { mute: ci.mute };
+            }
+        }
     });
     updatePlaylist('edit');
 
