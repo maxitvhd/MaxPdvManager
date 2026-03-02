@@ -158,7 +158,7 @@
       </li>
 
       <!-- ================= MaxPublica (todos lojistas) ================= -->
-      @php $maxpublicaActive = Request::is('lojista/maxdivulga*') && !Request::is('lojista/tvdoor*'); @endphp
+      @php $maxpublicaActive = Request::is('lojista/maxdivulga*'); @endphp
       <li class="nav-item mt-3">
         <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6 sidenav-heading">MaxPublica</h6>
       </li>

@@ -246,39 +246,6 @@ Route::middleware(['auth'])->group(function () {
         });
 
 
-        // Módulo TvDoor
-        Route::prefix('tvdoor')->group(function () {
-            Route::get('/', [TvDoorController::class, 'index'])->name('lojista.tvdoor.index');
-
-            // Players
-            Route::get('/players', [TvDoorController::class, 'players'])->name('lojista.tvdoor.players.index');
-            Route::post('/players', [TvDoorController::class, 'storePlayer'])->name('lojista.tvdoor.players.store');
-            Route::get('/players/{player}/edit', [TvDoorController::class, 'editPlayer'])->name('lojista.tvdoor.players.edit');
-            Route::put('/players/{player}', [TvDoorController::class, 'updatePlayer'])->name('lojista.tvdoor.players.update');
-            Route::delete('/players/{player}', [TvDoorController::class, 'destroyPlayer'])->name('lojista.tvdoor.players.destroy');
-
-            // Media
-            Route::get('/media', [TvDoorController::class, 'media'])->name('lojista.tvdoor.media.index');
-            Route::post('/media', [TvDoorController::class, 'storeMedia'])->name('lojista.tvdoor.media.store');
-            Route::delete('/media/{media}', [TvDoorController::class, 'destroyMedia'])->name('lojista.tvdoor.media.destroy');
-
-            // Layouts
-            Route::get('/layouts', [TvDoorController::class, 'layouts'])->name('lojista.tvdoor.layouts.index');
-            Route::get('/layouts/create', [TvDoorController::class, 'createLayout'])->name('lojista.tvdoor.layouts.create');
-            Route::post('/layouts', [TvDoorController::class, 'storeLayout'])->name('lojista.tvdoor.layouts.store');
-            Route::get('/layouts/{layout}/edit', [TvDoorController::class, 'editLayout'])->name('lojista.tvdoor.layouts.edit');
-            Route::put('/layouts/{layout}', [TvDoorController::class, 'updateLayout'])->name('lojista.tvdoor.layouts.update');
-            Route::delete('/layouts/{layout}', [TvDoorController::class, 'destroyLayout'])->name('lojista.tvdoor.layouts.destroy');
-
-            // Schedules
-            Route::get('/schedules', [TvDoorController::class, 'schedules'])->name('lojista.tvdoor.schedules.index');
-            Route::post('/schedules', [TvDoorController::class, 'storeSchedule'])->name('lojista.tvdoor.schedules.store');
-            Route::get('/schedules/{schedule}', [TvDoorController::class, 'editSchedule'])->name('lojista.tvdoor.schedules.show');
-            Route::get('/schedules/{schedule}/edit', [TvDoorController::class, 'editSchedule'])->name('lojista.tvdoor.schedules.edit');
-            Route::put('/schedules/{schedule}', [TvDoorController::class, 'updateSchedule'])->name('lojista.tvdoor.schedules.update');
-            Route::delete('/schedules/{schedule}', [TvDoorController::class, 'destroySchedule'])->name('lojista.tvdoor.schedules.destroy');
-        });
-
         // Canais Sociais
         Route::prefix('canais')->group(function () {
             Route::get('/', [MaxDivulgaController::class, 'canaisIndex'])->name('lojista.maxdivulga.canais.index');
@@ -288,6 +255,39 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{provider}', [\App\Http\Controllers\Lojista\SocialAuthController::class, 'disconnect'])->name('lojista.maxdivulga.canais.disconnect');
             Route::post('/publish/{campaign}', [\App\Http\Controllers\Lojista\SocialAuthController::class, 'publish'])->name('lojista.maxdivulga.canais.publish');
         });
+    });
+
+    // Módulo TvDoor - Isolado
+    Route::prefix('lojista/tvdoor')->group(function () {
+        Route::get('/', [TvDoorController::class, 'index'])->name('lojista.tvdoor.index');
+
+        // Players
+        Route::get('/players', [TvDoorController::class, 'players'])->name('lojista.tvdoor.players.index');
+        Route::post('/players', [TvDoorController::class, 'storePlayer'])->name('lojista.tvdoor.players.store');
+        Route::get('/players/{player}/edit', [TvDoorController::class, 'editPlayer'])->name('lojista.tvdoor.players.edit');
+        Route::put('/players/{player}', [TvDoorController::class, 'updatePlayer'])->name('lojista.tvdoor.players.update');
+        Route::delete('/players/{player}', [TvDoorController::class, 'destroyPlayer'])->name('lojista.tvdoor.players.destroy');
+
+        // Media
+        Route::get('/media', [TvDoorController::class, 'media'])->name('lojista.tvdoor.media.index');
+        Route::post('/media', [TvDoorController::class, 'storeMedia'])->name('lojista.tvdoor.media.store');
+        Route::delete('/media/{media}', [TvDoorController::class, 'destroyMedia'])->name('lojista.tvdoor.media.destroy');
+
+        // Layouts
+        Route::get('/layouts', [TvDoorController::class, 'layouts'])->name('lojista.tvdoor.layouts.index');
+        Route::get('/layouts/create', [TvDoorController::class, 'createLayout'])->name('lojista.tvdoor.layouts.create');
+        Route::post('/layouts', [TvDoorController::class, 'storeLayout'])->name('lojista.tvdoor.layouts.store');
+        Route::get('/layouts/{layout}/edit', [TvDoorController::class, 'editLayout'])->name('lojista.tvdoor.layouts.edit');
+        Route::put('/layouts/{layout}', [TvDoorController::class, 'updateLayout'])->name('lojista.tvdoor.layouts.update');
+        Route::delete('/layouts/{layout}', [TvDoorController::class, 'destroyLayout'])->name('lojista.tvdoor.layouts.destroy');
+
+        // Schedules
+        Route::get('/schedules', [TvDoorController::class, 'schedules'])->name('lojista.tvdoor.schedules.index');
+        Route::post('/schedules', [TvDoorController::class, 'storeSchedule'])->name('lojista.tvdoor.schedules.store');
+        Route::get('/schedules/{schedule}', [TvDoorController::class, 'editSchedule'])->name('lojista.tvdoor.schedules.show');
+        Route::get('/schedules/{schedule}/edit', [TvDoorController::class, 'editSchedule'])->name('lojista.tvdoor.schedules.edit');
+        Route::put('/schedules/{schedule}', [TvDoorController::class, 'updateSchedule'])->name('lojista.tvdoor.schedules.update');
+        Route::delete('/schedules/{schedule}', [TvDoorController::class, 'destroySchedule'])->name('lojista.tvdoor.schedules.destroy');
     });
 });
 
