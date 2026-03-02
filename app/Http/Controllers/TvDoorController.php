@@ -39,18 +39,23 @@ class TvDoorController extends Controller
     public function storePlayer(Request $request)
     {
         $loja = $this->resolverLoja();
-        $request->validate([
-            'name' => 'required|string|max:255',
-        ]);
+        $request->validate(['name' => 'required|string|max:255']);
 
         TvDoorPlayer::create([
-            'loja_id' => $loja->id,
-            'name' => $request->name,
+            'loja_id'      => $loja->id,
+            'name'         => $request->name,
             'pairing_code' => strtoupper(Str::random(6)),
-            'status' => 'pending',
+            'status'       => 'pending',
         ]);
 
         return redirect()->route('lojista.tvdoor.players.index')->with('success', 'Player adicionado! Use o código de pareamento no dispositivo.');
+    }
+
+    public function updatePlayer(Request $request, TvDoorPlayer $player)
+    {
+        $request->validate(['name' => 'required|string|max:255']);
+        $player->update(['name' => $request->name]);
+        return redirect()->route('lojista.tvdoor.players.index')->with('success', 'Player atualizado com sucesso.');
     }
 
     public function destroyPlayer(TvDoorPlayer $player)
@@ -129,6 +134,41 @@ class TvDoorController extends Controller
         return redirect()->route('lojista.tvdoor.layouts.index')->with('success', 'Layout salvo com sucesso.');
     }
 
+    public function editLayout(TvDoorLayout $layout)
+    {
+        $loja = $this->resolverLoja();
+        $produtos = Produto::where('loja_id', $loja->id)->get();
+        return view('lojista.tvdoor.layouts.editor', compact('produtos', 'loja', 'layout'));
+    }
+
+    public function updateLayout(Request $request, TvDoorLayout $layout)
+    {
+        $request->validate([
+            'name'    => 'required|string|max:255',
+            'content' => 'required|string',
+        ]);
+        $content = json_decode($request->content, true) ?? $request->content;
+        $layout->update([
+            'name'       => $request->name,
+            'content'    => $content,
+            'resolution' => $request->resolution ?? $layout->resolution,
+        ]);
+        return redirect()->route('lojista.tvdoor.layouts.index')->with('success', 'Layout atualizado com sucesso.');
+    }
+
+    public function destroyLayout(TvDoorLayout $layout)
+    {
+        $layout->delete();
+        return redirect()->route('lojista.tvdoor.layouts.index')->with('success', 'Layout excluído.');
+    }
+
+    public function destroyMedia(TvDoorMedia $media)
+    {
+        Storage::disk('public')->delete($media->file_path);
+        $media->delete();
+        return redirect()->route('lojista.tvdoor.media.index')->with('success', 'Mídia excluída.');
+    }
+
     // --- Schedule Management ---
     public function schedules()
     {
@@ -164,6 +204,25 @@ class TvDoorController extends Controller
         ]));
 
         return redirect()->route('lojista.tvdoor.schedules.index')->with('success', 'Agendamento criado!');
+    }
+
+    public function updateSchedule(Request $request, TvDoorSchedule $schedule)
+    {
+        $request->validate([
+            'player_id'        => 'required|exists:tv_door_players,id',
+            'schedulable_id'   => 'required|integer',
+            'schedulable_type' => 'required|string',
+            'days'             => 'required|array',
+            'start_time'       => 'required',
+            'end_time'         => 'required',
+            'priority'         => 'nullable|integer',
+            'resolution'       => 'nullable|string',
+        ]);
+        $schedule->update($request->only([
+            'player_id','schedulable_id','schedulable_type',
+            'days','start_time','end_time','priority','resolution'
+        ]));
+        return redirect()->route('lojista.tvdoor.schedules.index')->with('success', 'Agendamento atualizado!');
     }
 
     public function destroySchedule(TvDoorSchedule $schedule)

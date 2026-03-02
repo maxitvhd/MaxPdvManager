@@ -38,11 +38,14 @@
                                     <p class="text-xs text-secondary mb-3">
                                         {{ count($layout->content ?? []) }} elemento(s) &bull; Criado {{ $layout->created_at->diffForHumans() }}
                                     </p>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('lojista.tvdoor.schedules.index') }}" class="btn btn-sm bg-gradient-success mb-0 flex-fill">
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a href="{{ route('lojista.tvdoor.layouts.edit', $layout->id) }}" class="btn btn-sm bg-gradient-warning mb-0">
+                                            <i class="fas fa-edit me-1"></i> Editar
+                                        </a>
+                                        <a href="{{ route('lojista.tvdoor.schedules.index') }}" class="btn btn-sm bg-gradient-success mb-0">
                                             <i class="fas fa-calendar-alt me-1"></i> Agendar
                                         </a>
-                                        <form action="#" method="POST" onsubmit="return confirm('Excluir este layout?')">
+                                        <form action="{{ route('lojista.tvdoor.layouts.destroy', $layout->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Excluir este layout?')">
                                             @csrf @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-outline-danger mb-0">
                                                 <i class="fas fa-trash"></i>

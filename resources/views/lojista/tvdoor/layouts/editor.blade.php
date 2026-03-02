@@ -185,11 +185,16 @@
   </div>
 </div>
 
-<!-- Form oculto para salvar layout via POST -->
-<form id="save-form" action="{{ route('lojista.tvdoor.layouts.store') }}" method="POST" style="display:none">
-  @csrf
-  <input type="hidden" name="name" id="save-name">
-  <input type="hidden" name="content" id="save-content">
+<!-- Form oculto para salvar layout -->
+@isset($layout)
+  <form id="save-form" action="{{ route('lojista.tvdoor.layouts.update', $layout->id) }}" method="POST" style="display:none">
+    @csrf @method('PUT')
+@else
+  <form id="save-form" action="{{ route('lojista.tvdoor.layouts.store') }}" method="POST" style="display:none">
+    @csrf
+@endisset
+  <input type="hidden" name="name"       id="save-name">
+  <input type="hidden" name="content"    id="save-content">
   <input type="hidden" name="resolution" id="save-resolution">
 </form>
 
@@ -408,5 +413,33 @@ function salvarLayout() {
 
 // Inicializar fundo padrão
 applyBgSolid();
+
+// ===== MODO EDIÇÃO: Carregar layout existente =====
+@isset($layout)
+@php
+    $existingName = $layout->name;
+    $existingRes  = $layout->resolution ?? '1920x1080';
+    $existingContent = is_array($layout->content) ? json_encode($layout->content) : $layout->content;
+@endphp
+(function() {
+    document.getElementById('layout-name').value       = @json($existingName);
+    document.getElementById('layout-resolution').value = @json($existingRes);
+
+    // Ajustar resolução no select
+    const resSel = document.getElementById('res-select');
+    const res    = @json($existingRes);
+    Array.from(resSel.options).forEach(o => o.selected = (o.value === res));
+    const [rw, rh] = res.split('x').map(Number);
+    if (rw && rh) setResolution(rw, rh);
+
+    // Carregar objetos do canvas
+    const existing = @json($existingContent);
+    if (existing && existing.fabric) {
+        canvas.loadFromJSON(existing.fabric, () => {
+            canvas.renderAll();
+        });
+    }
+})();
+@endisset
 </script>
 @endsection
