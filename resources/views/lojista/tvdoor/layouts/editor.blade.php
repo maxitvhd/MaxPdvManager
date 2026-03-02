@@ -670,7 +670,7 @@ async function addVideo(input) {
     }
 }
 
-function addProduct(name, price, imgUrl) {
+function addProduct(name, price, imgUrl, id = null) {
     const startX = 150;
     const startY = 150;
     const cardW = 320; // Aumentado para acomodar preço grande
@@ -704,7 +704,7 @@ function addProduct(name, price, imgUrl) {
         fontWeight: '900', fontFamily: 'Impact, sans-serif',
         textAlign: 'center',
         shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.5)', blur: 8 }),
-        data: { part: 'price' }
+        data: { part: 'price', productId: id, type: 'price' }
     });
 
     const finishAdd = (imgObj) => {
@@ -774,7 +774,7 @@ async function searchProdutos() {
         data.produtos.forEach(p => {
             const div = document.createElement('div');
             div.className = 'prod-item';
-            div.onclick = () => addProduct(p.nome, p.preco, p.imagem_url || '');
+            div.onclick = () => addProduct(p.nome, p.preco, p.imagem_url || '', p.id);
             div.innerHTML = `
                 <img class="prod-img" src="${p.imagem_url || 'https://placehold.co/34x34/f0f0f0/aaa?text=?'}"
                      onerror="this.src='https://placehold.co/34x34/f0f0f0/aaa?text=?'"

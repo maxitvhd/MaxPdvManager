@@ -14,9 +14,12 @@ class TvDoorPlayer extends Model
     protected $fillable = [
         'loja_id',
         'name',
+        'description',
         'pairing_code',
         'device_token',
         'status',
+        'forced_resolution',
+        'is_active',
         'last_seen_at',
         'meta_data'
     ];

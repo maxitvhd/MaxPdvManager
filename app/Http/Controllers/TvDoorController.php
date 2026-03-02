@@ -60,9 +60,32 @@ class TvDoorController extends Controller
 
     public function updatePlayer(Request $request, TvDoorPlayer $player)
     {
-        $request->validate(['name' => 'required|string|max:255']);
-        $player->update(['name' => $request->name]);
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'forced_resolution' => 'nullable|string|max:20',
+            'is_active' => 'boolean'
+        ]);
+
+        $player->update([
+            'name' => $request->name,
+            'description' => $request->description,
+            'forced_resolution' => $request->forced_resolution,
+            'is_active' => $request->has('is_active') ? $request->is_active : true,
+        ]);
+
         return redirect()->route('lojista.tvdoor.players.index')->with('success', 'Player atualizado com sucesso.');
+    }
+
+    public function regeneratePairingCode(TvDoorPlayer $player)
+    {
+        $player->update([
+            'pairing_code' => strtoupper(Str::random(6)),
+            'device_token' => null, // Força re-pareamento
+            'status' => 'pending'
+        ]);
+
+        return redirect()->route('lojista.tvdoor.players.index')->with('success', 'Nova chave de pareamento gerada com sucesso.');
     }
 
     public function destroyPlayer(TvDoorPlayer $player)
@@ -166,7 +189,7 @@ class TvDoorController extends Controller
         if ($q) {
             $query->where(function($sq) use ($q) {
                 $sq->where('nome', 'like', "%{$q}%")
-                   ->orWhere('codigo_barras', 'like', "%{$q}%");
+                   ->orWhere('codigo_barra', 'like', "%{$q}%");
             });
         }
 
@@ -174,9 +197,10 @@ class TvDoorController extends Controller
         $produtos = $query->skip($page * $limit)->take($limit)->get()->map(function($p) use ($loja) {
             $p->imagem_url = $this->resolveProductImageUrl($p, $loja);
             return [
+                'id'        => $p->id,
                 'nome'      => $p->nome,
-                'preco'     => number_format($p->preco_venda, 2, ',', '.'),
-                'codigo'    => $p->codigo_barras,
+                'preco'     => number_format($p->preco ?? 0, 2, ',', '.'),
+                'codigo'    => $p->codigo_barra,
                 'imagem_url'=> $p->imagem_url,
             ];
         });
@@ -509,8 +533,8 @@ class TvDoorController extends Controller
                 } elseif (str_contains($type, 'TvDoorLayout')) {
                     $layout = TvDoorLayout::find($id);
                     if ($layout) {
-                        // Retorna o JSON completo do Fabric.js para renderização no player
-                        $entry['layout_fabric'] = $layout->content;
+                        // Retorna o JSON completo do Fabric.js com preços atualizados
+                        $entry['layout_fabric'] = $this->injectDynamicPrices($layout->content);
                         $entry['resolution']    = $layout->resolution ?? '1920x1080';
                         $entry['duration']      = $layout->duration ?? 15;
                     }
@@ -550,5 +574,43 @@ class TvDoorController extends Controller
             'playlist' => array_values($playlist),
             'config'   => ['sync_interval' => 60],
         ]);
+    }
+
+    /**
+     * Injeta os preços atuais do banco de dados no JSON do Fabric.js
+     */
+    private function injectDynamicPrices($content)
+    {
+        if (empty($content)) return $content;
+
+        $data = is_array($content) ? $content : json_decode($content, true);
+        if (!$data) return $content;
+
+        $isFabricWrapped = isset($data['fabric']);
+        $objects = $isFabricWrapped ? ($data['fabric']['objects'] ?? []) : ($data['objects'] ?? []);
+
+        if (empty($objects)) return $content;
+
+        $updated = false;
+        foreach ($objects as &$obj) {
+            if (isset($obj['data']['productId']) && ($obj['data']['type'] ?? '') === 'price') {
+                $produto = Produto::find($obj['data']['productId']);
+                if ($produto) {
+                    $obj['text'] = 'R$ ' . number_format($produto->preco ?? 0, 2, ',', '.');
+                    $updated = true;
+                }
+            }
+        }
+
+        if ($updated) {
+            if ($isFabricWrapped) {
+                $data['fabric']['objects'] = $objects;
+            } else {
+                $data['objects'] = $objects;
+            }
+            return $data;
+        }
+
+        return $content;
     }
 }

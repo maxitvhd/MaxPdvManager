@@ -27,7 +27,7 @@
               <thead>
                 <tr>
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Nome do Player</th>
-                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Código / Token</th>
+                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Configurações</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Última Conexão</th>
                   <th class="text-secondary opacity-7">Ações</th>
@@ -48,21 +48,24 @@
                     </div>
                   </td>
                   <td>
-                    @if($player->status === 'pending')
-                      <span class="badge badge-sm bg-gradient-info">Código: {{ $player->pairing_code }}</span>
-                    @else
-                      <span class="text-xs font-weight-bold text-success"><i class="fas fa-check-circle me-1"></i>Token Ativo</span>
-                    @endif
+                    <div class="d-flex flex-column">
+                      <span class="text-xs font-weight-bold text-dark">Res: {{ $player->forced_resolution ?? 'Auto' }}</span>
+                      @if($player->description)
+                        <span class="text-xxs text-secondary text-truncate" style="max-width: 150px;">{{ $player->description }}</span>
+                      @endif
+                    </div>
                   </td>
                   <td class="align-middle text-center">
-                    @if($player->status === 'online')
-                      <span class="badge badge-sm bg-gradient-success">Online</span>
-                    @elseif($player->status === 'offline')
-                      <span class="badge badge-sm bg-gradient-secondary">Offline</span>
-                    @else
-                      <span class="badge badge-sm bg-gradient-warning">Aguardando Pareamento</span>
-                    @endif
-                  </td>
+                    @if(!$player->is_active)
+                       <span class="badge badge-sm bg-gradient-danger">Inativo</span>
+                    @elseif($player->status === 'online')
+                       <span class="badge badge-sm bg-gradient-success">Online</span>
+                     @elseif($player->status === 'offline')
+                       <span class="badge badge-sm bg-gradient-secondary">Offline</span>
+                     @else
+                       <span class="badge badge-sm bg-gradient-warning">Aguardando Pareamento</span>
+                     @endif
+                   </td>
                   <td class="align-middle text-center">
                     <span class="text-secondary text-xs">
                       {{ $player->last_seen_at ? $player->last_seen_at->diffForHumans() : 'Nunca' }}
@@ -73,7 +76,10 @@
                       {{-- Editar --}}
                       <button class="btn btn-link text-warning p-1 mb-0 btn-edit-player" title="Editar"
                         data-id="{{ $player->id }}" 
-                        data-name="{{ $player->name }}">
+                        data-name="{{ $player->name }}"
+                        data-desc="{{ $player->description }}"
+                        data-res="{{ $player->forced_resolution }}"
+                        data-active="{{ $player->is_active ? 1 : 0 }}">
                         <i class="fas fa-edit"></i>
                       </button>
                       {{-- Visualizar QR/Código --}}
@@ -147,9 +153,43 @@
       <form id="editPlayerForm" method="POST">
         @csrf @method('PUT')
         <div class="modal-body">
-          <div class="form-group">
+           <div class="form-group">
             <label class="form-label">Nome do Dispositivo</label>
             <input type="text" class="form-control" id="editPlayerName" name="name" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descrição / Localização</label>
+            <textarea class="form-control" id="editPlayerDesc" name="description" rows="2" placeholder="Ex: Piso 1, Próximo ao Elevador"></textarea>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Forçar Resolução</label>
+                <select class="form-control" id="editPlayerRes" name="forced_resolution">
+                  <option value="">Automático</option>
+                  <option value="1920x1080">Full HD (1080p)</option>
+                  <option value="1280x720">HD (720p)</option>
+                  <option value="3840x2160">4K (2160p)</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="editPlayerActive" name="is_active" value="1" checked>
+                  <label class="form-check-label" for="editPlayerActive">Player Ativo</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-top mt-3 pt-3">
+             <p class="text-xs text-secondary mb-2">Segurança & Conexão</p>
+             <button type="button" class="btn btn-outline-info btn-sm" onclick="regeneratePairingCode()">
+                <i class="fas fa-sync-alt me-1"></i> Gerar Novo Código de Pareamento
+             </button>
+             <p class="text-xxs text-muted mt-1">Isso invalidará a conexão atual e exigirá um novo pareamento.</p>
           </div>
         </div>
         <div class="modal-footer">
@@ -183,7 +223,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- Listeners para Editar ----
     document.querySelectorAll('.btn-edit-player').forEach(btn => {
         btn.addEventListener('click', function() {
-            openEditPlayer(this.dataset.id, this.dataset.name);
+            openEditPlayer(
+                this.dataset.id, 
+                this.dataset.name, 
+                this.dataset.desc, 
+                this.dataset.res, 
+                this.dataset.active
+            );
         });
     });
 
@@ -196,14 +242,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- Auto-abrir se vier via GET ----
     @isset($player)
-    openEditPlayer({{ $player->id }}, '{{ addslashes($player->name) }}');
+    openEditPlayer(
+        {{ $player->id }}, 
+        '{{ addslashes($player->name) }}',
+        '{{ addslashes($player->description) }}',
+        '{{ $player->forced_resolution }}',
+        {{ $player->is_active ? 1 : 0 }}
+    );
     @endisset
 });
 
-function openEditPlayer(id, name) {
+function openEditPlayer(id, name, desc = '', res = '', active = 1) {
     document.getElementById('editPlayerName').value = name;
+    document.getElementById('editPlayerDesc').value = desc;
+    document.getElementById('editPlayerRes').value = res;
+    document.getElementById('editPlayerActive').checked = parseInt(active) === 1;
     document.getElementById('editPlayerForm').action = `/lojista/tvdoor/players/${id}`;
+    
+    // Armazena ID para regeneração
+    window.currentEditingPlayerId = id;
+
     new bootstrap.Modal(document.getElementById('editPlayerModal')).show();
+}
+
+function regeneratePairingCode() {
+    confirmDelete(null, 'Tem certeza? O player atual perderá a conexão imediatamente.', () => {
+        const id = window.currentEditingPlayerId;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/lojista/tvdoor/players/${id}/regenerate-code`;
+        
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = '_token';
+        csrf.value = '{{ csrf_token() }}';
+        
+        form.appendChild(csrf);
+        document.body.appendChild(form);
+        form.submit();
+    });
 }
 
 function viewPairingCode(code, name) {

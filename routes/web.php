@@ -266,6 +266,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/players', [TvDoorController::class, 'storePlayer'])->name('lojista.tvdoor.players.store');
         Route::get('/players/{player}/edit', [TvDoorController::class, 'editPlayer'])->name('lojista.tvdoor.players.edit');
         Route::put('/players/{player}', [TvDoorController::class, 'updatePlayer'])->name('lojista.tvdoor.players.update');
+        Route::post('/players/{player}/regenerate-code', [TvDoorController::class, 'regeneratePairingCode'])->name('lojista.tvdoor.players.regenerate_code');
         Route::delete('/players/{player}', [TvDoorController::class, 'destroyPlayer'])->name('lojista.tvdoor.players.destroy');
 
         // Media

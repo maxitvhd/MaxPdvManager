@@ -129,19 +129,24 @@
   @endif
 
   <script>
-    function confirmDelete(formId, message = 'Tem certeza que deseja excluir este item?') {
+    function confirmDelete(formId, message = 'Tem certeza que deseja excluir este item?', callback = null) {
         Swal.fire({
-            title: 'Confirmar Exclusão',
+            title: 'Confirmar Ação',
             text: message,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Sim, excluir!',
-            cancelButtonText: 'Cancelar'
+            confirmButtonColor: '#e91e63',
+            cancelButtonColor: '#8392ab',
+            confirmButtonText: 'Confirmar',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
-                document.getElementById(formId).submit();
+                if (callback && typeof callback === 'function') {
+                    callback();
+                } else if (formId) {
+                    document.getElementById(formId).submit();
+                }
             }
         });
         return false;
