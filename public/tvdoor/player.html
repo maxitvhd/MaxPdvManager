@@ -22,7 +22,6 @@
             color: white;
         }
 
-        /* ===== TELA PRINCIPAL ===== */
         #screen {
             width: 100%;
             height: 100%;
@@ -32,7 +31,6 @@
             justify-content: center;
         }
 
-        /* ===== TELA DE PAREAMENTO ===== */
         #pairing-screen {
             display: flex;
             flex-direction: column;
@@ -50,7 +48,7 @@
             font-size: 3rem;
             font-weight: 900;
             letter-spacing: 4px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             background: linear-gradient(90deg, #6c63ff, #48dbfb);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -58,57 +56,96 @@
 
         #pairing-screen .subtitle {
             font-size: 1rem;
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.45);
             margin-bottom: 50px;
         }
 
-        #pairing-screen .instruction {
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 20px;
-        }
-
-        #pairing-screen .steps {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 40px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        #pairing-screen .step {
+        .pair-box {
             background: rgba(255, 255, 255, 0.07);
             border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            padding: 15px 20px;
+            border-radius: 20px;
+            padding: 40px 50px;
+            max-width: 480px;
+            width: 100%;
+        }
+
+        .pair-box h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .pair-box p {
             font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.8);
-            text-align: left;
-            max-width: 200px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 30px;
+            line-height: 1.5;
         }
 
-        #pairing-screen .step b {
-            color: #6c63ff;
-            font-size: 1.2rem;
-            display: block;
-            margin-bottom: 5px;
+        .pair-box p span {
+            color: #48dbfb;
+            font-weight: 700;
         }
 
-        .status-dot {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #f59e0b;
-            margin-right: 8px;
-            animation: pulse 1.5s infinite;
+        #code-input {
+            padding: 14px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(108, 99, 255, 0.4);
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: 10px;
+            width: 100%;
+            text-align: center;
+            text-transform: uppercase;
+            outline: none;
+            transition: border-color 0.2s;
         }
 
-        .status-dot.online {
-            background: #10b981;
+        #code-input:focus {
+            border-color: #6c63ff;
         }
 
-        /* ===== CONTEÚDO ===== */
+        #code-input::placeholder {
+            letter-spacing: 3px;
+            font-size: 1.1rem;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.25);
+        }
+
+        .pair-btn {
+            margin-top: 20px;
+            padding: 14px;
+            width: 100%;
+            background: linear-gradient(135deg, #6c63ff, #48dbfb);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .pair-btn:hover {
+            opacity: 0.85;
+        }
+
+        #pair-error {
+            margin-top: 14px;
+            color: #f87171;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        #pair-loading {
+            margin-top: 14px;
+            color: #48dbfb;
+            font-size: 0.85rem;
+            display: none;
+        }
+
         .media-item {
             width: 100%;
             height: 100%;
@@ -132,7 +169,6 @@
             color: white;
         }
 
-        /* ===== BARRA DE STATUS ===== */
         #status-bar {
             position: fixed;
             bottom: 0;
@@ -154,7 +190,6 @@
             opacity: 1;
         }
 
-        /* ===== BARRA DE PROGRESSO ===== */
         #progress-bar {
             position: fixed;
             bottom: 0;
@@ -164,6 +199,21 @@
             width: 0%;
             transition: width linear;
             z-index: 1000;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #f59e0b;
+            margin-right: 6px;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-dot.online {
+            background: #10b981;
+            animation: none;
         }
 
         @keyframes fadeIn {
@@ -194,91 +244,95 @@
 
 <body>
     <div id="screen">
-        <!-- Tela inicial de pareamento -->
         <div id="pairing-screen">
             <div class="logo">TvDoor</div>
             <div class="subtitle">Digital Signage Player</div>
-            <div class="instruction">
-                <span class="status-dot"></span> Aguardando configuração...
-            </div>
-            <div class="steps">
-                <div class="step">
-                    <b>① Painel</b>
-                    Acesse <em>TvDoor → Players</em> e clique em "+ Novo Player".
-                </div>
-                <div class="step">
-                    <b>② Token</b>
-                    Copie o token gerado e cole abaixo, depois pressione <em>Enter</em>.
-                </div>
-                <div class="step">
-                    <b>③ Pronto!</b>
-                    O player sincroniza automaticamente e começa a exibir sua programação.
-                </div>
-            </div>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <input id="token-input" type="text" placeholder="Cole aqui o Device Token..."
-                    style="padding:12px 20px; border-radius:8px; border:1px solid rgba(255,255,255,0.2);
-                           background:rgba(255,255,255,0.1); color:white; font-size:1rem; width:340px; outline:none;" />
-                <button onclick="saveToken()"
-                    style="padding:12px 24px; background:linear-gradient(135deg,#6c63ff,#48dbfb);
-                           border:none; border-radius:8px; color:white; font-weight:700; cursor:pointer; font-size:1rem;">
-                    Conectar
-                </button>
+            <div class="pair-box">
+                <h2>Código de Pareamento</h2>
+                <p>
+                    No painel, acesse <span>TvDoor → Players</span> e crie um novo player.<br>
+                    Digite abaixo o código de 6 letras gerado.
+                </p>
+                <input id="code-input" type="text" maxlength="6" placeholder="XXXXXX" autocomplete="off"
+                    autocorrect="off" spellcheck="false" />
+                <button class="pair-btn" onclick="doParear()">Conectar Player</button>
+                <div id="pair-error"></div>
+                <div id="pair-loading">⏳ Verificando código...</div>
             </div>
         </div>
     </div>
 
-    <!-- Barra de Status -->
     <div id="status-bar">
         <span id="status-label"><span class="status-dot"></span> Aguardando...</span>
         <span id="now-label"></span>
-        <span>TvDoor Player v1.0</span>
+        <span>TvDoor Player v1.1</span>
     </div>
     <div id="progress-bar"></div>
 
     <script>
-        // ============================================================
-        //  CONFIG — altere a BASE_URL para o seu domínio de produção
-        // ============================================================
-        const BASE_URL = window.location.origin; // Ex: https://meusite.com.br
+        const BASE_URL = window.location.origin;
 
         let token = localStorage.getItem('tvdoor_token');
         let playlist = [];
         let idx = 0;
         let isPlaying = false;
 
-        // ---- Relógio na barra de status ----
+        // Relógio
         setInterval(() => {
-            const now = new Date();
-            document.getElementById('now-label').innerText = now.toLocaleTimeString('pt-BR');
+            document.getElementById('now-label').innerText = new Date().toLocaleTimeString('pt-BR');
         }, 1000);
 
-        // ---- Salvar token e iniciar ----
-        function saveToken() {
-            const val = document.getElementById('token-input').value.trim();
-            if (!val) return alert('Informe o token!');
-            localStorage.setItem('tvdoor_token', val);
-            token = val;
-            setStatus('Token salvo! Conectando...', false);
-            document.getElementById('pairing-screen').remove();
-            startSync();
-        }
-
-        // ---- Enter no input de token ----
-        document.getElementById('token-input')?.addEventListener('keydown', e => {
-            if (e.key === 'Enter') saveToken();
-        });
-
-        // ---- Init ----
+        // Init
         function init() {
             if (token) {
                 document.getElementById('pairing-screen').remove();
                 startSync();
             }
-            // Caso não haja token, a tela de pareamento já está visível
         }
 
-        // ---- Sincronizar com o servidor ----
+        // PASSO 1: Digita código de pareamento → API retorna token
+        async function doParear() {
+            const code = document.getElementById('code-input').value.trim().toUpperCase();
+            if (code.length < 4) { showPairError('Digite o código completo.'); return; }
+
+            document.getElementById('pair-error').style.display = 'none';
+            document.getElementById('pair-loading').style.display = 'block';
+            document.querySelector('.pair-btn').disabled = true;
+
+            try {
+                const res = await fetch(`${BASE_URL}/tvdoor/api/pair/${code}`);
+                const data = await res.json();
+
+                if (data.success && data.token) {
+                    localStorage.setItem('tvdoor_token', data.token);
+                    token = data.token;
+                    document.getElementById('pairing-screen').remove();
+                    setStatus('Pareado: ' + data.name, true);
+                    startSync();
+                } else {
+                    showPairError(data.message || 'Código inválido ou já utilizado.');
+                }
+            } catch (e) {
+                showPairError('Erro de conexão. Verifique a rede.');
+                console.error(e);
+            }
+
+            document.getElementById('pair-loading').style.display = 'none';
+            document.querySelector('.pair-btn').disabled = false;
+        }
+
+        function showPairError(msg) {
+            const el = document.getElementById('pair-error');
+            el.innerText = '❌ ' + msg;
+            el.style.display = 'block';
+            document.getElementById('pair-loading').style.display = 'none';
+        }
+
+        document.getElementById('code-input')?.addEventListener('keydown', e => {
+            if (e.key === 'Enter') doParear();
+        });
+
+        // PASSO 2: Sincronizar playlist
         async function startSync() {
             setStatus('Sincronizando...', false);
             try {
@@ -294,60 +348,50 @@
 
                 const data = await res.json();
                 if (data.success) {
-                    playlist = data.playlist;
-                    setStatus(`Online · ${playlist.length} item(s) na playlist`, true);
-                    if (!isPlaying) {
-                        isPlaying = true;
-                        idx = 0;
-                        playNext();
-                    }
+                    playlist = data.playlist || [];
+                    const syncSec = data.config?.sync_interval || 60;
+                    setStatus('Online · ' + playlist.length + ' item(s)', true);
+                    if (!isPlaying) { isPlaying = true; idx = 0; playNext(); }
+                    setTimeout(startSync, syncSec * 1000);
+                } else {
+                    setStatus('Sem programação agendada', true);
+                    setTimeout(startSync, 30000);
                 }
             } catch (e) {
                 setStatus('Sem conexão. Tentando em 30s...', false);
-                console.error(e);
+                setTimeout(startSync, 30000);
             }
-            // Reagenda sync periódico
-            setTimeout(startSync, 60000);
         }
 
-        // ---- Reproduzir próximo item ----
+        // PASSO 3: Reproduzir
         function playNext() {
-            if (playlist.length === 0) {
-                showIdle();
-                isPlaying = false;
-                return;
-            }
+            if (playlist.length === 0) { showIdle(); isPlaying = false; return; }
 
             const item = playlist[idx % playlist.length];
             const screen = document.getElementById('screen');
             screen.innerHTML = '';
             animateProgress(0);
 
-            // --- Mídia (Imagem ou Vídeo) ---
             if (item.type && item.type.includes('Media')) {
-                const duration = (item.duration || 10) * 1000;
-
+                const dur = (item.duration || 10) * 1000;
                 if (item.media_type === 'video') {
                     const video = document.createElement('video');
                     video.src = item.media_url;
                     video.className = 'media-item';
                     video.autoplay = true;
-                    video.muted = false;
                     video.onended = next;
                     screen.appendChild(video);
-                    animateProgress(video.duration * 1000 || duration);
+                    animateProgress(dur);
                 } else {
                     const img = document.createElement('img');
                     img.src = item.media_url;
                     img.className = 'media-item';
                     screen.appendChild(img);
-                    animateProgress(duration);
-                    setTimeout(next, duration);
+                    animateProgress(dur);
+                    setTimeout(next, dur);
                 }
-
-                // --- Layout Personalizado ---
             } else if (item.type && item.type.includes('Layout')) {
-                const duration = 15000;
+                const dur = 15000;
                 const container = document.createElement('div');
                 container.className = 'layout-container';
                 (item.layout_content || []).forEach(el => {
@@ -361,75 +405,50 @@
                     container.appendChild(div);
                 });
                 screen.appendChild(container);
-                // Ativa relógios dentro do layout
                 activateClocks(screen);
-                animateProgress(duration);
-                setTimeout(next, duration);
-
-                // --- Campanha MaxDivulga ---
+                animateProgress(dur);
+                setTimeout(next, dur);
             } else if (item.type && item.type.includes('Campaign')) {
-                const duration = 15000;
+                const dur = 15000;
                 if (item.media_url) {
                     const img = document.createElement('img');
                     img.src = item.media_url;
                     img.className = 'media-item';
                     screen.appendChild(img);
                 }
-                if (item.audio_url) {
-                    const audio = new Audio(item.audio_url);
-                    audio.play().catch(() => { });
-                }
-                animateProgress(duration);
-                setTimeout(next, duration);
-
-            } else {
-                next();
-            }
+                if (item.audio_url) { new Audio(item.audio_url).play().catch(() => { }); }
+                animateProgress(dur);
+                setTimeout(next, dur);
+            } else { next(); }
         }
 
-        function next() {
-            idx = (idx + 1) % (playlist.length || 1);
-            playNext();
-        }
+        function next() { idx = (idx + 1) % (playlist.length || 1); playNext(); }
 
-        // ---- Tela de espera quando não há conteúdo ----
         function showIdle() {
-            const screen = document.getElementById('screen');
-            screen.innerHTML = `
-                <div style="text-align:center; opacity:0.3;">
-                    <div style="font-size:4rem;">📺</div>
-                    <p style="margin-top:10px; font-size:1.2rem;">Sem programação no momento</p>
-                </div>`;
+            document.getElementById('screen').innerHTML =
+                '<div style="text-align:center;opacity:0.3;"><div style="font-size:4rem">📺</div><p style="margin-top:10px;font-size:1.2rem">Sem programação no momento</p></div>';
             setTimeout(() => { isPlaying = true; startSync(); }, 15000);
         }
 
-        // ---- Relógio dinâmico dentro de layouts ----
         function activateClocks(container) {
-            container.querySelectorAll('[data-type="clock"], .clock-widget').forEach(el => {
-                setInterval(() => {
-                    el.innerText = new Date().toLocaleTimeString('pt-BR');
-                }, 1000);
+            container.querySelectorAll('[data-type="clock"]').forEach(el => {
+                el.innerText = new Date().toLocaleTimeString('pt-BR');
+                setInterval(() => { el.innerText = new Date().toLocaleTimeString('pt-BR'); }, 1000);
             });
         }
 
-        // ---- Barra de progresso ----
         function animateProgress(durationMs) {
             const bar = document.getElementById('progress-bar');
             bar.style.transition = 'none';
             bar.style.width = '0%';
-            setTimeout(() => {
-                bar.style.transition = `width ${durationMs}ms linear`;
-                bar.style.width = '100%';
-            }, 50);
+            setTimeout(() => { bar.style.transition = `width ${durationMs}ms linear`; bar.style.width = '100%'; }, 50);
         }
 
-        // ---- Status na barra inferior ----
         function setStatus(msg, online) {
-            const label = document.getElementById('status-label');
-            label.innerHTML = `<span class="status-dot ${online ? 'online' : ''}"></span> ${msg}`;
+            document.getElementById('status-label').innerHTML =
+                `<span class="status-dot ${online ? 'online' : ''}"></span> ${msg}`;
         }
 
-        // ---- Inicia ----
         init();
     </script>
 </body>
