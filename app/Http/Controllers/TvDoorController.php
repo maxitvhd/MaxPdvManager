@@ -1,3 +1,5 @@
+<?php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -22,7 +24,7 @@ class TvDoorController extends Controller
         $playersCount = TvDoorPlayer::where('loja_id', $loja->id)->count();
         $mediaCount = TvDoorMedia::where('loja_id', $loja->id)->count();
         $layoutsCount = TvDoorLayout::where('loja_id', $loja->id)->count();
-        
+
         return view('lojista.tvdoor.index', compact('loja', 'playersCount', 'mediaCount', 'layoutsCount'));
     }
 
@@ -71,7 +73,7 @@ class TvDoorController extends Controller
         $loja = $this->resolverLoja();
         $request->validate([
             'name' => 'required|string|max:255',
-            'file' => 'required|file|mimes:jpeg,png,jpg,mp4,mov,avi|max:51200', // 50MB
+            'file' => 'required|file|mimes:jpeg,png,jpg,mp4,mov,avi|max:51200',
             'category_id' => 'nullable|exists:tv_door_categories,id',
             'duration' => 'required|integer|min:1',
         ]);
@@ -131,7 +133,10 @@ class TvDoorController extends Controller
         $media = TvDoorMedia::where('loja_id', $loja->id)->get();
         $layouts = TvDoorLayout::where('loja_id', $loja->id)->get();
         $campaigns = MaxDivulgaCampaign::where('loja_id', $loja->id)->where('is_active', true)->get();
-        $schedules = TvDoorSchedule::whereIn('player_id', $players->pluck('id'))->with(['player', 'schedulable'])->orderBy('priority', 'desc')->get();
+        $schedules = TvDoorSchedule::whereIn('player_id', $players->pluck('id'))
+            ->with(['player', 'schedulable'])
+            ->orderBy('priority', 'desc')
+            ->get();
 
         return view('lojista.tvdoor.schedules.index', compact('players', 'media', 'layouts', 'campaigns', 'schedules', 'loja'));
     }
@@ -214,7 +219,7 @@ class TvDoorController extends Controller
             $item = [
                 'id' => $s->id,
                 'type' => $s->schedulable_type,
-                'duration' => 15, // default
+                'duration' => 15,
             ];
 
             if ($s->schedulable_type === TvDoorMedia::class) {
