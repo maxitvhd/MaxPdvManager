@@ -648,8 +648,11 @@ async function addVideo(input) {
                 left: 110, top: 195, fontSize: 16, fill: '#6c63ff',
                 fontFamily: 'Segoe UI, sans-serif', selectable: false
             });
-            const group = new fabric.Group([rect, label], { left: 100, top: 100 });
-            canvas.add(group); canvas.setActiveObject(group); canvas.renderAll();
+            canvas.add(rect);
+            canvas.add(label);
+            const sel = new fabric.ActiveSelection([rect, label], { canvas: canvas });
+            canvas.setActiveObject(sel);
+            canvas.renderAll();
         } else {
             alert('Erro no upload: ' + data.message);
         }
@@ -665,36 +668,37 @@ async function addVideo(input) {
 function addProduct(name, price, imgUrl) {
     const startX = 150;
     const startY = 150;
-    const cardW = 260;
-    const cardH = 320;
+    const cardW = 320; // Aumentado para acomodar preço grande
+    const cardH = 400; // Aumentado para melhor espaçamento
 
-    // Fundo do Card
+    // Fundo do Card (Mais escuro e com borda neon)
     const rect = new fabric.Rect({
         left: startX, top: startY,
         width: cardW, height: cardH,
-        fill: 'rgba(20, 20, 45, 0.9)',
-        rx: 18, ry: 18,
-        stroke: '#4a4ae2', strokeWidth: 2,
-        shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.5)', blur: 15, offsetX: 5, offsetY: 5 }),
+        fill: 'rgba(5, 5, 20, 0.98)',
+        rx: 22, ry: 22,
+        stroke: '#6c63ff', strokeWidth: 4,
+        shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 25, offsetX: 10, offsetY: 10 }),
         data: { part: 'bg' }
     });
 
-    // Nome
-    const nameText = new fabric.IText(name, {
-        left: startX + 15, top: startY + 200, width: 230,
-        fontSize: 20, fill: '#ffffff',
-        fontWeight: 'bold', fontFamily: 'Segoe UI, sans-serif',
+    // Nome (Maior e com mais espaçamento)
+    const nameText = new fabric.IText(name.toUpperCase(), {
+        left: startX + 20, top: startY + 240, width: 280,
+        fontSize: 22, fill: '#ffffff',
+        fontWeight: 'bold', fontFamily: 'Impact, sans-serif',
         textAlign: 'center', splitByGrapheme: true,
-        lineHeight: 1.1, charSpacing: 10,
+        lineHeight: 1.1, charSpacing: 30,
         data: { part: 'name' }
     });
 
-    // Preço
+    // Preço (GIGANTE e VERDE NEON)
     const priceText = new fabric.IText('R$ ' + price, {
-        left: startX + 15, top: startY + 250, width: 230,
-        fontSize: 28, fill: '#43e97b',
-        fontWeight: 'bold', fontFamily: 'Segoe UI, sans-serif',
+        left: startX + 20, top: startY + 310, width: 280,
+        fontSize: 48, fill: '#43e97b',
+        fontWeight: '900', fontFamily: 'Impact, sans-serif',
         textAlign: 'center',
+        shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.5)', blur: 8 }),
         data: { part: 'price' }
     });
 
@@ -704,7 +708,6 @@ function addProduct(name, price, imgUrl) {
         canvas.add(nameText);
         canvas.add(priceText);
 
-        // Cria uma seleção ativa com todos os novos objetos
         const selItems = [rect, nameText, priceText];
         if (imgObj) selItems.push(imgObj);
         
@@ -715,10 +718,10 @@ function addProduct(name, price, imgUrl) {
 
     if (imgUrl) {
         fabric.Image.fromURL(imgUrl, img => {
-            img.scaleToWidth(200);
+            img.scaleToWidth(240);
             img.set({ 
-                left: startX + 30, top: startY + 20, 
-                shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.3)', blur: 10 }),
+                left: startX + 40, top: startY + 25, 
+                shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.5)', blur: 20 }),
                 data: { part: 'image' }
             });
             finishAdd(img);
@@ -927,7 +930,23 @@ function salvarLayout() {
 
 // ===== HELPER: extrai JSON atual do canvas =====
 function obterConteudoLayout() {
+    // IMPORTANTE: Descartar seleção ativa antes de converter para JSON
+    // Se houver uma ActiveSelection, o Fabric salva coordenadas relativas ao grupo de seleção, 
+    // o que causa o erro de "tela preta" ou deslocamento ao recarregar.
+    const active = canvas.getActiveObject();
+    if (active) {
+        canvas.discardActiveObject();
+        canvas.renderAll();
+    }
+
     const json = canvas.toJSON(['data']);
+    
+    // Se o usuário estava editando e resetamos a seleção, tentamos restaurar para não atrapalhar o fluxo
+    if (active) {
+        canvas.setActiveObject(active);
+        canvas.renderAll();
+    }
+
     return JSON.stringify({
         fabric:     json,
         width:      canvasW,
@@ -1027,19 +1046,36 @@ saveHistory(); // Estado inicial
     const [rw, rh] = res.split('x').map(Number);
     if (rw && rh) setResolution(rw, rh);
 
-    const data = @json($layout->content);
+    let data = @json($layout->content);
     if (data) {
         try {
+            // Se for string vinda do banco, decodifica
             const canvasData = typeof data === 'string' ? JSON.parse(data) : data;
+            
+            // Suporta formatos {"fabric": {...}} ou direto {...}
             const toLoad = canvasData.fabric || canvasData;
+            
             if (toLoad && (toLoad.objects || toLoad.backgroundImage)) {
+                // Limpa o canvas antes de carregar
+                canvas.clear();
+                
                 canvas.loadFromJSON(toLoad, () => {
                     canvas.renderAll();
                     updateCanvasScaling();
+                    
+                    // Garante que o fundo seja aplicado se estiver no JSON
+                    if (toLoad.background && typeof toLoad.background === 'string') {
+                        canvas.setBackgroundColor(toLoad.background, canvas.renderAll.bind(canvas));
+                    }
+                    
                     setTimeout(updateCanvasScaling, 500);
+                    setTimeout(updateCanvasScaling, 1500); // Segurança extra para imagens pesadas
                 });
             }
-        } catch(e) { console.error("Erro ao carregar layout:", e); }
+        } catch(e) { 
+            console.error("Erro ao carregar layout:", e);
+            showToast('❌ Erro ao carregar objetos salvos.', 'error');
+        }
     }
 })();
 @endisset
