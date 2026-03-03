@@ -677,120 +677,78 @@ class CheckoutController extends Controller
         ], 201);
     }
 
-    public function storeProdutosUnified(Request $request)
-    {
-        // Valida os parâmetros obrigatórios
-        $codigo = $request->input('codigo');
-        $mac = $request->input('mac');
-        if (!$codigo || !$mac) {
-            return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
-        }
-
-        // Verifica o checkout
-        $checkout = Checkout::where('codigo', $codigo)
-            ->where('mac', $mac)
-            ->where('status', 'ativo')
-            ->first();
-        if (!$checkout) {
-            return response()->json(['error' => 'Acesso negado'], 403);
-        }
-
-        // Verifica a loja
-        $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
-        if (!$loja) {
-            return response()->json(['error' => 'Loja não encontrada'], 404);
-        }
-
-        // Verifica o usuário
-        $user_codigo = $request->input('user_codigo');
-        $user = User::where('codigo', $user_codigo)->first();
-        if (!$user) {
-            return response()->json(['error' => 'Usuário não encontrado'], 404);
-        }
-
-        // Valida o JSON de produtos
-        $productsJson = $request->input('products');
-        #   Log::info('Received products: ' . $productsJson);
-        if (empty($productsJson)) {
-            return response()->json(['error' => 'O campo "products" é obrigatório'], 400);
-        }
-
-        $products = json_decode($productsJson, true);
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($products)) {
-            #        Log::error('JSON decode error: ' . json_last_error_msg());
-            return response()->json(['error' => 'O campo "products" deve ser um JSON válido'], 400);
-        }
-
-        $response = [
-            'produtos_full' => [],
-            'produtos' => []
-        ];
-
-        // Processa cada produto
-        foreach ($products as $index => $product) {
-            if (!isset($product['codigo_barra'])) {
-                return response()->json(['error' => "O campo 'codigo_barra' é obrigatório para o produto no índice {$index}"], 400);
-            }
-
-            $barcode = $product['codigo_barra'];
-            $produto_full_id = null;
-
-            // Busca ou cria o ProdutoFull
-            $produto_full = ProdutoFull::where('codigo_barra', $barcode)->first();
-            if (!$produto_full) {
-                $full_data = [
-                    'codigo_barra' => $barcode,
-                    'nome' => $product['nome'] ?? '',
-                    'categoria' => $product['categoria'] ?? '',
-                    'descricao' => $product['descricao'] ?? '',
-                    'peso' => $product['peso'] ?? 0,
-                ];
-
-                // Verifica se a imagem já foi salva pelo endpoint /upload-imagens-zip
-                $imagePathFull = Storage::disk('public')->exists("produtos_full/{$barcode}.jpg") ? "{$barcode}.jpg" :
-                    (Storage::disk('public')->exists("produtos_full/{$barcode}.png") ? "{$barcode}.png" : null);
-                if ($imagePathFull) {
-                    $full_data['imagem'] = $imagePathFull;
-                    #        Log::info("Imagem associada em produtos_full: {$imagePathFull}");
-                }
-
-                $produto_full = ProdutoFull::create($full_data);
-                $produto_full_id = $produto_full->id;
-                $response['produtos_full'][$barcode] = $produto_full_id;
-            } else {
-                $produto_full_id = $produto_full->id;
-                $response['produtos_full'][$barcode] = $produto_full_id;
-            }
-
-            // Busca ou cria o Produto do usuário
-            $produto = Produto::where('user_id', $user->id)
-                ->where('produto_full_id', $produto_full_id)
-                ->first();
-            if (!$produto) {
-                $produto_data = $product;
-                $produto_data['user_id'] = $user->id;
-                $produto_data['produto_full_id'] = $produto_full_id;
-
-                // Verifica se a imagem já foi salva pelo endpoint /upload-imagens-zip
-                $imagePathUser = Storage::disk('public')->exists("lojas/{$loja->codigo}/produtos/{$barcode}.jpg") ? "{$barcode}.jpg" :
-                    (Storage::disk('public')->exists("lojas/{$loja->codigo}/produtos/{$barcode}.png") ? "{$barcode}.png" : null);
-                if ($imagePathUser) {
-                    $produto_data['imagem'] = $imagePathUser;
-                    #    Log::info("Imagem associada em lojas/{$loja->codigo}/produtos: {$imagePathUser}");
-                }
-
-                $produto = Produto::create($produto_data);
-                $response['produtos'][$barcode] = $produto->id;
-            } else {
-                $response['produtos'][$barcode] = $produto->id;
-            }
-        }
-
-        return response()->json([
-            'success' => 'Processamento concluído',
-            'data' => $response
-        ], 201);
+public function storeProdutosUnified(Request $request)
+{
+    // 1. Validações Iniciais (Mantidas)
+    $codigo = $request->input('codigo');
+    $mac = $request->input('mac');
+    if (!$codigo || !$mac) {
+        return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
     }
+
+    $checkout = Checkout::where('codigo', $codigo)->where('mac', $mac)->where('status', 'ativo')->first();
+    if (!$checkout) return response()->json(['error' => 'Acesso negado'], 403);
+
+    $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
+    $user = User::where('codigo', $request->input('user_codigo'))->first();
+    if (!$loja || !$user) return response()->json(['error' => 'Loja ou Usuário não encontrado'], 404);
+
+    $productsJson = $request->input('products');
+    $products = json_decode($productsJson, true);
+    if (json_last_error() !== JSON_ERROR_NONE) return response()->json(['error' => 'JSON inválido'], 400);
+
+    $response = ['produtos_full' => [], 'produtos' => []];
+
+    // 2. Processamento Otimizado
+    foreach ($products as $product) {
+        $barcode = $product['codigo_barra'];
+
+        // --- PASSO 1: PRODUTO GLOBAL (ProdutoFull) ---
+        // Se não existir, cria. Se existir, não mexe (mantém a integridade do catálogo mestre)
+        $produto_full = ProdutoFull::firstOrCreate(
+            ['codigo_barra' => $barcode],
+            [
+                'nome' => $product['nome'] ?? 'Produto Sem Nome',
+                'categoria' => $product['categoria'] ?? 'Geral',
+                'descricao' => $product['descricao'] ?? '',
+                'peso' => $product['peso'] ?? 0,
+                'imagem' => $this->getExistingImagePath("produtos_full", $barcode)
+            ]
+        );
+
+        // --- PASSO 2: PRODUTO DA LOJA (Produto) ---
+        // Se o lojista enviar de novo, nós ATUALIZAMOS (Preço, Estoque, Nome na Loja)
+        // Isso evita duplicados e mantém os dados frescos.
+        $produto_data = $product;
+        $produto_data['user_id'] = $user->id;
+        $produto_data['loja_id'] = $loja->id; // Importante garantir o vínculo com a loja
+        $produto_data['produto_full_id'] = $produto_full->id;
+        $produto_data['imagem'] = $this->getExistingImagePath("lojas/{$loja->codigo}/produtos", $barcode);
+
+        $produto_loja = Produto::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'produto_full_id' => $produto_full->id
+            ],
+            $produto_data
+        );
+
+        $response['produtos_full'][$barcode] = $produto_full->id;
+        $response['produtos'][$barcode] = $produto_loja->id;
+    }
+
+    return response()->json(['success' => 'Sincronização concluída', 'data' => $response], 201);
+}
+
+/**
+ * Função auxiliar para checar se a imagem existe em JPG ou PNG
+ */
+private function getExistingImagePath($folder, $barcode)
+{
+    if (Storage::disk('public')->exists("{$folder}/{$barcode}.jpg")) return "{$barcode}.jpg";
+    if (Storage::disk('public')->exists("{$folder}/{$barcode}.png")) return "{$barcode}.png";
+    return null;
+}
 
     public function mensagens(Request $request)
     {
@@ -1155,5 +1113,70 @@ class CheckoutController extends Controller
             Log::error("Erro Sync Dashboard: " . $e->getMessage());
             return response()->json(['error' => 'Erro interno ao sincronizar', 'details' => $e->getMessage()], 500);
         }
+    
+    
+    
+    
     }
+
+
+    /**
+ * Nova função de autenticação exclusiva para o PDV.
+ * Não altera a função 'licenca' original.
+ */
+public function autenticarPdv(Request $request)
+{
+    $key = $request->header('Authorization');
+    $key = str_replace('Bearer ', '', $key);
+
+    if (!$key) {
+        return response()->json(['error' => 'Chave de licença não fornecida'], 400);
+    }
+
+    $licenca = Licenca::where('key', $key)->first();
+    if (!$licenca) {
+        return response()->json(['error' => 'Licença Inválida!'], 403);
+    }
+
+    $loja = Loja::find($licenca->loja_id);
+    if (!$loja) {
+        return response()->json(['error' => 'Loja não encontrada.'], 404);
+    }
+
+    $dados = $request->all();
+    
+    // Verifica/Cria registro da máquina (Checkout)
+    $checkout = Checkout::where('licenca_id', $licenca->id)
+        ->where('mac', $dados['mac'] ?? null)
+        ->first();
+
+    $novoStatus = ($licenca->isValid() && $checkout && $checkout->status === 'ativo') ? 'ativo' : 'inativo';
+    
+    // Se for novo e tiver espaço, ativa
+    if (!$checkout && $licenca->isValid()) {
+        $ativos = Checkout::where('licenca_id', $licenca->id)->where('status', 'ativo')->count();
+        if ($ativos < $licenca->limite_dispositivos) {
+            $novoStatus = 'ativo';
+        }
+    }
+
+    if (!$checkout) {
+        $checkout = Checkout::create([
+            'licenca_id' => $licenca->id,
+            'codigo' => $dados['codigo'] ?? null,
+            'descricao' => 'PDV ' . ($dados['hostname'] ?? 'Novo'),
+            'mac' => $dados['mac'] ?? null,
+            'status' => $novoStatus,
+        ]);
+    } else {
+        $checkout->update(['status' => $novoStatus]);
+    }
+
+    return response()->json([
+        'success' => 'PDV Autenticado',
+        'loja_codigo' => $loja->codigo, // Mudamos para loja_codigo
+        'status' => $checkout->status
+    ]);
+}
+
 }

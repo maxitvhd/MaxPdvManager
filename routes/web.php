@@ -167,6 +167,7 @@ Route::prefix('lojas/{loja}')->group(function () {
 #------------ ROTAS DE API PARA CHECKOUT ------------------
 Route::post('/api/mensagens', [CheckoutController::class, 'mensagens']);
 Route::post('/api/licenca', [CheckoutController::class, 'licenca']);
+Route::post('/api/autenticar-pdv', [CheckoutController::class, 'autenticarPdv']);
 Route::post('/api/dados', [CheckoutController::class, 'dados']);
 Route::post('/api/produtos', [CheckoutController::class, 'produtos']);
 Route::post('/api/funcionarios', [CheckoutController::class, 'funcionarios']);

@@ -1010,9 +1010,8 @@ async function salvarSemSair() {
 // ===== PRÉVIA EM NOVA ABA =====
 function previewLayout() {
     const content = obterConteudoLayout();
-    // Encoda e abre em nova aba via sessionStorage
-    sessionStorage.setItem('tvdoor_preview', content);
-    window.open('{{ route("lojista.tvdoor.layouts.preview") }}', '_blank');
+    document.getElementById('preview-content').value = content;
+    document.getElementById('preview-form').submit();
 }
 
 // ===== TOAST NOTIFICATION =====
