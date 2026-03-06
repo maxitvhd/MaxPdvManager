@@ -679,9 +679,11 @@ class CheckoutController extends Controller
 
 public function storeProdutosUnified(Request $request)
 {
-    // 1. Validações Iniciais (Mantidas)
+    // 1. Validações Iniciais
     $codigo = $request->input('codigo');
     $mac = $request->input('mac');
+    $loja_codigo = $request->input('loja_codigo');
+
     if (!$codigo || !$mac) {
         return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
     }
@@ -689,9 +691,13 @@ public function storeProdutosUnified(Request $request)
     $checkout = Checkout::where('codigo', $codigo)->where('mac', $mac)->where('status', 'ativo')->first();
     if (!$checkout) return response()->json(['error' => 'Acesso negado'], 403);
 
-    $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
-    $user = User::where('codigo', $request->input('user_codigo'))->first();
-    if (!$loja || !$user) return response()->json(['error' => 'Loja ou Usuário não encontrado'], 404);
+    // Valida apenas a loja usando o código que estamos enviando do Extrator
+    $loja = Loja::where('codigo', $loja_codigo)->first();
+    
+    // Ou se preferir usar a loja atrelada à licença:
+    // $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
+
+    if (!$loja) return response()->json(['error' => 'Loja não encontrada'], 404);
 
     $productsJson = $request->input('products');
     $products = json_decode($productsJson, true);
@@ -699,12 +705,14 @@ public function storeProdutosUnified(Request $request)
 
     $response = ['produtos_full' => [], 'produtos' => []];
 
+    // Pegamos o dono da loja caso a tabela tbl_produtos no banco ainda obrigue a ter um user_id
+    $dono_id = $loja->user_id ?? ($loja->users()->first()->id ?? null);
+
     // 2. Processamento Otimizado
     foreach ($products as $product) {
         $barcode = $product['codigo_barra'];
 
         // --- PASSO 1: PRODUTO GLOBAL (ProdutoFull) ---
-        // Se não existir, cria. Se existir, não mexe (mantém a integridade do catálogo mestre)
         $produto_full = ProdutoFull::firstOrCreate(
             ['codigo_barra' => $barcode],
             [
@@ -717,17 +725,17 @@ public function storeProdutosUnified(Request $request)
         );
 
         // --- PASSO 2: PRODUTO DA LOJA (Produto) ---
-        // Se o lojista enviar de novo, nós ATUALIZAMOS (Preço, Estoque, Nome na Loja)
-        // Isso evita duplicados e mantém os dados frescos.
         $produto_data = $product;
-        $produto_data['user_id'] = $user->id;
-        $produto_data['loja_id'] = $loja->id; // Importante garantir o vínculo com a loja
+        if ($dono_id) {
+            $produto_data['user_id'] = $dono_id; // Se o banco exige user_id
+        }
+        $produto_data['loja_id'] = $loja->id; // Vínculo com a loja
         $produto_data['produto_full_id'] = $produto_full->id;
         $produto_data['imagem'] = $this->getExistingImagePath("lojas/{$loja->codigo}/produtos", $barcode);
 
         $produto_loja = Produto::updateOrCreate(
             [
-                'user_id' => $user->id,
+                'loja_id' => $loja->id, // Busca pelo ID da loja e do produto full
                 'produto_full_id' => $produto_full->id
             ],
             $produto_data
@@ -739,6 +747,7 @@ public function storeProdutosUnified(Request $request)
 
     return response()->json(['success' => 'Sincronização concluída', 'data' => $response], 201);
 }
+
 
 /**
  * Função auxiliar para checar se a imagem existe em JPG ou PNG
