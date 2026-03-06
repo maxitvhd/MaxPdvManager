@@ -1124,7 +1124,7 @@ private function getExistingImagePath($folder, $barcode)
  * Nova função de autenticação exclusiva para o PDV.
  * Não altera a função 'licenca' original.
  */
-public function autenticarPdv(Request $request)
+public function aautenticarPdv(Request $request)
 {
     $key = $request->header('Authorization');
     $key = str_replace('Bearer ', '', $key);
