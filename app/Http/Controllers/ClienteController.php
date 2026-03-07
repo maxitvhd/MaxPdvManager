@@ -91,7 +91,7 @@ class ClienteController extends Controller
 
         if ($lojas->isEmpty()) {
             return view('bank.clientes.index', [
-                'clientes' => collect([]),
+                'clientes' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20),
                 'lojas'    => $lojas,
                 'lojaAtual'=> null,
             ]);
