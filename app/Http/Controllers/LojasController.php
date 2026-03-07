@@ -162,15 +162,51 @@ class LojasController extends Controller
                 \Illuminate\Support\Facades\DB::table('clientes_leads')->insert($leadsData);
             }
 
-            // 2. Apagar os clientes da loja para evitar Constraint Violation (se não tiver cascade)
+            // 2. Limpeza Manual em Cascata para evitar "Constraint Violation" do MariaDB
+            
+            // 2A. Clientes e Financeiro do PDV
+            \Illuminate\Support\Facades\DB::table('clientes_transacoes')->where('loja_id', $loja->id)->delete();
             \App\Models\Cliente::where('loja_id', $loja->id)->delete();
 
-            // 3. Pode deletar a loja (o restante deve ser OnDelete Cascade no banco)
+            // 2B. Registros de Caixa e Vendas (PDV)
+            \Illuminate\Support\Facades\DB::table('loja_vendas_itens')->whereIn('loja_venda_id', function ($query) use ($loja) {
+                $query->select('id')->from('loja_vendas')->where('loja_id', $loja->id);
+            })->delete();
+            \Illuminate\Support\Facades\DB::table('loja_vendas')->where('loja_id', $loja->id)->delete();
+            \Illuminate\Support\Facades\DB::table('loja_caixa_sessoes')->where('loja_id', $loja->id)->delete();
+            \Illuminate\Support\Facades\DB::table('loja_movimentacoes')->where('loja_id', $loja->id)->delete();
+            
+            // 2C. Sistema, Lojas e TVDoor
+            \Illuminate\Support\Facades\DB::table('sistema_transacoes')->where('loja_id', $loja->id)->delete();
+            \Illuminate\Support\Facades\DB::table('social_accounts')->where('loja_id', $loja->id)->delete();
+            
+            \Illuminate\Support\Facades\DB::table('tv_door_categories')->where('loja_id', $loja->id)->delete();
+            \Illuminate\Support\Facades\DB::table('tv_door_layouts')->where('loja_id', $loja->id)->delete();
+            \Illuminate\Support\Facades\DB::table('tv_door_media')->where('loja_id', $loja->id)->delete();
+            \Illuminate\Support\Facades\DB::table('tv_door_players')->where('loja_id', $loja->id)->delete();
+            \Illuminate\Support\Facades\DB::table('tv_door_schedules')->where('loja_id', $loja->id)->delete();
+            
+            // 2D. Produtos e Checkouts
+            \Illuminate\Support\Facades\DB::table('produto_lotes')->whereIn('produto_id', function ($query) use ($loja) {
+                $query->select('id')->from('produtos')->where('loja_id', $loja->id);
+            })->delete();
+            \Illuminate\Support\Facades\DB::table('produtos')->where('loja_id', $loja->id)->delete();
+            
+            \Illuminate\Support\Facades\DB::table('loja_permissao')->where('loja_id', $loja->id)->delete();
+            \Illuminate\Support\Facades\DB::table('loja_cancelamento_key')->where('loja_id', $loja->id)->delete();
+            \Illuminate\Support\Facades\DB::table('loja_cancelamento')->where('loja_id', $loja->id)->delete();
+            
+            \Illuminate\Support\Facades\DB::table('loja_checkout')->whereIn('licenca_id', function ($query) use ($loja) {
+                $query->select('id')->from('loja_licencas')->where('loja_id', $loja->id);
+            })->delete();
+            \Illuminate\Support\Facades\DB::table('loja_licencas')->where('loja_id', $loja->id)->delete();
+
+            // 3. Pode deletar a loja finalmente
             $loja->delete();
 
             \Illuminate\Support\Facades\DB::commit();
 
-            return redirect()->route('lojas.index')->with('success', 'Loja excluída permanentemente e clientes foram arquivados corrtamente.');
+            return redirect()->route('lojas.index')->with('success', 'Loja excluída permanentemente e clientes foram arquivados com sucesso.');
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();
             \Illuminate\Support\Facades\Log::error('Erro ao excluir loja: ' . $e->getMessage());
