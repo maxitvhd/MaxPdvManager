@@ -48,9 +48,8 @@ Route::group(['middleware' => 'auth'], function () {
         return view('billing');
     })->name('billing');
 
-    Route::get('profile', function () {
-        return view('profile');
-    })->name('profile');
+    Route::get('profile', [InfoUserController::class, 'profile'])->name('profile');
+    Route::post('profile', [InfoUserController::class, 'updateProfile'])->name('profile.update');
 
     Route::get('rtl', function () {
         return view('rtl');
