@@ -11,7 +11,7 @@ use App\Models\ProdutoFull;
 use App\Models\LojaCancelamentoKey;
 use App\Models\Mensagens;
 use App\Models\Cliente;
-use App\Models\ClienteTransacao; // Model da tabela espelho na nuvem
+use App\Models\ClienteTransacao; 
 use App\Models\LojaVenda;
 use App\Models\LojaVendaItem;
 use App\Models\LojaMovimentacao;
@@ -35,7 +35,6 @@ class CheckoutController extends Controller
         $user = Auth::user();
         $query = Checkout::with('licenca');
 
-        // Segurança: Filtrar checkouts por dono da licença
         if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
             $query->whereHas('licenca', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
@@ -79,7 +78,6 @@ class CheckoutController extends Controller
             return back()->withErrors(['licenca_id' => 'Licença inválida ou inativa.']);
         }
 
-        // Segurança extra: verificar se a licença pertence ao usuário
         if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
             if ($licenca->user_id !== $user->id) {
                 return back()->withErrors(['licenca_id' => 'Você não tem permissão para usar esta licença.']);
@@ -105,7 +103,6 @@ class CheckoutController extends Controller
         $user = Auth::user();
         $checkout = Checkout::findOrFail($id);
 
-        // Segurança: verificar se o checkout pertence a uma licença do usuário
         if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
             if ($checkout->licenca->user_id !== $user->id) {
                 abort(403, 'Acesso não autorizado.');
@@ -145,11 +142,9 @@ class CheckoutController extends Controller
         $licenca = $checkout->licenca;
 
         if ($checkout->status === 'ativo') {
-            // Desativar é sempre permitido, marcamos manual como true
             $checkout->update(['status' => 'inativo', 'status_manual' => true]);
             return redirect()->back()->with('success', 'O dispositivo foi desativado com sucesso.');
         } else {
-            // Para ativar, precisa checar limitação de plano e validade da licença
             if (!$licenca || !$licenca->isValid()) {
                 return redirect()->back()->with('error', 'Não foi possível ativar. A licença está inativa ou vencida.');
             }
@@ -159,7 +154,6 @@ class CheckoutController extends Controller
                 return redirect()->back()->with('error', "Limite da Licença excedido! Seu plano atual suporta no máximo {$licenca->limite_dispositivos} dispositivo(s). Desative algum primeiro.");
             }
 
-            // Ao ativar manualmente, libera a trava
             $checkout->update(['status' => 'ativo', 'status_manual' => false]);
             return redirect()->back()->with('success', 'Dispositivo ativado! Ele já pode se conectar ao PDV.');
         }
@@ -179,7 +173,6 @@ class CheckoutController extends Controller
         }
 
         $licenca = Licenca::where('key', $key)->first();
-        Log::info('Licença localizada no BD: ' . ($licenca ? 'SIM, ID ' . $licenca->id : 'NÃO'));
 
         if (!$licenca) {
             Log::warning('Tentativa falhou: Chave de licença informada não existe no servidor Mestre.');
@@ -189,51 +182,30 @@ class CheckoutController extends Controller
         $dadosMaquina = $request->all();
         $licencaValid = $licenca && $licenca->isValid();
 
-        Log::info('Licença é Considerada Válida? ' . ($licencaValid ? 'SIM' : 'NÃO'));
-        Log::info('Dados do MAC: ' . ($dadosMaquina['mac'] ?? 'MAC_NULO'));
-
-        // Verifica se essa máquina já está registrada nesse MAC/Código
         $checkout_existente = Checkout::where('licenca_id', $licenca ? $licenca->id : 0)
             ->where('mac', $dadosMaquina['mac'] ?? null)
             ->first();
 
-        Log::info('Checkout pré-existente (Mesmo MAC): ' . ($checkout_existente ? 'SIM, ID ' . $checkout_existente->id . ', Status Atual: ' . $checkout_existente->status : 'NÃO CRIADO AINDA'));
-
-        // Conta quantos existem ativos dessa loja
         $qntAtivos = $licenca ? Checkout::where('licenca_id', $licenca->id)->where('status', 'ativo')->count() : 0;
-
-        Log::info('Total de Dispositivos Ativos nesta Licença: ' . $qntAtivos . '. Limite da Licença: ' . ($licenca->limite_dispositivos ?? 0));
-
-        // Determina o status a ser atribuído
         $statusAtual = $checkout_existente ? $checkout_existente->status : 'inativo';
         $novoStatus = 'inativo';
 
         if ($licencaValid) {
             if ($statusAtual === 'ativo') {
-                $novoStatus = 'ativo'; // Já estava ativo e a licença tá ok
-                Log::info('Decisão de Status: Manter ATIVO (Dispositivo já pertencia à cota ativa).');
+                $novoStatus = 'ativo';
             } else {
-                // Checa se foi desativado MANUALMENTE pelo Lojista na Dash
                 $foiBanidoManualmente = $checkout_existente && $checkout_existente->status_manual;
 
                 if ($foiBanidoManualmente) {
-                    Log::warning('Decisão de Status: Manter INATIVO. O Lojista desativou este PDV manualmente pelo Painel Web. É preciso ativá-lo por lá primeiro.');
                     $novoStatus = 'inativo';
                 } else {
-                    // Tenta ativar automaticamente se tiver espaço (e não foi banido manual)
                     if ($qntAtivos < $licenca->limite_dispositivos) {
                         $novoStatus = 'ativo';
-                        Log::info('Decisão de Status: Promover para ATIVO (Há espaço na cota limite e a máquina é bem vinda).');
-                    } else {
-                        Log::warning('Decisão de Status: Manter INATIVO (A cota máxima de ' . $licenca->limite_dispositivos . ' já foi atingida).');
                     }
                 }
             }
-        } else {
-            Log::warning('Decisão de Status: Manter INATIVO forçadamente (Licença inválida ou expirada).');
         }
 
-        // Se a máquina não existe, cria
         if (!$checkout_existente) {
             $checkout_existente = Checkout::create([
                 'licenca_id' => $licenca->id,
@@ -248,11 +220,9 @@ class CheckoutController extends Controller
                 'status' => $novoStatus,
             ]);
         } else {
-            // Atualiza sempre o último IP e o status calculado
             $checkout_existente->update(['status' => $novoStatus, 'ip' => $dadosMaquina['ip'] ?? $checkout_existente->ip]);
         }
 
-        // Bloqueio do Frontend (Aplicativo do PDV) se precisou ficar inativo
         if (!$licencaValid) {
             return response()->json(['error' => 'Licença inválida, inativa ou com pagamentos pendentes. Dispositivo registrado e aguardando regularização.'], 403);
         }
@@ -268,9 +238,6 @@ class CheckoutController extends Controller
             'status' => $licenca->status,
         ]);
     }
-
-
-
 
     public function dados(Request $request)
     {
@@ -296,7 +263,6 @@ class CheckoutController extends Controller
             return response()->json(['error' => 'Loja não encontrada'], 404);
         }
 
-        // Busca o código do usuário associado à loja
         $user = User::find($loja->user_id);
         $user_codigo = $user ? $user->codigo : null;
 
@@ -307,135 +273,93 @@ class CheckoutController extends Controller
         ], 200);
     }
 
-
-
-
     public function produtos(Request $request)
     {
         $codigo = $request->input('codigo');
         $mac = $request->input('mac');
 
         if (!$codigo || !$mac) {
-            Log::error('Código ou MAC ausentes na requisição', ['codigo' => $codigo, 'mac' => $mac]);
             return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
         }
-
 
         $checkout = Checkout::where('codigo', $codigo)
             ->where('mac', $mac)
             ->where('status', 'ativo')
             ->first();
+
         if (!$checkout) {
-            Log::error('Checkout não encontrado ou inativo', ['codigo' => $codigo, 'mac' => $mac]);
             return response()->json(['error' => 'Acesso negado'], 403);
         }
 
         $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
 
         if (!$loja) {
-            Log::error('Loja não encontrada', ['licenca_id' => $checkout->licenca->loja_id]);
             return response()->json(['error' => 'Loja não encontrada'], 404);
         }
-        /// buscando produtos pelo id da loja 
 
         $user_codigo = User::find($loja->user_id)->codigo;
-        //dd($user_codigo);
 
-        // Busca os produtos e seus lotes
         $produtos = Produto::where('loja_id', $loja->id)
             ->with('lotes')
             ->get();
-        //dd ($produtos);
 
-        // Cria a pasta do usuário no storage
         $userStoragePath = "public/lojas/{$loja->codigo}";
         Storage::makeDirectory($userStoragePath);
 
-        // Remove ZIP e token antigos, se existirem
         $oldZipPath = storage_path("app/{$userStoragePath}/{$loja->codigo}.zip");
         if (file_exists($oldZipPath)) {
             unlink($oldZipPath);
-            Log::info('ZIP antigo removido', ['path' => $oldZipPath]);
         }
 
         $oldTokenPath = storage_path("app/{$userStoragePath}/{$loja->codigo}_token.txt");
         if (file_exists($oldTokenPath)) {
             unlink($oldTokenPath);
-            Log::info('Token antigo removido', ['path' => $oldTokenPath]);
         }
 
-        // Gera o arquivo ZIP compactando a pasta produtos inteira
         $zipFileName = "{$loja->codigo}.zip";
         $zipPath = storage_path("app/{$userStoragePath}/{$zipFileName}");
-        // Ajusta o caminho para a pasta de imagens no storage
         $imagesDir = storage_path("app/public/lojas/{$loja->codigo}/produtos");
 
-        // Verifica se a pasta de imagens existe
         if (!is_dir($imagesDir)) {
-            Log::warning('Pasta de imagens não encontrada', ['path' => $imagesDir]);
-            // Cria um ZIP vazio com um diretório vazio para evitar erros
             $zip = new ZipArchive();
             if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-                Log::error('Falha ao criar arquivo ZIP', ['path' => $zipPath]);
                 return response()->json(['error' => 'Falha ao criar arquivo ZIP'], 500);
             }
             $zip->addEmptyDir('empty');
             $zip->close();
-            #  Log::info('ZIP criado com diretório vazio', ['path' => $zipPath]);
         } else {
-            // Compacta a pasta inteira
             $zip = new ZipArchive();
             if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-                #     Log::error('Falha ao criar arquivo ZIP', ['path' => $zipPath]);
                 return response()->json(['error' => 'Falha ao criar arquivo ZIP'], 500);
             }
 
-            // Função para adicionar arquivos e subdiretórios ao ZIP
             $files = new \RecursiveIteratorIterator(
                 new \RecursiveDirectoryIterator($imagesDir),
                 \RecursiveIteratorIterator::LEAVES_ONLY
             );
 
-            $imagesAdded = 0;
             foreach ($files as $name => $file) {
                 if (!$file->isDir()) {
                     $filePath = $file->getRealPath();
-                    // Calcula o caminho relativo para manter a estrutura no ZIP
                     $relativePath = substr($filePath, strlen($imagesDir) + 1);
                     $zip->addFile($filePath, $relativePath);
-                    $imagesAdded++;
-                    #    Log::info('Arquivo adicionado ao ZIP', ['file' => $relativePath, 'path' => $filePath]);
                 }
             }
 
-            // Fecha o ZIP e verifica se foi bem-sucedido
             if (!$zip->close()) {
-                #    Log::error('Falha ao fechar o arquivo ZIP', ['path' => $zipPath]);
                 return response()->json(['error' => 'Falha ao fechar o arquivo ZIP'], 500);
             }
-
-            Log::info('ZIP criado com sucesso', [
-                'path' => $zipPath,
-                'images_added' => $imagesAdded
-            ]);
         }
 
-        // Verifica se o ZIP foi realmente criado
         if (!file_exists($zipPath)) {
-            #    Log::error('Arquivo ZIP não foi criado', ['path' => $zipPath]);
             return response()->json(['error' => 'Falha ao criar arquivo ZIP: arquivo não encontrado'], 500);
         }
 
-        // Gera um token temporário para autenticação do download
         $token = Str::random(32);
         $tokenPath = storage_path("app/{$userStoragePath}/{$loja->codigo}_token.txt");
         file_put_contents($tokenPath, $token);
-        Log::info('Token gerado', ['path' => $tokenPath, 'token' => $token]);
 
-        // Gera a URL para download do ZIP com o token
         $zipUrl = url("/api/download-zip/{$loja->codigo}?token={$token}");
-
-        Log::info('URL do ZIP gerada', ['url' => $zipUrl]);
 
         return response()->json([
             'success' => 'Produtos recuperados com sucesso',
@@ -450,27 +374,20 @@ class CheckoutController extends Controller
     {
         $token = $request->query('token');
 
-        //dd ( $token );
-
-        // Verifica se o token é válido
         $tokenPath = storage_path("app/public/lojas/{$user_codigo}/{$user_codigo}_token.txt");
         if (!file_exists($tokenPath)) {
-            #    Log::error('Token não encontrado', ['user_codigo' => $user_codigo, 'token' => $token]);
             return response()->json(['error' => 'Token inválido ou expirado'], 403);
         }
 
         $storedToken = file_get_contents($tokenPath);
         if ($token !== $storedToken) {
-            #    Log::error('Token inválido', ['user_codigo' => $user_codigo, 'token' => $token, 'stored_token' => $storedToken]);
             return response()->json(['error' => 'Token inválido'], 403);
         }
 
-        // Verifica se o user_codigo da requisição coincide com o da loja
         $codigo = $request->header('X-Codigo');
         $mac = $request->header('X-Mac');
 
         if (!$codigo || !$mac) {
-            #    Log::error('Código ou MAC ausentes nos cabeçalhos', ['codigo' => $codigo, 'mac' => $mac]);
             return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
         }
 
@@ -480,30 +397,20 @@ class CheckoutController extends Controller
             ->first();
 
         if (!$checkout) {
-            Log::error('Checkout não encontrado ou inativo', ['codigo' => $codigo, 'mac' => $mac]);
             return response()->json(['error' => 'Acesso negado'], 403);
         }
 
-
-        // Fornece o arquivo ZIP
         $zipPath = storage_path("app/public/lojas/{$user_codigo}/{$user_codigo}.zip");
         if (!file_exists($zipPath)) {
-            #   Log::error('Arquivo ZIP não encontrado no download', ['path' => $zipPath]);
             return response()->json(['error' => 'Arquivo ZIP não encontrado'], 404);
         }
 
-        // Remove o token após o download
         unlink($tokenPath);
-        #    Log::info('Token removido após download', ['path' => $tokenPath]);
-
-        Log::info('ZIP baixado com sucesso', ['user_codigo' => $user_codigo, 'path' => $zipPath]);
 
         return response()->download($zipPath, "{$user_codigo}.zip", [
             'Content-Type' => 'application/zip',
         ]);
     }
-
-
 
     public function funcionarios(Request $request)
     {
@@ -526,10 +433,9 @@ class CheckoutController extends Controller
         $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
         $user_codigo = User::find($loja->user_id)->codigo;
 
-        // Busca os funcionários associados à loja via LojaPermissao
         $funcionarios = User::whereHas('permissoes', function ($query) use ($loja) {
             $query->where('loja_id', $loja->id);
-        })->get(['id', 'name', 'usuario', 'email', 'imagem', 'password', 'codigo', 'endereco', 'bairro', 'cidade', 'estado', 'cep', 'avatar', 'phone', 'about_me', 'funcao', 'acesso']); // Adicionado 'acesso'
+        })->get(['id', 'name', 'usuario', 'email', 'imagem', 'password', 'codigo', 'endereco', 'bairro', 'cidade', 'estado', 'cep', 'avatar', 'phone', 'about_me', 'funcao', 'acesso']);
 
         return response()->json([
             'success' => 'Funcionários recuperados com sucesso',
@@ -562,7 +468,6 @@ class CheckoutController extends Controller
             return response()->json(['error' => 'Loja não encontrada'], 404);
         }
 
-        // Busca as chaves de cancelamento da loja
         $chaves = LojaCancelamentoKey::where('loja_id', $loja->id)
             ->with('user')
             ->get()
@@ -581,244 +486,159 @@ class CheckoutController extends Controller
         ], 200);
     }
 
-    public function uploadImagensZip(Request $request)
+    // ==============================================================
+    // INÍCIO: FUNÇÕES DE SINCRONIZAÇÃO DE PRODUTOS E IMAGENS (NOVO)
+    // ==============================================================
+
+    public function storeProdutosUnified(Request $request)
     {
-        // Valida os parâmetros obrigatórios
         $codigo = $request->input('codigo');
         $mac = $request->input('mac');
+        $loja_codigo = $request->input('loja_codigo');
+
         if (!$codigo || !$mac) {
             return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
         }
 
-        // Verifica o checkout
-        $checkout = Checkout::where('codigo', $codigo)
-            ->where('mac', $mac)
-            ->where('status', 'ativo')
-            ->first();
-        if (!$checkout) {
-            return response()->json(['error' => 'Acesso negado'], 403);
+        $checkout = Checkout::where('codigo', $codigo)->where('mac', $mac)->where('status', 'ativo')->first();
+        if (!$checkout) return response()->json(['error' => 'Acesso negado'], 403);
+
+        $loja = Loja::where('codigo', $loja_codigo)->first();
+        if (!$loja) return response()->json(['error' => 'Loja não encontrada'], 404);
+
+        $productsJson = $request->input('products');
+        $products = json_decode($productsJson, true);
+        if (json_last_error() !== JSON_ERROR_NONE) return response()->json(['error' => 'JSON inválido'], 400);
+
+        $response = ['produtos_full' => [], 'produtos' => []];
+        $dono_id = $loja->user_id ?? ($loja->users()->first()->id ?? null);
+
+        foreach ($products as $product) {
+            $barcode = $product['codigo_barra'];
+            
+            // Pega o nome da imagem enviado pelo Extrator
+            $imagem_nome = $product['imagem'] ?? "{$barcode}.jpg";
+
+            $produto_full = ProdutoFull::firstOrCreate(
+                ['codigo_barra' => $barcode],
+                [
+                    'nome' => $product['nome'] ?? 'Produto Sem Nome',
+                    'categoria' => $product['categoria'] ?? 'Geral',
+                    'descricao' => $product['descricao'] ?? '',
+                    'peso' => $product['peso'] ?? 0,
+                    'imagem' => $imagem_nome
+                ]
+            );
+
+            $produto_data = $product;
+            if ($dono_id) {
+                $produto_data['user_id'] = $dono_id;
+            }
+            $produto_data['loja_id'] = $loja->id; 
+            $produto_data['produto_full_id'] = $produto_full->id;
+            $produto_data['imagem'] = $imagem_nome;
+
+            $produto_loja = Produto::updateOrCreate(
+                [
+                    'loja_id' => $loja->id,
+                    'produto_full_id' => $produto_full->id
+                ],
+                $produto_data
+            );
+
+            $response['produtos_full'][$barcode] = $produto_full->id;
+            $response['produtos'][$barcode] = $produto_loja->id;
         }
 
-        // Verifica a loja
-        $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
-        if (!$loja) {
-            return response()->json(['error' => 'Loja não encontrada'], 404);
-        }
+        Log::info("Sincronização de Lote de Produtos concluída para a loja: {$loja_codigo}");
+        return response()->json(['success' => 'Sincronização concluída', 'data' => $response], 201);
+    }
 
-        // Verifica o usuário
-        $user_codigo = $request->input('user_codigo');
-        $user = User::where('codigo', $user_codigo)->first();
-        if (!$user) {
-            return response()->json(['error' => 'Usuário não encontrado'], 404);
-        }
+    public function uploadImagensZip(Request $request)
+    {
+        $codigo = $request->input('codigo');
+        $mac = $request->input('mac');
+        $loja_codigo = $request->input('loja_codigo');
 
-        // Processa o arquivo ZIP
-        $tempDir = storage_path('app/temp/' . uniqid());
-        $extractedImages = [];
+        if (!$codigo || !$mac) return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
+
+        $checkout = Checkout::where('codigo', $codigo)->where('mac', $mac)->where('status', 'ativo')->first();
+        if (!$checkout) return response()->json(['error' => 'Acesso negado'], 403);
+
+        $loja = Loja::where('codigo', $loja_codigo)->first();
+        if (!$loja) return response()->json(['error' => 'Loja não encontrada'], 404);
+
         if ($request->hasFile('imagens_zip')) {
+            Log::info('[1] Upload ZIP - Recebido arquivo imagens_zip.');
+            
             $zipFile = $request->file('imagens_zip');
             $zipPath = $zipFile->storeAs('temp', $zipFile->getClientOriginalName());
+            $tempDir = storage_path('app/temp/' . uniqid());
+            
+            Log::info("[2] Upload ZIP - Arquivo salvo em: {$zipPath}. Preparando extração...");
 
-            // Descompacta o arquivo ZIP
-            $zip = new ZipArchive;
+            $zip = new \ZipArchive;
             if ($zip->open(storage_path('app/' . $zipPath)) === TRUE) {
-                // Cria diretório temporário para extrair as imagens
+                
                 if (!file_exists($tempDir)) {
                     mkdir($tempDir, 0777, true);
                 }
-
+                
                 $zip->extractTo($tempDir);
                 $zip->close();
+                Log::info('[3] Upload ZIP - ZIP descompactado com sucesso.');
 
-                // Lista as imagens extraídas (apenas .jpg e .png)
                 $extractedImages = glob($tempDir . '/*.{jpg,png}', GLOB_BRACE);
-                Log::info('Imagens extraídas do ZIP: ' . implode(', ', $extractedImages));
-            } else {
-                #        Log::error('Falha ao abrir o arquivo ZIP: ' . $zipFile->getClientOriginalName());
-                return response()->json(['error' => 'Falha ao processar o arquivo ZIP'], 400);
-            }
-        } else {
-            #    Log::warning('Nenhum arquivo ZIP recebido no campo imagens_zip');
-            return response()->json(['error' => 'Nenhum arquivo ZIP enviado'], 400);
-        }
-
-        // Processa as imagens extraídas
-        $processedImages = [];
-        foreach ($extractedImages as $imagePath) {
-            $filename = basename($imagePath);
-            $barcode = pathinfo($filename, PATHINFO_FILENAME); // Extrai o código de barras do nome do arquivo
-            $extension = pathinfo($imagePath, PATHINFO_EXTENSION);
-
-            // Salva a imagem em produtos_full
-            $fullFilename = "{$barcode}.{$extension}";
-            Storage::disk('public')->put("produtos_full/{$fullFilename}", file_get_contents($imagePath));
-            #    Log::info("Imagem salva em produtos_full: {$fullFilename}");
-
-            // Salva a imagem no diretório do usuário
-            Storage::disk('public')->makeDirectory("lojas/{$loja->codigo}/produtos");
-            Storage::disk('public')->put("lojas/{$loja->codigo}/produtos/{$fullFilename}", file_get_contents($imagePath));
-            #    Log::info("Imagem salva em usuario/{$loja->codigo}/produtos: {$fullFilename}");
-
-            $processedImages[$barcode] = $fullFilename;
-        }
-
-        // Limpa o diretório temporário
-        if (file_exists($tempDir)) {
-            array_map('unlink', glob("$tempDir/*.*"));
-            rmdir($tempDir);
-        }
-        if (isset($zipPath) && Storage::exists($zipPath)) {
-            Storage::delete($zipPath);
-        }
-
-        return response()->json([
-            'success' => 'Imagens processadas com sucesso',
-            'images' => $processedImages
-        ], 201);
-    }
-
-public function storeProdutosUnified(Request $request)
-{
-    // 1. Validações Iniciais
-    $codigo = $request->input('codigo');
-    $mac = $request->input('mac');
-    $loja_codigo = $request->input('loja_codigo');
-
-    if (!$codigo || !$mac) {
-        return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
-    }
-
-    $checkout = Checkout::where('codigo', $codigo)->where('mac', $mac)->where('status', 'ativo')->first();
-    if (!$checkout) return response()->json(['error' => 'Acesso negado'], 403);
-
-    // Valida a loja usando o código que estamos enviando do Extrator
-    $loja = Loja::where('codigo', $loja_codigo)->first();
-
-    if (!$loja) return response()->json(['error' => 'Loja não encontrada'], 404);
-
-    $productsJson = $request->input('products');
-    $products = json_decode($productsJson, true);
-    if (json_last_error() !== JSON_ERROR_NONE) return response()->json(['error' => 'JSON inválido'], 400);
-
-    $response = ['produtos_full' => [], 'produtos' => []];
-
-    // Pegamos o dono da loja caso a tabela tbl_produtos no banco ainda obrigue a ter um user_id
-    $dono_id = $loja->user_id ?? ($loja->users()->first()->id ?? null);
-
-    // 2. Processamento Otimizado
-    foreach ($products as $product) {
-        $barcode = $product['codigo_barra'];
+                
+                if ($extractedImages) {
+                    Log::info('[4] Upload ZIP - ' . count($extractedImages) . ' imagens extraídas.');
+                    
+                    foreach ($extractedImages as $imagePath) {
+                        $filename = basename($imagePath);
+                        $barcode = pathinfo($filename, PATHINFO_FILENAME);
+                        $extension = pathinfo($imagePath, PATHINFO_EXTENSION);
         
-        // Pega o nome da imagem enviado pelo Extrator (ou usa o código como fallback)
-        $imagem_nome = $product['imagem'] ?? "{$barcode}.jpg";
-
-        // --- PASSO 1: PRODUTO GLOBAL (ProdutoFull) ---
-        $produto_full = ProdutoFull::firstOrCreate(
-            ['codigo_barra' => $barcode],
-            [
-                'nome' => $product['nome'] ?? 'Produto Sem Nome',
-                'categoria' => $product['categoria'] ?? 'Geral',
-                'descricao' => $product['descricao'] ?? '',
-                'peso' => $product['peso'] ?? 0,
-                // Salva diretamente o nome enviado pelo Extrator
-                'imagem' => $imagem_nome
-            ]
-        );
-
-        // --- PASSO 2: PRODUTO DA LOJA (Produto) ---
-        $produto_data = $product;
-        if ($dono_id) {
-            $produto_data['user_id'] = $dono_id; // Se o banco exige user_id
-        }
-        $produto_data['loja_id'] = $loja->id; // Vínculo com a loja
-        $produto_data['produto_full_id'] = $produto_full->id;
-        
-        // Salva diretamente o nome enviado pelo Extrator na loja também
-        $produto_data['imagem'] = $imagem_nome;
-
-        $produto_loja = Produto::updateOrCreate(
-            [
-                'loja_id' => $loja->id,
-                'produto_full_id' => $produto_full->id
-            ],
-            $produto_data
-        );
-
-        $response['produtos_full'][$barcode] = $produto_full->id;
-        $response['produtos'][$barcode] = $produto_loja->id;
-    }
-
-    // Processar arquivo ZIP com as imagens (se enviado)
-    if ($request->hasFile('imagens_zip')) {
-        Log::info('[1] Sincronização Unificada - Recebido arquivo imagens_zip.');
-        $zipFile = $request->file('imagens_zip');
-        $zipPath = $zipFile->storeAs('temp', $zipFile->getClientOriginalName());
-        $tempDir = storage_path('app/temp/' . uniqid());
-        Log::info("[2] Sincronização Unificada - Arquivo salvo em: {$zipPath}. Preparando tempDir: {$tempDir}");
-
-        $zip = new \ZipArchive;
-        if ($zip->open(storage_path('app/' . $zipPath)) === TRUE) {
-            if (!file_exists($tempDir)) {
-                mkdir($tempDir, 0777, true);
-                Log::info('[3] Sincronização Unificada - Diretório temporário criado.');
-            }
-            $zip->extractTo($tempDir);
-            $zip->close();
-            Log::info('[4] Sincronização Unificada - ZIP descompactado com sucesso.');
-
-            $extractedImages = glob($tempDir . '/*.{jpg,png}', GLOB_BRACE);
-            if ($extractedImages) {
-                Log::info('[5] Sincronização Unificada - ' . count($extractedImages) . ' imagens extraídas. (' . implode(', ', $extractedImages) . ')');
-                foreach ($extractedImages as $imagePath) {
-                    $filename = basename($imagePath);
-                    $barcode = pathinfo($filename, PATHINFO_FILENAME);
-                    $extension = pathinfo($imagePath, PATHINFO_EXTENSION);
-    
-                    $fullFilename = "{$barcode}.{$extension}";
-                    // Copiar para a pasta global
-                    Storage::disk('public')->put("produtos_full/{$fullFilename}", file_get_contents($imagePath));
-                    // Copiar para a pasta da loja
-                    Storage::disk('public')->makeDirectory("lojas/{$loja->codigo}/produtos");
-                    Storage::disk('public')->put("lojas/{$loja->codigo}/produtos/{$fullFilename}", file_get_contents($imagePath));
+                        $fullFilename = "{$barcode}.{$extension}";
+                        
+                        Storage::disk('public')->put("produtos_full/{$fullFilename}", file_get_contents($imagePath));
+                        Storage::disk('public')->makeDirectory("lojas/{$loja->codigo}/produtos");
+                        Storage::disk('public')->put("lojas/{$loja->codigo}/produtos/{$fullFilename}", file_get_contents($imagePath));
+                    }
+                    Log::info('[5] Upload ZIP - Cópias de imagens concluídas com sucesso.');
+                } else {
+                    Log::warning('[4] Upload ZIP - Nenhuma imagem .jpg ou .png encontrada dentro do ZIP.');
                 }
-                Log::info('[6] Sincronização Unificada - Cópias de imagens concluídas.');
+
+                if (file_exists($tempDir)) {
+                    array_map('unlink', glob("$tempDir/*.*"));
+                    rmdir($tempDir);
+                }
             } else {
-                Log::warning('[5] Sincronização Unificada - Nenhuma imagem .jpg ou .png encontrada após a extração.');
+                Log::error('[ERRO] Upload ZIP - Falha ao abrir o arquivo ZIP.');
+                return response()->json(['error' => 'Falha ao processar o arquivo ZIP'], 500);
             }
 
-            // Cleanup do diretório temporário
-            if (file_exists($tempDir)) {
-                array_map('unlink', glob("$tempDir/*.*"));
-                rmdir($tempDir);
-                Log::info('[7] Sincronização Unificada - Cleanup do diretório temporário concluído.');
+            if (Storage::exists($zipPath)) {
+                Storage::delete($zipPath);
             }
-        } else {
-            Log::error('[3 ERRO] Sincronização Unificada - Falha ao abrir o arquivo ZIP: ' . $zipFile->getClientOriginalName());
+
+            return response()->json(['success' => 'Imagens processadas com sucesso'], 201);
         }
 
-        // Cleanup do ZIP principal
-        if (Storage::exists($zipPath)) {
-            Storage::delete($zipPath);
-            Log::info('[8] Sincronização Unificada - Cleanup do ZIP original concluído.');
-        }
-    } else {
-        Log::info('[0] Sincronização Unificada - Nenhum arquivo imagens_zip recebido na requisição.');
+        Log::warning('[0] Upload ZIP - Endpoint acessado, mas nenhum arquivo imagens_zip foi enviado na requisição.');
+        return response()->json(['error' => 'Nenhum arquivo enviado'], 400);
     }
 
-    return response()->json(['success' => 'Sincronização concluída', 'data' => $response], 201);
-}
+    private function getExistingImagePath($folder, $barcode)
+    {
+        if (Storage::disk('public')->exists("{$folder}/{$barcode}.jpg")) return "{$barcode}.jpg";
+        if (Storage::disk('public')->exists("{$folder}/{$barcode}.png")) return "{$barcode}.png";
+        return null;
+    }
 
-
-
-/**
- * Função auxiliar para checar se a imagem existe em JPG ou PNG
- */
-private function getExistingImagePath($folder, $barcode)
-{
-    if (Storage::disk('public')->exists("{$folder}/{$barcode}.jpg")) return "{$barcode}.jpg";
-    if (Storage::disk('public')->exists("{$folder}/{$barcode}.png")) return "{$barcode}.png";
-    return null;
-}
+    // ==============================================================
+    // FIM: FUNÇÕES DE SINCRONIZAÇÃO DE PRODUTOS E IMAGENS
+    // ==============================================================
 
     public function mensagens(Request $request)
     {
@@ -826,7 +646,6 @@ private function getExistingImagePath($folder, $barcode)
         $mac = $request->input('mac');
 
         if (!$codigo || !$mac) {
-            Log::error('Código ou MAC ausentes na requisição', ['codigo' => $codigo, 'mac' => $mac]);
             return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
         }
 
@@ -836,30 +655,22 @@ private function getExistingImagePath($folder, $barcode)
             ->first();
 
         if (!$checkout) {
-            Log::error('Checkout não encontrado ou inativo', ['codigo' => $codigo, 'mac' => $mac]);
             return response()->json(['error' => 'Acesso negado'], 403);
         }
 
         $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
 
         if (!$loja) {
-            Log::error('Loja não encontrada', ['licenca_id' => $checkout->licenca->loja_id]);
             return response()->json(['error' => 'Loja não encontrada'], 404);
         }
 
         $user_codigo = User::find($loja->user_id)->codigo;
 
-        // Busca mensagens globais (loja_codigo nulo) e personalizadas para a loja
         $mensagens = Mensagens::where(function ($query) use ($loja) {
             $query->whereNull('loja_codigo')
                 ->orWhere('loja_codigo', $loja->codigo);
         })->where('ativo', true)
             ->get(['id', 'texto', 'tipo', 'ativo', 'loja_codigo']);
-
-        Log::info('Mensagens recuperadas com sucesso', [
-            'loja_id' => $loja->id,
-            'total_mensagens' => $mensagens->count(),
-        ]);
 
         return response()->json([
             'success' => 'Mensagens recuperadas com sucesso',
@@ -875,7 +686,7 @@ private function getExistingImagePath($folder, $barcode)
         if (!$codigo || !$mac) {
             return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
         }
-        // Validação do Checkout/PDV
+
         $checkout = Checkout::where('codigo', $codigo)
             ->where('mac', $mac)
             ->where('status', 'ativo')
@@ -883,28 +694,15 @@ private function getExistingImagePath($folder, $barcode)
         if (!$checkout) {
             return response()->json(['error' => 'Acesso negado'], 403);
         }
-        // Identifica a loja associada à licença do checkout
+
         $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
 
         if (!$loja) {
             return response()->json(['error' => 'Loja não encontrada'], 404);
         }
-        // Busca os clientes da loja
-        // O Laravel descriptografa automaticamente os campos 'encrypted' ao serializar para JSON?
-        // NÃO, por padrão o Laravel esconde campos 'hidden' ou retorna o valor do atributo.
-        // Como usamos o cast 'encrypted', ao acessar $cliente->cpf, ele retorna o valor descriptografado.
-        // Ao converter para array/JSON, ele usa esses valores descriptografados.
-        // PORTANTO, o JSON de resposta enviará os dados "abertos" via HTTPS para o PDV,
-        // que é o comportamento desejado para que o PDV possa ler os dados.
-        // A criptografia acontece apenas no banco de dados do servidor (data at rest).
-
-
 
         $clientes = Cliente::where('loja_id', $loja->id)->get();
-
-        // Oculta os campos sensíveis apenas para esta resposta
         $clientes->makeHidden(['cpf', 'endereco', 'bairro', 'cidade', 'estado', 'cep']);
-
 
         return response()->json([
             'success' => 'Clientes recuperados com sucesso',
@@ -912,12 +710,8 @@ private function getExistingImagePath($folder, $barcode)
         ]);
     }
 
-
     public function sync(Request $request)
     {
-        // ---------------------------------------------------------
-        // 1. SEGURANÇA (Idêntica ao método Clientes)
-        // ---------------------------------------------------------
         $codigo = $request->input('codigo');
         $mac = $request->input('mac');
 
@@ -925,7 +719,6 @@ private function getExistingImagePath($folder, $barcode)
             return response()->json(['error' => 'Código e MAC são obrigatórios'], 400);
         }
 
-        // Validação do Checkout/PDV
         $checkout = Checkout::where('codigo', $codigo)
             ->where('mac', $mac)
             ->where('status', 'ativo')
@@ -935,84 +728,65 @@ private function getExistingImagePath($folder, $barcode)
             return response()->json(['error' => 'Acesso negado ou PDV inativo'], 403);
         }
 
-        // Identifica a loja associada
         $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
 
         if (!$loja) {
             return response()->json(['error' => 'Loja não encontrada'], 404);
         }
 
-        // ---------------------------------------------------------
-        // 2. PROCESSAMENTO DAS TRANSAÇÕES
-        // ---------------------------------------------------------
-
-        // Recebe o array de transações enviado pelo Python
         $transacoes = $request->input('transacoes', []);
         $uuids_confirmados = [];
         $clientes_afetados = [];
 
-        DB::beginTransaction(); // Garante que ou salva tudo ou não salva nada
+        DB::beginTransaction(); 
 
         try {
             foreach ($transacoes as $tr) {
-
-                // A. Verifica se essa transação já foi processada antes (Proteção contra duplicidade)
-                // Usamos o UUID gerado pelo Python como chave única
                 $existe = ClienteTransacao::where('uuid', $tr['uuid'])->exists();
 
                 if ($existe) {
-                    // Se já existe, apenas confirmamos para o PDV não enviar de novo
                     $uuids_confirmados[] = $tr['uuid'];
                     continue;
                 }
 
-                // B. Salva a transação no histórico da Nuvem
                 ClienteTransacao::create([
                     'loja_id' => $loja->id,
                     'uuid' => $tr['uuid'],
                     'cliente_codigo' => $tr['cliente_codigo'],
                     'venda_codigo' => $tr['venda_codigo'] ?? null,
-                    'tipo' => $tr['tipo'], // 'debito' (compra) ou 'pagamento' (quitação)
+                    'tipo' => $tr['tipo'], 
                     'valor' => $tr['valor'],
                     'data_hora' => $tr['data_hora'],
                     'usuario_codigo' => $tr['usuario_codigo'] ?? 'SYSTEM',
-                    'checkout_mac' => $mac // Rastreabilidade: qual caixa enviou
+                    'checkout_mac' => $mac 
                 ]);
 
-                // C. Atualiza o Saldo Mestre do Cliente (A fonte da verdade)
                 $cliente = Cliente::where('codigo', $tr['cliente_codigo'])
                     ->where('loja_id', $loja->id)
                     ->first();
 
                 if ($cliente) {
-                    // Lógica Financeira
                     if ($tr['tipo'] == 'debito') {
-                        // Cliente comprou fiado: Aumenta dívida, diminui saldo disponível
                         $cliente->credito_usado += $tr['valor'];
-                        $cliente->saldo -= $tr['valor']; // Pode ficar negativo se estourar limite offline
+                        $cliente->saldo -= $tr['valor']; 
                     } elseif ($tr['tipo'] == 'pagamento' || $tr['tipo'] == 'estorno') {
-                        // Cliente pagou: Diminui dívida, libera saldo
                         $cliente->credito_usado -= $tr['valor'];
                         $cliente->saldo += $tr['valor'];
                     }
 
                     $cliente->save();
-                    $clientes_afetados[] = $cliente->codigo; // Guarda para log ou retorno futuro
+                    $clientes_afetados[] = $cliente->codigo; 
                 }
 
-                // Adiciona na lista de sucesso
                 $uuids_confirmados[] = $tr['uuid'];
             }
 
             DB::commit();
 
-            // ---------------------------------------------------------
-            // 3. RETORNO PARA O PDV
-            // ---------------------------------------------------------
             return response()->json([
                 'success' => true,
                 'message' => 'Sincronização processada com sucesso',
-                'synced_uuids' => $uuids_confirmados, // O PDV usará isso para marcar como 'synced'
+                'synced_uuids' => $uuids_confirmados, 
             ]);
 
         } catch (\Exception $e) {
@@ -1028,7 +802,6 @@ private function getExistingImagePath($folder, $barcode)
 
     public function syncDashboard(Request $request)
     {
-        // 1. Validação de Segurança (Código e MAC)
         $codigo = $request->input('codigo');
         $mac = $request->input('mac');
 
@@ -1049,19 +822,16 @@ private function getExistingImagePath($folder, $barcode)
         $loja_id = $checkout->licenca->loja_id;
         $payload = $request->all();
 
-        // Arrays para confirmar o sucesso para o PDV
         $synced_uuids = [
             'vendas' => [],
             'movimentacoes' => [],
             'caixa_sessoes' => [],
             'cancelamentos' => []
-
         ];
 
-        DB::beginTransaction(); // Início da transação segura
+        DB::beginTransaction(); 
 
         try {
-            // A. Sincronizar Sessões de Caixa
             if (!empty($payload['caixa_sessoes'])) {
                 foreach ($payload['caixa_sessoes'] as $cx) {
                     LojaCaixaSessao::updateOrCreate(
@@ -1082,7 +852,6 @@ private function getExistingImagePath($folder, $barcode)
                 }
             }
 
-            // B. Sincronizar Movimentações (Sangria/Suprimento)
             if (!empty($payload['movimentacoes'])) {
                 foreach ($payload['movimentacoes'] as $mv) {
                     LojaMovimentacao::updateOrCreate(
@@ -1101,10 +870,8 @@ private function getExistingImagePath($folder, $barcode)
                 }
             }
 
-            // C. Sincronizar Vendas e Itens
             if (!empty($payload['vendas'])) {
                 foreach ($payload['vendas'] as $v) {
-                    // 1. Salva Cabeçalho
                     $vendaModel = LojaVenda::updateOrCreate(
                         ['uuid' => $v['uuid']],
                         [
@@ -1124,9 +891,8 @@ private function getExistingImagePath($folder, $barcode)
                         ]
                     );
 
-                    // 2. Processa Itens (Deleta antigos e insere novos para garantir integridade)
                     if (!empty($v['itens'])) {
-                        $vendaModel->itens()->delete(); // Limpa itens anteriores dessa venda
+                        $vendaModel->itens()->delete(); 
 
                         $itensParaInserir = [];
                         foreach ($v['itens'] as $item) {
@@ -1141,22 +907,20 @@ private function getExistingImagePath($folder, $barcode)
                                 'custo' => $item['custo'] ?? 0,
                             ];
                         }
-                        // Insert rápido em lote
                         LojaVendaItem::insert($itensParaInserir);
                     }
                     $synced_uuids['vendas'][] = $v['uuid'];
                 }
 
-                // D. SINCRONIZAR CANCELAMENTOS
                 if (!empty($payload['cancelamentos'])) {
                     foreach ($payload['cancelamentos'] as $cancel) {
                         LojaCancelamento::updateOrCreate(
-                            ['uuid' => $cancel['uuid']], // Busca pelo UUID único
+                            ['uuid' => $cancel['uuid']], 
                             [
                                 'loja_id' => $loja_id,
                                 'usuario_codigo' => $cancel['usuario_codigo'] ?? 'SISTEMA',
                                 'venda_codigo' => $cancel['venda_codigo'] ?? null,
-                                'produtos' => $cancel['produtos'] ?? [], // O Model converte array para JSON autom.
+                                'produtos' => $cancel['produtos'] ?? [], 
                                 'valor_total' => $cancel['valor_total'],
                                 'data_hora' => $cancel['data_hora'],
                                 'observacao' => $cancel['observacao'] ?? null,
@@ -1164,14 +928,12 @@ private function getExistingImagePath($folder, $barcode)
                                 'checkout_mac' => $mac
                             ]
                         );
-                        // Adiciona na lista de confirmação para o PDV
                         $synced_uuids['cancelamentos'][] = $cancel['uuid'];
                     }
                 }
-
             }
 
-            DB::commit(); // Confirma gravação
+            DB::commit(); 
 
             return response()->json([
                 'success' => true,
@@ -1183,70 +945,58 @@ private function getExistingImagePath($folder, $barcode)
             Log::error("Erro Sync Dashboard: " . $e->getMessage());
             return response()->json(['error' => 'Erro interno ao sincronizar', 'details' => $e->getMessage()], 500);
         }
-    
-    
-    
-    
     }
 
+    public function autenticarPdv(Request $request)
+    {
+        $key = $request->header('Authorization');
+        $key = str_replace('Bearer ', '', $key);
 
-    /**
- * Nova função de autenticação exclusiva para o PDV.
- * Não altera a função 'licenca' original.
- */
-public function aautenticarPdv(Request $request)
-{
-    $key = $request->header('Authorization');
-    $key = str_replace('Bearer ', '', $key);
-
-    if (!$key) {
-        return response()->json(['error' => 'Chave de licença não fornecida'], 400);
-    }
-
-    $licenca = Licenca::where('key', $key)->first();
-    if (!$licenca) {
-        return response()->json(['error' => 'Licença Inválida!'], 403);
-    }
-
-    $loja = Loja::find($licenca->loja_id);
-    if (!$loja) {
-        return response()->json(['error' => 'Loja não encontrada.'], 404);
-    }
-
-    $dados = $request->all();
-    
-    // Verifica/Cria registro da máquina (Checkout)
-    $checkout = Checkout::where('licenca_id', $licenca->id)
-        ->where('mac', $dados['mac'] ?? null)
-        ->first();
-
-    $novoStatus = ($licenca->isValid() && $checkout && $checkout->status === 'ativo') ? 'ativo' : 'inativo';
-    
-    // Se for novo e tiver espaço, ativa
-    if (!$checkout && $licenca->isValid()) {
-        $ativos = Checkout::where('licenca_id', $licenca->id)->where('status', 'ativo')->count();
-        if ($ativos < $licenca->limite_dispositivos) {
-            $novoStatus = 'ativo';
+        if (!$key) {
+            return response()->json(['error' => 'Chave de licença não fornecida'], 400);
         }
-    }
 
-    if (!$checkout) {
-        $checkout = Checkout::create([
-            'licenca_id' => $licenca->id,
-            'codigo' => $dados['codigo'] ?? null,
-            'descricao' => 'PDV ' . ($dados['hostname'] ?? 'Novo'),
-            'mac' => $dados['mac'] ?? null,
-            'status' => $novoStatus,
+        $licenca = Licenca::where('key', $key)->first();
+        if (!$licenca) {
+            return response()->json(['error' => 'Licença Inválida!'], 403);
+        }
+
+        $loja = Loja::find($licenca->loja_id);
+        if (!$loja) {
+            return response()->json(['error' => 'Loja não encontrada.'], 404);
+        }
+
+        $dados = $request->all();
+        
+        $checkout = Checkout::where('licenca_id', $licenca->id)
+            ->where('mac', $dados['mac'] ?? null)
+            ->first();
+
+        $novoStatus = ($licenca->isValid() && $checkout && $checkout->status === 'ativo') ? 'ativo' : 'inativo';
+        
+        if (!$checkout && $licenca->isValid()) {
+            $ativos = Checkout::where('licenca_id', $licenca->id)->where('status', 'ativo')->count();
+            if ($ativos < $licenca->limite_dispositivos) {
+                $novoStatus = 'ativo';
+            }
+        }
+
+        if (!$checkout) {
+            $checkout = Checkout::create([
+                'licenca_id' => $licenca->id,
+                'codigo' => $dados['codigo'] ?? null,
+                'descricao' => 'PDV ' . ($dados['hostname'] ?? 'Novo'),
+                'mac' => $dados['mac'] ?? null,
+                'status' => $novoStatus,
+            ]);
+        } else {
+            $checkout->update(['status' => $novoStatus]);
+        }
+
+        return response()->json([
+            'success' => 'PDV Autenticado',
+            'loja_codigo' => $loja->codigo, 
+            'status' => $checkout->status
         ]);
-    } else {
-        $checkout->update(['status' => $novoStatus]);
     }
-
-    return response()->json([
-        'success' => 'PDV Autenticado',
-        'loja_codigo' => $loja->codigo, // Mudamos para loja_codigo
-        'status' => $checkout->status
-    ]);
-}
-
 }
