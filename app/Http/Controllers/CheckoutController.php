@@ -37,7 +37,11 @@ class CheckoutController extends Controller
 
         if (!$user->hasRole('admin') && !$user->hasRole('super-admin')) {
             $query->whereHas('licenca', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
+                // Filtra para exibir apenas os checkouts cuja licença seja do próprio usuário ou esteja vinculada a uma loja dele
+                $q->where('user_id', $user->id)
+                  ->orWhereHas('loja', function ($qLoja) use ($user) {
+                      $qLoja->where('user_id', $user->id);
+                  });
             });
         }
 
