@@ -60,4 +60,12 @@ class Produto extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Relacionamento com a Loja
+     */
+    public function loja()
+    {
+        return $this->belongsTo(Loja::class);
+    }
 }

@@ -260,7 +260,7 @@ public function index(Request $request)
     }
 
     // 2. Monta a Query filtrando por essas lojas
-    $query = Produto::with(['produtoFull', 'lotes'])
+    $query = Produto::with(['produtoFull', 'lotes', 'loja'])
         ->whereIn('loja_id', $lojasPermitidas);
 
     // Busca
@@ -317,7 +317,7 @@ public function index(Request $request)
     {
         $lojasPermitidas = $this->getLojasPermitidas();
 
-        $produto = Produto::with(['produtoFull', 'lotes'])
+        $produto = Produto::with(['produtoFull', 'lotes', 'loja'])
             ->where('id', $id)
             ->whereIn('loja_id', $lojasPermitidas)
             ->firstOrFail();
@@ -329,7 +329,7 @@ public function index(Request $request)
     {
         $lojasPermitidas = $this->getLojasPermitidas();
 
-        $produto = Produto::with(['produtoFull', 'lotes'])
+        $produto = Produto::with(['produtoFull', 'lotes', 'loja'])
             ->where('id', $id)
             ->whereIn('loja_id', $lojasPermitidas)
             ->firstOrFail();
@@ -454,7 +454,7 @@ public function index(Request $request)
         // 1. Usa a função centralizada para pegar as lojas permitidas
         $lojasPermitidas = $this->getLojasPermitidas();
 
-        $query = Produto::with(['produtoFull', 'lotes'])
+        $query = Produto::with(['produtoFull', 'lotes', 'loja'])
             ->whereIn('loja_id', $lojasPermitidas);
 
         // Se quiser pegar dados da loja para exibir na view (opcional)
