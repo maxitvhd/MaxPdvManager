@@ -18,9 +18,18 @@ class TvDoorController extends Controller
 {
     use ResolvesLoja;
 
-    public function index()
+    protected function requireLoja()
     {
         $loja = $this->resolverLoja();
+        if (!$loja) {
+            abort(redirect()->route('lojas.index')->with('error', 'Crie pelo menos uma loja para acessar o painel do TvDoor.'));
+        }
+        return $loja;
+    }
+
+    public function index()
+    {
+        $loja = $this->requireLoja();
         $playersCount = TvDoorPlayer::where('loja_id', $loja->id)->count();
         $mediaCount = TvDoorMedia::where('loja_id', $loja->id)->count();
         $layoutsCount = TvDoorLayout::where('loja_id', $loja->id)->count();
@@ -31,14 +40,14 @@ class TvDoorController extends Controller
     // --- Players Management ---
     public function players()
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $players = TvDoorPlayer::where('loja_id', $loja->id)->get();
         return view('lojista.tvdoor.players.index', compact('players', 'loja'));
     }
 
     public function storePlayer(Request $request)
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $request->validate(['name' => 'required|string|max:255']);
 
         TvDoorPlayer::create([
@@ -53,7 +62,7 @@ class TvDoorController extends Controller
 
     public function editPlayer(TvDoorPlayer $player)
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $players = TvDoorPlayer::where('loja_id', $loja->id)->get();
         return view('lojista.tvdoor.players.index', compact('players', 'loja', 'player'));
     }
@@ -97,7 +106,7 @@ class TvDoorController extends Controller
     // --- Media Management ---
     public function media()
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $media = TvDoorMedia::where('loja_id', $loja->id)->with('category')->get();
         $categories = TvDoorCategory::where('loja_id', $loja->id)->get();
         return view('lojista.tvdoor.media.index', compact('media', 'categories', 'loja'));
@@ -105,7 +114,7 @@ class TvDoorController extends Controller
 
     public function storeMedia(Request $request)
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $request->validate([
             'name' => 'required|string|max:255',
             'file' => 'required|file|mimes:jpeg,png,jpg,mp4,mov,avi|max:51200',
@@ -131,20 +140,20 @@ class TvDoorController extends Controller
     // --- Layout Management ---
     public function layouts()
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $layouts = TvDoorLayout::where('loja_id', $loja->id)->get();
         return view('lojista.tvdoor.layouts.index', compact('layouts', 'loja'));
     }
 
     public function createLayout()
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         return view('lojista.tvdoor.layouts.editor', compact('loja'));
     }
 
     public function storeLayout(Request $request)
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $request->validate([
             'name' => 'required|string|max:255',
             'content' => 'required|string',
@@ -171,7 +180,7 @@ class TvDoorController extends Controller
 
     public function editLayout(TvDoorLayout $layout)
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         return view('lojista.tvdoor.layouts.editor', compact('loja', 'layout'));
     }
 
@@ -278,7 +287,7 @@ class TvDoorController extends Controller
 
     public function uploadLayoutAsset(Request $request)
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $request->validate([
             'file' => 'required|file|max:20480', // 20MB max
         ]);
@@ -325,7 +334,7 @@ class TvDoorController extends Controller
     // --- Schedule Management ---
     public function schedules()
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $players = TvDoorPlayer::where('loja_id', $loja->id)->get();
         $media = TvDoorMedia::where('loja_id', $loja->id)->get();
         $layouts = TvDoorLayout::where('loja_id', $loja->id)->get();
@@ -380,7 +389,7 @@ class TvDoorController extends Controller
 
     public function editSchedule(TvDoorSchedule $schedule)
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $players = TvDoorPlayer::where('loja_id', $loja->id)->get();
         $media = TvDoorMedia::where('loja_id', $loja->id)->get();
         $layouts = TvDoorLayout::where('loja_id', $loja->id)->get();
