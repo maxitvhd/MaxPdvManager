@@ -750,21 +750,25 @@ public function storeProdutosUnified(Request $request)
 
     // Processar arquivo ZIP com as imagens (se enviado)
     if ($request->hasFile('imagens_zip')) {
+        Log::info('[1] Sincronização Unificada - Recebido arquivo imagens_zip.');
         $zipFile = $request->file('imagens_zip');
         $zipPath = $zipFile->storeAs('temp', $zipFile->getClientOriginalName());
         $tempDir = storage_path('app/temp/' . uniqid());
+        Log::info("[2] Sincronização Unificada - Arquivo salvo em: {$zipPath}. Preparando tempDir: {$tempDir}");
 
         $zip = new \ZipArchive;
         if ($zip->open(storage_path('app/' . $zipPath)) === TRUE) {
             if (!file_exists($tempDir)) {
                 mkdir($tempDir, 0777, true);
+                Log::info('[3] Sincronização Unificada - Diretório temporário criado.');
             }
             $zip->extractTo($tempDir);
             $zip->close();
+            Log::info('[4] Sincronização Unificada - ZIP descompactado com sucesso.');
 
             $extractedImages = glob($tempDir . '/*.{jpg,png}', GLOB_BRACE);
             if ($extractedImages) {
-                Log::info('Imagens extraídas durante unified sync: ' . implode(', ', $extractedImages));
+                Log::info('[5] Sincronização Unificada - ' . count($extractedImages) . ' imagens extraídas. (' . implode(', ', $extractedImages) . ')');
                 foreach ($extractedImages as $imagePath) {
                     $filename = basename($imagePath);
                     $barcode = pathinfo($filename, PATHINFO_FILENAME);
@@ -777,21 +781,28 @@ public function storeProdutosUnified(Request $request)
                     Storage::disk('public')->makeDirectory("lojas/{$loja->codigo}/produtos");
                     Storage::disk('public')->put("lojas/{$loja->codigo}/produtos/{$fullFilename}", file_get_contents($imagePath));
                 }
+                Log::info('[6] Sincronização Unificada - Cópias de imagens concluídas.');
+            } else {
+                Log::warning('[5] Sincronização Unificada - Nenhuma imagem .jpg ou .png encontrada após a extração.');
             }
 
             // Cleanup do diretório temporário
             if (file_exists($tempDir)) {
                 array_map('unlink', glob("$tempDir/*.*"));
                 rmdir($tempDir);
+                Log::info('[7] Sincronização Unificada - Cleanup do diretório temporário concluído.');
             }
         } else {
-            Log::error('Falha ao abrir o arquivo ZIP unificado: ' . $zipFile->getClientOriginalName());
+            Log::error('[3 ERRO] Sincronização Unificada - Falha ao abrir o arquivo ZIP: ' . $zipFile->getClientOriginalName());
         }
 
         // Cleanup do ZIP principal
         if (Storage::exists($zipPath)) {
             Storage::delete($zipPath);
+            Log::info('[8] Sincronização Unificada - Cleanup do ZIP original concluído.');
         }
+    } else {
+        Log::info('[0] Sincronização Unificada - Nenhum arquivo imagens_zip recebido na requisição.');
     }
 
     return response()->json(['success' => 'Sincronização concluída', 'data' => $response], 201);
