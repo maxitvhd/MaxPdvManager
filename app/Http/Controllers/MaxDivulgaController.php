@@ -17,6 +17,15 @@ class MaxDivulgaController extends Controller
 {
     use ResolvesLoja;
 
+    protected function requireLoja($lojaId = null)
+    {
+        $loja = $this->resolverLoja($lojaId);
+        if (!$loja) {
+            abort(redirect()->route('lojas.index')->with('error', 'Crie pelo menos uma loja para acessar o painel do MaxDivulga.'));
+        }
+        return $loja;
+    }
+
     public function index()
     {
         $user = auth()->user();
@@ -26,7 +35,7 @@ class MaxDivulgaController extends Controller
             $campaigns = MaxDivulgaCampaign::whereNull('parent_id')
                 ->orderBy('created_at', 'desc')->get();
         } else {
-            $loja = $this->resolverLoja();
+            $loja = $this->requireLoja();
             $lojaId = $loja ? $loja->id : null;
 
             // Exibe campanhas originais desta loja (sem ser as geradas repetidas do cronJob)
@@ -51,7 +60,7 @@ class MaxDivulgaController extends Controller
     public function create()
     {
         $themes = MaxDivulgaTheme::where('is_active', true)->get();
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
 
         $fundos = [];
         $dir = storage_path('app/public/audio/fundo');
@@ -69,7 +78,7 @@ class MaxDivulgaController extends Controller
 
     public function store(Request $request)
     {
-        $loja = $this->resolverLoja($request->loja_id);
+        $loja = $this->requireLoja($request->loja_id);
 
         if (!$loja) {
             return back()->withErrors(['loja' => 'Nenhuma loja encontrada para gerar campanha.']);
@@ -404,7 +413,7 @@ class MaxDivulgaController extends Controller
 
     public function show(MaxDivulgaCampaign $campaign)
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $lojaId = $loja->id ?? null;
         $socialAccounts = \App\Models\SocialAccount::where('loja_id', $lojaId)->get();
 
@@ -500,7 +509,7 @@ class MaxDivulgaController extends Controller
 
     public function apiProducts(Request $request)
     {
-        $loja = $this->resolverLoja($request->get('loja_id'));
+        $loja = $this->requireLoja($request->get('loja_id'));
 
         if (!$loja) {
             return response()->json(['error' => 'Nenhuma loja encontrada.'], 404);
@@ -604,7 +613,7 @@ class MaxDivulgaController extends Controller
      */
     public function canaisIndex()
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $lojaId = $loja->id ?? null;
         $socialAccounts = \App\Models\SocialAccount::where('loja_id', $lojaId)->get();
 
@@ -620,7 +629,7 @@ class MaxDivulgaController extends Controller
      */
     public function themeStudio()
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $themes = MaxDivulgaTheme::where('is_active', true)->get();
         $produtos = $loja
             ? Produto::where('loja_id', $loja->id)->orderBy('nome')->get()
@@ -644,7 +653,7 @@ class MaxDivulgaController extends Controller
             return response('<h2 style="font-family:sans-serif;color:red;padding:40px">Tema não encontrado</h2>', 404);
         }
 
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         if (!$loja) {
             return response('<h2 style="font-family:sans-serif;color:red;padding:40px">Loja não encontrada</h2>', 404);
         }
@@ -779,7 +788,7 @@ class MaxDivulgaController extends Controller
             return response('<p style="font:14px sans-serif;color:#999;padding:30px">Código vazio</p>');
         }
 
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         if (!$loja) {
             return response('<p style="font:14px sans-serif;color:red;padding:30px">Loja não encontrada</p>', 404);
         }
@@ -855,7 +864,7 @@ class MaxDivulgaController extends Controller
      */
     public function themeBuilder(MaxDivulgaTheme $theme)
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $frameUrl = route('lojista.maxdivulga.theme_builder_frame', $theme);
         $saveUrl = route('lojista.maxdivulga.theme_builder_save', $theme);
         return view('lojista.maxdivulga.theme_builder', compact('theme', 'loja', 'frameUrl', 'saveUrl'));
@@ -868,7 +877,7 @@ class MaxDivulgaController extends Controller
      */
     public function themeBuilderFrame(MaxDivulgaTheme $theme)
     {
-        $loja = $this->resolverLoja();
+        $loja = $this->requireLoja();
         $qty = 6;
 
         // Produtos de amostra
