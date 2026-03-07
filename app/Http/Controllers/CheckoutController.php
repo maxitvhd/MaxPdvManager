@@ -748,6 +748,52 @@ public function storeProdutosUnified(Request $request)
         $response['produtos'][$barcode] = $produto_loja->id;
     }
 
+    // Processar arquivo ZIP com as imagens (se enviado)
+    if ($request->hasFile('imagens_zip')) {
+        $zipFile = $request->file('imagens_zip');
+        $zipPath = $zipFile->storeAs('temp', $zipFile->getClientOriginalName());
+        $tempDir = storage_path('app/temp/' . uniqid());
+
+        $zip = new \ZipArchive;
+        if ($zip->open(storage_path('app/' . $zipPath)) === TRUE) {
+            if (!file_exists($tempDir)) {
+                mkdir($tempDir, 0777, true);
+            }
+            $zip->extractTo($tempDir);
+            $zip->close();
+
+            $extractedImages = glob($tempDir . '/*.{jpg,png}', GLOB_BRACE);
+            if ($extractedImages) {
+                Log::info('Imagens extraídas durante unified sync: ' . implode(', ', $extractedImages));
+                foreach ($extractedImages as $imagePath) {
+                    $filename = basename($imagePath);
+                    $barcode = pathinfo($filename, PATHINFO_FILENAME);
+                    $extension = pathinfo($imagePath, PATHINFO_EXTENSION);
+    
+                    $fullFilename = "{$barcode}.{$extension}";
+                    // Copiar para a pasta global
+                    Storage::disk('public')->put("produtos_full/{$fullFilename}", file_get_contents($imagePath));
+                    // Copiar para a pasta da loja
+                    Storage::disk('public')->makeDirectory("lojas/{$loja->codigo}/produtos");
+                    Storage::disk('public')->put("lojas/{$loja->codigo}/produtos/{$fullFilename}", file_get_contents($imagePath));
+                }
+            }
+
+            // Cleanup do diretório temporário
+            if (file_exists($tempDir)) {
+                array_map('unlink', glob("$tempDir/*.*"));
+                rmdir($tempDir);
+            }
+        } else {
+            Log::error('Falha ao abrir o arquivo ZIP unificado: ' . $zipFile->getClientOriginalName());
+        }
+
+        // Cleanup do ZIP principal
+        if (Storage::exists($zipPath)) {
+            Storage::delete($zipPath);
+        }
+    }
+
     return response()->json(['success' => 'Sincronização concluída', 'data' => $response], 201);
 }
 
