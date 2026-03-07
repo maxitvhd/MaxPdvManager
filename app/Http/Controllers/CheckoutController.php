@@ -691,11 +691,8 @@ public function storeProdutosUnified(Request $request)
     $checkout = Checkout::where('codigo', $codigo)->where('mac', $mac)->where('status', 'ativo')->first();
     if (!$checkout) return response()->json(['error' => 'Acesso negado'], 403);
 
-    // Valida apenas a loja usando o código que estamos enviando do Extrator
+    // Valida a loja usando o código que estamos enviando do Extrator
     $loja = Loja::where('codigo', $loja_codigo)->first();
-    
-    // Ou se preferir usar a loja atrelada à licença:
-    // $loja = Loja::where('id', $checkout->licenca->loja_id)->first();
 
     if (!$loja) return response()->json(['error' => 'Loja não encontrada'], 404);
 
@@ -711,6 +708,9 @@ public function storeProdutosUnified(Request $request)
     // 2. Processamento Otimizado
     foreach ($products as $product) {
         $barcode = $product['codigo_barra'];
+        
+        // Pega o nome da imagem enviado pelo Extrator (ou usa o código como fallback)
+        $imagem_nome = $product['imagem'] ?? "{$barcode}.jpg";
 
         // --- PASSO 1: PRODUTO GLOBAL (ProdutoFull) ---
         $produto_full = ProdutoFull::firstOrCreate(
@@ -720,7 +720,8 @@ public function storeProdutosUnified(Request $request)
                 'categoria' => $product['categoria'] ?? 'Geral',
                 'descricao' => $product['descricao'] ?? '',
                 'peso' => $product['peso'] ?? 0,
-                'imagem' => $this->getExistingImagePath("produtos_full", $barcode)
+                // Salva diretamente o nome enviado pelo Extrator
+                'imagem' => $imagem_nome
             ]
         );
 
@@ -731,11 +732,13 @@ public function storeProdutosUnified(Request $request)
         }
         $produto_data['loja_id'] = $loja->id; // Vínculo com a loja
         $produto_data['produto_full_id'] = $produto_full->id;
-        $produto_data['imagem'] = $this->getExistingImagePath("lojas/{$loja->codigo}/produtos", $barcode);
+        
+        // Salva diretamente o nome enviado pelo Extrator na loja também
+        $produto_data['imagem'] = $imagem_nome;
 
         $produto_loja = Produto::updateOrCreate(
             [
-                'loja_id' => $loja->id, // Busca pelo ID da loja e do produto full
+                'loja_id' => $loja->id,
                 'produto_full_id' => $produto_full->id
             ],
             $produto_data
@@ -747,6 +750,7 @@ public function storeProdutosUnified(Request $request)
 
     return response()->json(['success' => 'Sincronização concluída', 'data' => $response], 201);
 }
+
 
 
 /**
