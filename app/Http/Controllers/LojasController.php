@@ -183,8 +183,10 @@ class LojasController extends Controller
             \Illuminate\Support\Facades\DB::table('tv_door_categories')->where('loja_id', $loja->id)->delete();
             \Illuminate\Support\Facades\DB::table('tv_door_layouts')->where('loja_id', $loja->id)->delete();
             \Illuminate\Support\Facades\DB::table('tv_door_media')->where('loja_id', $loja->id)->delete();
+            \Illuminate\Support\Facades\DB::table('tv_door_schedules')->whereIn('player_id', function ($query) use ($loja) {
+                $query->select('id')->from('tv_door_players')->where('loja_id', $loja->id);
+            })->delete();
             \Illuminate\Support\Facades\DB::table('tv_door_players')->where('loja_id', $loja->id)->delete();
-            \Illuminate\Support\Facades\DB::table('tv_door_schedules')->where('loja_id', $loja->id)->delete();
             
             // 2D. Produtos e Checkouts
             \Illuminate\Support\Facades\DB::table('produto_lotes')->whereIn('produto_id', function ($query) use ($loja) {
