@@ -18,7 +18,19 @@ class InfoUserController extends Controller
 
     public function profile()
     {
-        return view('profile');
+        // Pega todos os avatares da pasta public/assets/img/avatar/ (apenas arquivos)
+        $avatarPath = public_path('assets/img/avatar');
+        $avatars = [];
+        if (is_dir($avatarPath)) {
+            $files = array_diff(scandir($avatarPath), ['.', '..']);
+            foreach ($files as $file) {
+                if (is_file($avatarPath . '/' . $file)) {
+                    $avatars[] = 'assets/img/avatar/' . $file;
+                }
+            }
+        }
+
+        return view('profile', compact('avatars'));
     }
 
     public function updateProfile(Request $request)
@@ -29,6 +41,8 @@ class InfoUserController extends Controller
             'name' => ['required', 'max:50'],
             'email' => ['required', 'email', 'max:50', Rule::unique('users')->ignore($user->id)],
             'phone' => ['nullable', 'max:50'],
+            'usuario' => ['nullable', 'max:50'],
+            'acesso' => ['nullable', 'max:50'],
             'endereco' => ['nullable', 'max:150'],
             'bairro' => ['nullable', 'max:50'],
             'cidade' => ['nullable', 'max:50'],
@@ -37,6 +51,7 @@ class InfoUserController extends Controller
             'location' => ['nullable', 'max:70'],
             'geolocalizacao' => ['nullable', 'max:150'],
             'imagem' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
+            'avatar_selecionado' => ['nullable', 'string', 'max:255'],
             // social networks
             'facebook' => ['nullable', 'url', 'max:150'],
             'twitter' => ['nullable', 'url', 'max:150'],
@@ -46,14 +61,25 @@ class InfoUserController extends Controller
         ]);
 
         if (env('IS_DEMO') && $user->id == 1 && $request->get('email') != $user->email) {
-            return redirect()->back()->withErrors(['msg2' => 'You are in a demo version, you can\'t change the email address.']);
+            return redirect()->back()->withErrors(['msg2' => 'Você está numa versão de demonstração, não pode alterar o e-mail.']);
         }
 
-        // Handle Image Upload
+        // Handle Image Upload to specific user path
         if ($request->hasFile('imagem')) {
+            $codigo = $user->codigo ?? 'geral';
             $imageName = time() . '.' . $request->imagem->extension();
-            $request->imagem->move(public_path('assets/img/users'), $imageName);
-            $user->imagem = 'assets/img/users/' . $imageName;
+            $path = "usuario/{$codigo}/perfil";
+            
+            // Usar o Storage público
+            $request->imagem->storeAs($path, $imageName, 'public');
+            $user->imagem = "storage/{$path}/{$imageName}";
+            // Se subiu foto, removemos o avatar selecionado para prevalecer a foto
+            $user->avatar = null;
+        } elseif ($request->filled('avatar_selecionado')) {
+            // Se o usuário selecionou um avatar da lista
+            $user->avatar = $request->get('avatar_selecionado');
+            // Removemos a foto personalizada para prevalecer o avatar
+            $user->imagem = null;
         }
 
         // Handle Social Links to about_me
@@ -68,6 +94,8 @@ class InfoUserController extends Controller
         $user->name = $attributes['name'];
         $user->email = $attributes['email'];
         if (isset($attributes['phone'])) $user->phone = $attributes['phone'];
+        if (isset($attributes['usuario'])) $user->usuario = $attributes['usuario'];
+        if (isset($attributes['acesso'])) $user->acesso = $attributes['acesso'];
         if (isset($attributes['endereco'])) $user->endereco = $attributes['endereco'];
         if (isset($attributes['bairro'])) $user->bairro = $attributes['bairro'];
         if (isset($attributes['cidade'])) $user->cidade = $attributes['cidade'];

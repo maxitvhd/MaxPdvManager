@@ -20,7 +20,16 @@
         <div class="row gx-4">
           <div class="col-auto">
             <div class="avatar avatar-xl position-relative">
-              <img src="{{ $user->imagem ? asset($user->imagem) : '../assets/img/bruce-mars.jpg' }}" alt="profile_image" class="w-100 border-radius-lg shadow-sm" style="object-fit: cover; aspect-ratio: 1/1;">
+              @php
+                  // Se tiver imagem (upload), usamos a imagem. Se tiver avatar selecionado, usamos. Caso nenhum dos dois, o padrão.
+                  $profilePic = '../assets/img/bruce-mars.jpg';
+                  if ($user->imagem) {
+                      $profilePic = asset($user->imagem);
+                  } elseif ($user->avatar) {
+                      $profilePic = asset($user->avatar);
+                  }
+              @endphp
+              <img src="{{ $profilePic }}" alt="profile_image" class="w-100 border-radius-lg shadow-sm" style="object-fit: cover; aspect-ratio: 1/1;">
             </div>
           </div>
           <div class="col-auto my-auto">
@@ -64,7 +73,7 @@
                 @endif
 
                 <div class="row">
-                    <!-- Informações Básicas -->
+                    <!-- Informações Básicas e Acesso do PDV -->
                     <div class="col-md-6">
                         <div class="form-group">
                             <label for="user-name" class="form-control-label">{{ __('Nome Completo') }}</label>
@@ -77,10 +86,18 @@
                             <input class="form-control" value="{{ old('email', $user->email) }}" type="email" placeholder="@exemplo.com" id="user-email" name="email" required>
                         </div>
                     </div>
+
+                    <!-- Credenciais de Acesso (App PDV) -->
                     <div class="col-md-4">
                         <div class="form-group">
-                            <label for="user-phone" class="form-control-label">{{ __('Telefone') }}</label>
-                            <input class="form-control" value="{{ old('phone', $user->phone) }}" type="tel" placeholder="Telefone" id="user-phone" name="phone">
+                            <label for="user-usuario" class="form-control-label">{{ __('Usuário (Acesso App)') }}</label>
+                            <input class="form-control" value="{{ old('usuario', $user->usuario) }}" type="text" placeholder="Login do app" id="user-usuario" name="usuario">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="user-acesso" class="form-control-label">{{ __('Senha de Acesso (App)') }}</label>
+                            <input class="form-control" value="{{ old('acesso', $user->acesso) }}" type="text" placeholder="Senha do app" id="user-acesso" name="acesso">
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -89,11 +106,42 @@
                             <input class="form-control" value="{{ $user->funcao }}" type="text" id="user-funcao" disabled>
                         </div>
                     </div>
-                    <div class="col-md-4">
+
+                    <!-- Foto Personalizada e Telefone -->
+                    <div class="col-md-6">
                         <div class="form-group">
-                            <label for="user-imagem" class="form-control-label">{{ __('Foto de Perfil') }}</label>
-                            <input class="form-control" type="file" id="user-imagem" name="imagem" accept="image/*">
+                            <label for="user-phone" class="form-control-label">{{ __('Telefone') }}</label>
+                            <input class="form-control" value="{{ old('phone', $user->phone) }}" type="tel" placeholder="Telefone" id="user-phone" name="phone">
                         </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="user-imagem" class="form-control-label">{{ __('Foto de Perfil Personalizada') }}</label>
+                            <input class="form-control" type="file" id="user-imagem" name="imagem" accept="image/*">
+                            <small class="text-xs text-muted">A foto personalizada substitui o avatar da galeria.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Galeria de Avatares -->
+                <hr class="horizontal dark">
+                <h6 class="mb-3">Selecione um Avatar</h6>
+                <div class="row">
+                    <div class="col-12">
+                        <input type="hidden" name="avatar_selecionado" id="avatar_selecionado" value="{{ $user->avatar }}">
+                        <div class="d-flex flex-wrap gap-3 mb-3">
+                            @if(isset($avatars) && count($avatars) > 0)
+                                @foreach($avatars as $av)
+                                    <div class="avatar-option cursor-pointer p-1 rounded-circle {{ $user->avatar == $av ? 'border border-3 border-primary' : '' }}" 
+                                         data-path="{{ $av }}" onclick="selectAvatar(this)" style="transition: 0.3s;">
+                                        <img src="{{ asset($av) }}" alt="Avatar" class="avatar avatar-md rounded-circle">
+                                    </div>
+                                @endforeach
+                            @else
+                                <p class="text-sm text-muted">Nenhum avatar encontrado na pasta <code>public/assets/img/avatar/</code>.</p>
+                            @endif
+                        </div>
+                        <small class="text-xs text-info">Para usar avatares do sistema, adicione imagens como <code>avatar_01.gif</code> na rota especificada.</small>
                     </div>
                 </div>
 
@@ -202,6 +250,23 @@
   </div>
 
   <script>
+    // Seleção de Avatar
+    function selectAvatar(element) {
+        // Remove borda de todos
+        document.querySelectorAll('.avatar-option').forEach(el => {
+            el.classList.remove('border', 'border-3', 'border-primary');
+        });
+        
+        // Adiciona borda no clicado
+        element.classList.add('border', 'border-3', 'border-primary');
+        
+        // Pega o caminho
+        const path = element.getAttribute('data-path');
+        
+        // Define o target
+        document.getElementById('avatar_selecionado').value = path;
+    }
+
     // Get current geolocation if possible and update the hidden input
     if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(function(position) {
