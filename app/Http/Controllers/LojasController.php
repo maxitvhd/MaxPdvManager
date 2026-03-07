@@ -136,9 +136,46 @@ class LojasController extends Controller
                 ->with('error', 'Ops! Você não pode excluir essa loja.');
         }
 
-        $loja->delete();
-        
-        return redirect()->route('lojas.index')->with('success', 'Loja excluída permanentemente.');
+        try {
+            \Illuminate\Support\Facades\DB::beginTransaction();
+
+            // 1. Transferir clientes para a tabela de leads
+            $clientes = \App\Models\Cliente::where('loja_id', $loja->id)->get();
+            
+            $leadsData = [];
+            foreach ($clientes as $cliente) {
+                $leadsData[] = [
+                    'antiga_loja_id' => $loja->id,
+                    'nome' => $cliente->nome,
+                    'email' => $cliente->email,
+                    'telefone' => $cliente->telefone,
+                    'codigo_original' => $cliente->codigo,
+                    'dados_completos' => json_encode($cliente->toArray()), // Guarda tudo como JSON
+                    'motivo_transferencia' => 'Exclusão de Loja',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            // Inserir os leads em lote
+            if (!empty($leadsData)) {
+                \Illuminate\Support\Facades\DB::table('clientes_leads')->insert($leadsData);
+            }
+
+            // 2. Apagar os clientes da loja para evitar Constraint Violation (se não tiver cascade)
+            \App\Models\Cliente::where('loja_id', $loja->id)->delete();
+
+            // 3. Pode deletar a loja (o restante deve ser OnDelete Cascade no banco)
+            $loja->delete();
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->route('lojas.index')->with('success', 'Loja excluída permanentemente e clientes foram arquivados corrtamente.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Erro ao excluir loja: ' . $e->getMessage());
+            return redirect()->route('lojas.index')->with('error', 'Erro ao excluir a loja: ' . $e->getMessage());
+        }
     }
 
    
